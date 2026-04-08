@@ -44,19 +44,19 @@
 
 ## Phase 1 — Command Surface + Stub Contract
 
-- [ ] CODE: Implement CLI command routing for all 9 commands
+- [x] CODE: Implement CLI command routing for all 9 commands
   - Feature: preserve public command surface while narrowing functional scope. The commands are `create`, `register`, `deploy`, `promote`, `rollback`, `logs`, `status`, `list`, and `teardown`.
   - Acceptance:
     - `universe --help` shows all 9 commands.
     - All non-`create` commands are invocable.
 
-- [ ] CODE: Implement shared non-implemented stub behavior for the 8 deferred commands
+- [x] CODE: Implement shared non-implemented stub behavior for the 8 deferred commands
   - Feature: deterministic placeholder behavior for `register`, `deploy`, `promote`, `rollback`, `logs`, `status`, `list`, and `teardown`.
   - Acceptance:
     - Each deferred command exits non-zero.
     - Each deferred command emits the same standardized “not implemented in spike” contract.
 
-- [ ] TASK: Test completion gate for stubbed commands
+- [x] TASK: Test completion gate for stubbed commands
   - Acceptance:
     - CLI tests verify help output and stubbed-command behavior.
     - Snapshot/golden tests verify standardized error output.

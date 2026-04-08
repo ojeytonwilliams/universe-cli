@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.2.0] - 2026-04-08
+
+### Phase 1 — Command Surface + Stub Contract
+
+- **CLI routing** (`src/cli.ts`): `runCli(argv, observability)` dispatches all 9 ADR-007 commands. Returns a `CliResult` with exit code and output string.
+- **Help text**: `universe --help` lists all 9 commands with descriptions.
+- **Deferred command stubs**: `register`, `deploy`, `promote`, `rollback`, `logs`, `status`, `list`, and `teardown` each exit non-zero and emit the standardized `DeferredCommandError` message.
+- **CLI tests** (`src/cli.test.ts`): snapshot-verified help output; all 8 deferred commands verified to exit non-zero and contain their command name; standardized message format snapshot-locked.
+
 ## [1.1.0] - 2026-04-08
 
 ### Phase 0 — Foundations
