@@ -1,6 +1,11 @@
+// oxlint-disable-next-line import/no-nodejs-modules
+import { join } from "path";
 import { CliError, DeferredCommandError } from "./errors/cli-errors.js";
 import type { CreateInputValidator } from "./ports/create-input-validator.js";
+import type { FilesystemWriter } from "./ports/filesystem-writer.js";
+import type { LayerResolver } from "./ports/layer-resolver.js";
 import type { ObservabilityClient } from "./ports/observability-client.js";
+import type { PlatformManifestGenerator } from "./ports/platform-manifest-generator.js";
 import type { PromptPort } from "./ports/prompt-port.js";
 import { safeError } from "./ports/observability-client.js";
 
@@ -28,7 +33,11 @@ interface CliResult {
 }
 
 interface CliDependencies {
+  cwd: string;
+  filesystemWriter: FilesystemWriter;
+  layerResolver: LayerResolver;
   observability: ObservabilityClient;
+  platformManifestGenerator: PlatformManifestGenerator;
   promptPort: PromptPort;
   validator: CreateInputValidator;
 }
@@ -44,24 +53,34 @@ const DEFERRED_COMMANDS = new Set([
   "teardown",
 ]);
 
-const formatCreateSummary = (selection: {
-  databases: string[];
-  framework: string;
-  name: string;
-  platformServices: string[];
-  runtime: string;
-}): string =>
-  [
-    "Create configuration confirmed:",
-    `- Name: ${selection.name}`,
-    `- Runtime: ${selection.runtime}`,
-    `- Framework: ${selection.framework}`,
-    `- Databases: ${selection.databases.join(", ")}`,
-    `- Platform services: ${selection.platformServices.join(", ")}`,
-  ].join("\n");
+const renderProjectFiles = (
+  files: Record<string, string>,
+  selection: {
+    framework: string;
+    name: string;
+    runtime: string;
+  },
+): Record<string, string> =>
+  Object.fromEntries(
+    Object.entries(files).map(([filePath, content]) => [
+      filePath,
+      content
+        .replaceAll("__FRAMEWORK__", selection.framework)
+        .replaceAll("__PROJECT_NAME__", selection.name)
+        .replaceAll("__RUNTIME__", selection.runtime),
+    ]),
+  );
 
 const runCli = async (argv: string[], deps: CliDependencies): Promise<CliResult> => {
-  const { observability, promptPort, validator } = deps;
+  const {
+    cwd,
+    filesystemWriter,
+    layerResolver,
+    observability,
+    platformManifestGenerator,
+    promptPort,
+    validator,
+  } = deps;
   const [command] = argv;
 
   if (command === undefined || command === "--help" || command === "-h") {
@@ -91,10 +110,21 @@ const runCli = async (argv: string[], deps: CliDependencies): Promise<CliResult>
 
     try {
       const validatedInput = validator.validateCreateInput(promptResult);
+      const resolvedLayers = layerResolver.resolveLayers(validatedInput);
+      const targetDirectory = join(cwd, validatedInput.name);
+      const renderedFiles = renderProjectFiles(
+        {
+          ...resolvedLayers.files,
+          "platform.yaml": platformManifestGenerator.generatePlatformManifest(validatedInput),
+        },
+        validatedInput,
+      );
+
+      await filesystemWriter.writeProject(targetDirectory, renderedFiles);
 
       return {
         exitCode: 0,
-        output: formatCreateSummary(validatedInput),
+        output: `Scaffolded project at ${targetDirectory}`,
       };
     } catch (error) {
       if (error instanceof CliError) {

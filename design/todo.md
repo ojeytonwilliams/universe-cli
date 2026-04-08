@@ -103,7 +103,7 @@
 
 ## Phase 3 — Layer Composition and Artifact Generation
 
-- [ ] CODE: Implement deterministic layer resolution for `create`
+- [x] CODE: Implement deterministic layer resolution for `create`
   - Feature: assemble scaffold from runtime, framework, service, and always-on layers.
   - Acceptance:
     - Composition follows `always/` + `base/{runtime}` + `frameworks/{framework}` + `services/{each}`.
@@ -115,7 +115,7 @@
     - Conflicts introduced within the same layer stage fail with `LayerConflictError`.
     - Missing layers fail with typed errors.
 
-- [ ] CODE: Generate required project artifacts
+- [x] CODE: Generate required project artifacts
   - Feature: write the starter project to disk.
   - Acceptance:
     - Generates project folder, runtime-specific starter source files, `platform.yaml`, `README.md`, `docker-compose.dev.yml`, `Procfile`, and `.gitignore`.
@@ -126,7 +126,7 @@
     - Does not call or mutate any registration/provisioning state.
     - Leaves no partial scaffold after unrecoverable write failure.
 
-- [ ] CODE: Generate `platform.yaml` from selected inputs
+- [x] CODE: Generate `platform.yaml` from selected inputs
   - Feature: derive developer-facing platform metadata from `create` selections.
   - Acceptance:
     - Uses ADR-007 service naming.

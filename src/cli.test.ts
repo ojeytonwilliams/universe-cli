@@ -1,8 +1,11 @@
 import type { CreateInputValidator } from "./ports/create-input-validator.js";
+import type { FilesystemWriter } from "./ports/filesystem-writer.js";
+import type { LayerResolver } from "./ports/layer-resolver.js";
 import type { ObservabilityClient } from "./ports/observability-client.js";
+import type { PlatformManifestGenerator } from "./ports/platform-manifest-generator.js";
 import type { CreateSelections, PromptPort } from "./ports/prompt-port.js";
 import { runCli } from "./cli.js";
-import { InvalidNameError } from "./errors/cli-errors.js";
+import { InvalidNameError, ScaffoldWriteError } from "./errors/cli-errors.js";
 
 const client: ObservabilityClient = {
   error() {},
@@ -47,19 +50,72 @@ const passThroughValidator: CreateInputValidator = {
   },
 };
 
+const resolvedLayerFiles = {
+  ".gitignore": "node_modules\n",
+  Procfile: "web: node dist/index.js\n",
+  "README.md": "# hello-universe\n",
+  "docker-compose.dev.yml": "services:{}\n",
+  "package.json": '{"name":"hello-universe"}',
+  "src/index.ts": "console.log('hello universe');\n",
+  "tsconfig.json": '{"compilerOptions":{}}',
+};
+
+const passThroughLayerResolver: LayerResolver = {
+  resolveLayers() {
+    return {
+      files: resolvedLayerFiles,
+      layers: [],
+    };
+  },
+};
+
+const manifestGenerator: PlatformManifestGenerator = {
+  generatePlatformManifest() {
+    return "name: hello-universe\n";
+  },
+};
+
+const writerCalls: { files: Record<string, string>; targetDirectory: string }[] = [];
+
+const recordingWriter: FilesystemWriter = {
+  writeProject(targetDirectory, files) {
+    writerCalls.push({ files, targetDirectory });
+
+    return Promise.resolve();
+  },
+};
+
+const failingWriter: FilesystemWriter = {
+  writeProject(targetDirectory) {
+    return Promise.reject(new ScaffoldWriteError(targetDirectory, new Error("disk full")));
+  },
+};
+
 const invalidNameValidator: CreateInputValidator = {
   validateCreateInput() {
     throw new InvalidNameError("InvalidName");
   },
 };
 
-const createDeps = (promptPort: PromptPort, validator: CreateInputValidator) => ({
+const createDeps = (
+  promptPort: PromptPort,
+  validator: CreateInputValidator,
+  filesystemWriter: FilesystemWriter = recordingWriter,
+) => ({
+  cwd: "/workspace",
+  filesystemWriter,
+  layerResolver: passThroughLayerResolver,
   observability: client,
+  platformManifestGenerator: manifestGenerator,
   promptPort,
   validator,
 });
 
 describe(runCli, () => {
+  beforeEach(() => {
+    writerCalls.length = 0;
+  });
+
   describe("--help", () => {
     it("exits with code 0", async () => {
       const result = await runCli(["--help"], createDeps(createPrompt, passThroughValidator));
@@ -113,17 +169,19 @@ describe(runCli, () => {
   });
 
   describe("create", () => {
-    it("returns a confirmation summary when inputs are confirmed", async () => {
+    it("writes the resolved scaffold artifacts to disk when inputs are confirmed", async () => {
       const { output } = await runCli(["create"], createDeps(createPrompt, passThroughValidator));
 
-      expect(output).toMatchInlineSnapshot(`
-        "Create configuration confirmed:
-        - Name: hello-universe
-        - Runtime: Node.js (TypeScript)
-        - Framework: Express
-        - Databases: PostgreSQL
-        - Platform services: Auth, Email"
-      `);
+      expect(writerCalls).toStrictEqual([
+        {
+          files: {
+            ...resolvedLayerFiles,
+            "platform.yaml": "name: hello-universe\n",
+          },
+          targetDirectory: "/workspace/hello-universe",
+        },
+      ]);
+      expect(output).toContain("Scaffolded project at /workspace/hello-universe");
     });
 
     it("returns non-zero when prompt flow is cancelled", async () => {
@@ -150,6 +208,15 @@ describe(runCli, () => {
       const result = await runCli(["create"], createDeps(createPrompt, invalidNameValidator));
 
       expect(result.output).toContain("Invalid project name");
+    });
+
+    it("returns a typed write failure when scaffold output cannot be written", async () => {
+      const result = await runCli(
+        ["create"],
+        createDeps(createPrompt, passThroughValidator, failingWriter),
+      );
+
+      expect(result.output).toContain("Failed to write scaffold");
     });
   });
 });
