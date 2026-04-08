@@ -1,4 +1,5 @@
 import {
+  CliError,
   DeferredCommandError,
   InvalidMultiSelectError,
   InvalidNameError,
@@ -30,6 +31,14 @@ describe("error exit codes", () => {
     const uniqueCodes = new Set(codes);
 
     expect(uniqueCodes.size).toBe(errors.length);
+  });
+});
+
+describe(CliError, () => {
+  it("acts as the shared base class for typed CLI errors", () => {
+    const error = new InvalidNameError("bad-name");
+
+    expect(error).toBeInstanceOf(CliError);
   });
 });
 

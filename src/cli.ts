@@ -1,5 +1,7 @@
-import { DeferredCommandError } from "./errors/cli-errors.js";
+import { CliError, DeferredCommandError } from "./errors/cli-errors.js";
+import type { CreateInputValidator } from "./ports/create-input-validator.js";
 import type { ObservabilityClient } from "./ports/observability-client.js";
+import type { PromptPort } from "./ports/prompt-port.js";
 import { safeError } from "./ports/observability-client.js";
 
 const HELP_TEXT = `
@@ -25,6 +27,12 @@ interface CliResult {
   output: string;
 }
 
+interface CliDependencies {
+  observability: ObservabilityClient;
+  promptPort: PromptPort;
+  validator: CreateInputValidator;
+}
+
 const DEFERRED_COMMANDS = new Set([
   "deploy",
   "list",
@@ -36,7 +44,24 @@ const DEFERRED_COMMANDS = new Set([
   "teardown",
 ]);
 
-const runCli = (argv: string[], observability: ObservabilityClient): CliResult => {
+const formatCreateSummary = (selection: {
+  databases: string[];
+  framework: string;
+  name: string;
+  platformServices: string[];
+  runtime: string;
+}): string =>
+  [
+    "Create configuration confirmed:",
+    `- Name: ${selection.name}`,
+    `- Runtime: ${selection.runtime}`,
+    `- Framework: ${selection.framework}`,
+    `- Databases: ${selection.databases.join(", ")}`,
+    `- Platform services: ${selection.platformServices.join(", ")}`,
+  ].join("\n");
+
+const runCli = async (argv: string[], deps: CliDependencies): Promise<CliResult> => {
+  const { observability, promptPort, validator } = deps;
   const [command] = argv;
 
   if (command === undefined || command === "--help" || command === "-h") {
@@ -50,9 +75,35 @@ const runCli = (argv: string[], observability: ObservabilityClient): CliResult =
   }
 
   if (command === "create") {
-    const error = new DeferredCommandError(command);
-    safeError(observability, error);
-    return { exitCode: error.exitCode, output: error.message };
+    if (argv.length > 1) {
+      return {
+        exitCode: 1,
+        output:
+          'The "create" command is interactive-only in this spike. Run "universe create" with no additional arguments.',
+      };
+    }
+
+    const promptResult = await promptPort.promptForCreateInputs();
+
+    if (promptResult === null || !promptResult.confirmed) {
+      return { exitCode: 1, output: "Create cancelled before writing files." };
+    }
+
+    try {
+      const validatedInput = validator.validateCreateInput(promptResult);
+
+      return {
+        exitCode: 0,
+        output: formatCreateSummary(validatedInput),
+      };
+    } catch (error) {
+      if (error instanceof CliError) {
+        safeError(observability, error);
+        return { exitCode: error.exitCode, output: error.message };
+      }
+
+      throw error;
+    }
   }
 
   return { exitCode: 1, output: `Unknown command: "${command}". Run "universe --help" for usage.` };

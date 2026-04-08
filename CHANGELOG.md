@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.3.0] - 2026-04-08
+
+### Phase 2 — `universe create` Prompt Flow and Validation
+
+- **Interactive create UX** (`src/adapters/clack-prompt-adapter.ts`, `src/cli.ts`): replaced the deferred `create` stub with an interactive-only flow so the spike can validate onboarding behavior before scaffold generation is implemented.
+- **Prompt contract + ordering** (`src/ports/prompt-port.ts`, `src/adapters/clack-prompt-adapter.test.ts`): codified the prompt port and enforced the exact Name → Runtime → Framework → Databases → Platform services → Confirmation sequence to keep downstream phases deterministic.
+- **Runtime-aware options** (`src/adapters/clack-prompt-adapter.ts`): filtered framework and multi-select choices by runtime so unsupported paths are prevented at selection time, reducing invalid combinations before generation logic lands.
+- **Typed input validation** (`src/ports/create-input-validator.ts`, `src/adapters/default-create-input-validator.ts`): added central validation for name rules, existing-target checks, `None` exclusivity, and supported matrix enforcement to produce stable, typed error behavior ahead of artifact writing.
+- **Shared CLI error base class** (`src/errors/cli-errors.ts`, `src/cli.ts`): introduced `CliError` so command handling can rely on `instanceof` rather than structural `exitCode` checks, keeping typed CLI failures explicit as more commands are implemented.
+- **Validation coverage in CLI and unit tests** (`src/cli.test.ts`, `src/adapters/default-create-input-validator.test.ts`): ensured actionable feedback reaches users and that phase-locked constraints are regression-tested.
+- **Matrix and static convention locks** (`design/create-supported-matrix.md`, `design/static-scaffold-convention.md`): documented the reduced spike matrix and static serving contract explicitly to prevent scope drift while Phase 3 builds layer/artifact generation.
+
 ## [1.2.0] - 2026-04-08
 
 ### Phase 1 — Command Surface + Stub Contract

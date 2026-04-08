@@ -65,7 +65,7 @@
 
 ## Phase 2 — `universe create` Prompt Flow and Validation
 
-- [ ] CODE: Implement interactive `create` prompt flow
+- [x] CODE: Implement interactive `create` prompt flow
   - Feature: collect name, runtime, framework, databases, and platform services.
   - Acceptance:
     - Prompts follow this order: name, runtime, framework, databases, platform services, confirmation.
@@ -73,7 +73,7 @@
     - Includes a final confirmation summary before files are written.
     - User receives actionable feedback for invalid input.
 
-- [ ] CODE: Implement `create` input validation
+- [x] CODE: Implement `create` input validation
   - Feature: validate names and supported combinations before scaffolding.
   - Acceptance:
     - Name must be lowercase kebab-case, start with a letter, and be 3–50 characters long.
@@ -82,7 +82,7 @@
     - `None` excludes all other values in the same multi-select group.
     - Unsupported runtime/framework/service combinations fail with clear unsupported-in-spike errors.
 
-- [ ] TASK: Lock the supported matrix for the spike
+- [x] TASK: Lock the supported matrix for the spike
   - Deliverable: explicit support table for generated template combinations.
   - Acceptance:
     - Supports Node.js (TypeScript) + Express.
@@ -92,7 +92,7 @@
     - Supports `None` only for Static databases and platform services.
     - Explicitly documents deferred options: Python, Go, Next.js, Fastify, Hono, Flask, MongoDB, SQLite.
 
-- [ ] TASK: Lock the Static scaffold convention
+- [x] TASK: Lock the Static scaffold convention
   - Deliverable: explicit Static project layout and local-serving convention.
   - Acceptance:
     - Static starter files live under `public/`.
