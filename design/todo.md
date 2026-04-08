@@ -2,21 +2,21 @@
 
 ## Phase 0 — Foundations (Create-First Skeleton)
 
-- [ ] TASK: Define repository structure and command execution flow for the reduced CLI spike
+- [x] TASK: Define repository structure and command execution flow for the reduced CLI spike
   - Deliverable: architecture note documenting command layer, ports, local adapters, and stub-command boundaries.
   - Acceptance:
     - Architecture note is created at `plans/universe-cli/architecture.md`.
     - Architecture document names every external boundary as a port.
     - No command directly imports infrastructure-specific implementations.
 
-- [ ] TASK: Set up test harness and quality gates for stub-only execution
+- [x] TASK: Set up test harness and quality gates for stub-only execution
   - Deliverable: unit, contract, and CLI integration test scaffolding.
   - Acceptance:
     - Tests can run locally without network access.
     - A guard test/assertion fails if a real adapter is wired in spike mode.
     - CI/local test gate includes unit + contract + CLI suites and is executable via one documented command.
 
-- [ ] TASK: Define shared error taxonomy and CLI output conventions
+- [x] TASK: Define shared error taxonomy and CLI output conventions
   - Deliverable: canonical error classes/codes + output style guide.
   - Acceptance:
     - At least 5 core error categories are defined and mapped to exit codes.
@@ -25,7 +25,7 @@
     - Example command outputs are covered by snapshot/golden tests.
     - Standardized non-implemented contract defines exact message template and exit code for all 8 deferred commands.
 
-- [ ] TASK: Add minimal observability guardrails for the spike
+- [x] TASK: Add minimal observability guardrails for the spike
   - Deliverable: `ObservabilityClient` port + default stub/no-op client + centralized command runner boundary.
   - Acceptance:
     - All commands depend on the `ObservabilityClient` port, with stub/no-op as the only spike implementation.
@@ -33,7 +33,7 @@
     - O11y is best-effort and cannot block command success/failure.
     - Contract tests verify o11y failures are swallowed and command exit behavior remains unchanged.
 
-- [ ] TASK: Create and maintain spike assumptions register
+- [x] TASK: Create and maintain spike assumptions register
   - Deliverable: living assumptions log used by the create-first phases.
   - Reference: `plans/universe-cli/assumptions-register.md`
   - Acceptance:
