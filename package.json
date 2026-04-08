@@ -1,0 +1,35 @@
+{
+  "name": "ts-template",
+  "version": "1.0.0",
+  "description": "",
+  "keywords": [],
+  "license": "BSD-3-Clause",
+  "author": "",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "test": "vitest run",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "husky": "9.1.7",
+    "lint-staged": "16.4.0",
+    "oxfmt": "0.42.0",
+    "oxlint": "1.57.0",
+    "oxlint-tsgolint": "0.17.3",
+    "typescript": "5.9.3",
+    "vitest": "3.1.1"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,mjs,cjs}": [
+      "oxlint --fix",
+      "oxfmt"
+    ],
+    "!*.{js,jsx,ts,tsx,mjs,cjs}": "oxfmt --no-error-on-unmatched-pattern"
+  },
+  "packageManager": "pnpm@10.32.1"
+}
