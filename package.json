@@ -1,22 +1,28 @@
 {
-  "name": "universe-cli",
+  "name": "universe",
   "version": "1.2.0",
   "description": "",
   "keywords": [],
   "license": "BSD-3-Clause",
   "author": "",
+  "bin": {
+    "universe": "dist/bin.js"
+  },
   "type": "module",
   "main": "index.js",
   "scripts": {
+    "build": "tsc -p tsconfig.json",
     "check": "tsc --noEmit",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
+    "start": "node dist/bin.js",
     "test": "vitest run",
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check",
     "prepare": "husky"
   },
   "devDependencies": {
+    "@types/node": "24.12.2",
     "husky": "9.1.7",
     "lint-staged": "16.4.0",
     "oxfmt": "0.42.0",

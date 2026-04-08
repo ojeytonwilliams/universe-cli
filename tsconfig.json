@@ -7,7 +7,7 @@
 
     "module": "nodenext",
     "target": "esnext",
-    "types": ["vitest/globals"],
+    "types": ["vitest/globals", "node"],
 
     // Other Outputs
     "sourceMap": true,
