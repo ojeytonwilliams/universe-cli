@@ -2,7 +2,7 @@
 
 ## Phase 1 — Trivial Prototype (first working `universe logs`)
 
-- [ ] CODE: Define logs port contract and typed logs error
+- [x] CODE: Define logs port contract and typed logs error
   - Feature: Add `LogsClient` port (request/response types) and `LogsError` in the CLI error taxonomy.
   - Acceptance:
     - `src/ports/logs-client.ts` exports a documented interface with one logs retrieval method.
@@ -10,7 +10,7 @@
     - Logs response includes project `name`, `environment`, and deterministic ordered log entries.
     - `LogsError` has one stable user-facing message style and one stable exit code.
 
-- [ ] CODE: Implement stub logs adapter with deterministic behavior
+- [x] CODE: Implement stub logs adapter with deterministic behavior
   - Feature: Add `StubLogsClient` adapter that simulates log retrieval without network access.
   - Acceptance:
     - Stub returns a deterministic list of log entries for the same project/environment pair.
@@ -18,7 +18,7 @@
     - Adapter can simulate retrieval failure for explicit test fixtures (for example, sentinel project names).
     - Adapter performs no external network calls.
 
-- [ ] CODE: Promote `logs` from deferred to implemented CLI handler
+- [x] CODE: Promote `logs` from deferred to implemented CLI handler
   - Feature: Implement `universe logs [directory] [environment]` in `runCli` and remove `logs` from deferred command set.
   - Acceptance:
     - `logs` reads `platform.yaml` from `[directory]` or `cwd` when omitted.
@@ -27,7 +27,7 @@
     - Valid manifest is passed to `LogsClient` and successful result exits `0`.
     - Success output includes project name, environment, and deterministic rendered log lines.
 
-- [ ] TASK: Wire container and dependency graph for logs
+- [x] TASK: Wire container and dependency graph for logs
   - Acceptance:
     - `src/container.ts` exports `logsClient` wired to `StubLogsClient` in spike mode.
     - CLI dependency composition includes `logsClient` without breaking existing commands.

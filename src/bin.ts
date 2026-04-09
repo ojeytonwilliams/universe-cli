@@ -9,6 +9,7 @@ import { LayerCompositionService } from "./services/layer-composition-service.js
 import { PlatformManifestService } from "./services/platform-manifest-service.js";
 import {
   deployClient,
+  logsClient,
   observabilityClient,
   promoteClient,
   registrationClient,
@@ -27,6 +28,7 @@ const { exitCode, output } = await runCli(process.argv.slice(2), {
   deployClient,
   filesystemWriter,
   layerResolver,
+  logsClient,
   observability: observabilityClient,
   platformManifestGenerator: manifestGenerator,
   projectReader,

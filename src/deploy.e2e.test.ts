@@ -8,6 +8,7 @@ import { StubDeployClient } from "./adapters/stub-deploy-client.js";
 import { StubObservabilityClient } from "./adapters/stub-observability-client.js";
 import { StubPromoteClient } from "./adapters/stub-promote-client.js";
 import { StubRegistrationClient } from "./adapters/stub-registration-client.js";
+import { StubLogsClient } from "./adapters/stub-logs-client.js";
 import { StubRollbackClient } from "./adapters/stub-rollback-client.js";
 import { CreateInputValidationService } from "./services/create-input-validation-service.js";
 import { LayerCompositionService } from "./services/layer-composition-service.js";
@@ -39,6 +40,7 @@ const createDependencies = (
   deployClient,
   filesystemWriter: new LocalFilesystemWriter(),
   layerResolver: new LayerCompositionService(),
+  logsClient: new StubLogsClient(),
   observability: new StubObservabilityClient(),
   platformManifestGenerator: new PlatformManifestService(),
   projectReader: new LocalProjectReader(),

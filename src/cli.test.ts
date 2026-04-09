@@ -22,7 +22,7 @@ const client: ObservabilityClient = {
   track() {},
 };
 
-const DEFERRED_COMMANDS = ["list", "logs", "status", "teardown"] as const;
+const DEFERRED_COMMANDS = ["list", "status", "teardown"] as const;
 
 const createPromptResult: CreateSelections = {
   confirmed: true,
@@ -115,6 +115,16 @@ const defaultRegistrationClient = {
   },
 };
 
+const defaultLogsClient = {
+  getLogs(_request: { environment: string; manifest: PlatformManifest }): Promise<{
+    entries: { level: string; message: string; timestamp: string }[];
+    environment: string;
+    name: string;
+  }> {
+    return Promise.reject(new Error("logsClient.getLogs should not be called in this test"));
+  },
+};
+
 const defaultDeployClient = {
   deploy(_request: {
     environment: string;
@@ -151,6 +161,7 @@ const createDeps = (
   deployClient: defaultDeployClient,
   filesystemWriter,
   layerResolver: passThroughLayerResolver,
+  logsClient: defaultLogsClient,
   observability: client,
   platformManifestGenerator: manifestGenerator,
   projectReader: defaultProjectReader,

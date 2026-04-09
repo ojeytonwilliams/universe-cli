@@ -1,4 +1,5 @@
 import { StubDeployClient } from "./adapters/stub-deploy-client.js";
+import { StubLogsClient } from "./adapters/stub-logs-client.js";
 import { StubObservabilityClient } from "./adapters/stub-observability-client.js";
 import { StubPromoteClient } from "./adapters/stub-promote-client.js";
 import { StubRegistrationClient } from "./adapters/stub-registration-client.js";
@@ -7,9 +8,17 @@ import { StubRollbackClient } from "./adapters/stub-rollback-client.js";
 // Spike-mode adapter wiring. All adapters exported from this module must be
 // Spike stubs. The container guard test (container.test.ts) enforces this.
 const deployClient = new StubDeployClient();
+const logsClient = new StubLogsClient();
 const observabilityClient = new StubObservabilityClient();
 const promoteClient = new StubPromoteClient();
 const registrationClient = new StubRegistrationClient();
 const rollbackClient = new StubRollbackClient();
 
-export { deployClient, observabilityClient, promoteClient, registrationClient, rollbackClient };
+export {
+  deployClient,
+  logsClient,
+  observabilityClient,
+  promoteClient,
+  registrationClient,
+  rollbackClient,
+};

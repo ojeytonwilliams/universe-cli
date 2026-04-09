@@ -4,6 +4,7 @@ const EXIT_CODES = {
   INVALID_MULTI_SELECT: 7,
   INVALID_NAME: 2,
   LAYER_CONFLICT: 9,
+  LOGS: 17,
   MANIFEST_INVALID: 12,
   MANIFEST_NOT_FOUND: 11,
   MISSING_LAYER: 8,
@@ -146,6 +147,13 @@ class DeploymentError extends CliError {
   }
 }
 
+class LogsError extends CliError {
+  constructor(name: string, reason: string) {
+    super(`Failed to retrieve logs for project "${name}": ${reason}`, EXIT_CODES.LOGS);
+    this.name = "LogsError";
+  }
+}
+
 class PromotionError extends CliError {
   constructor(name: string, reason: string) {
     super(`Failed to promote project "${name}": ${reason}`, EXIT_CODES.PROMOTION);
@@ -174,6 +182,7 @@ export {
   CliError,
   DeferredCommandError,
   DeploymentError,
+  LogsError,
   PromotionError,
   RollbackError,
   InvalidMultiSelectError,

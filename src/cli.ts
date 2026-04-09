@@ -43,6 +43,13 @@ interface CliDependencies {
   deployClient: { deploy(request: DeployRequest): Promise<DeployReceipt> };
   filesystemWriter: FilesystemWriter;
   layerResolver: { resolveLayers(input: CreateSelections): ResolvedLayerSet };
+  logsClient: {
+    getLogs(request: { environment: string; manifest: PlatformManifest }): Promise<{
+      entries: { level: string; message: string; timestamp: string }[];
+      environment: string;
+      name: string;
+    }>;
+  };
   observability: ObservabilityClient;
   platformManifestGenerator: {
     generatePlatformManifest(input: CreateSelections): string;
@@ -58,7 +65,7 @@ interface CliDependencies {
   validator: { validateCreateInput(input: CreateSelections): CreateSelections };
 }
 
-const DEFERRED_COMMANDS = new Set(["list", "logs", "status", "teardown"]);
+const DEFERRED_COMMANDS = new Set(["list", "status", "teardown"]);
 
 const runCli = async (argv: string[], deps: CliDependencies): Promise<CliResult> => {
   const {
@@ -66,6 +73,7 @@ const runCli = async (argv: string[], deps: CliDependencies): Promise<CliResult>
     deployClient,
     filesystemWriter,
     layerResolver,
+    logsClient,
     observability,
     platformManifestGenerator,
     projectReader,
@@ -327,6 +335,65 @@ const runCli = async (argv: string[], deps: CliDependencies): Promise<CliResult>
       if (error instanceof CliError) {
         safeError(observability, error);
         safeTrack(observability, "rollback.failure", { targetEnvironment });
+        return { exitCode: error.exitCode, output: error.message };
+      }
+
+      throw error;
+    }
+  }
+
+  if (command === "logs") {
+    if (argv.length > 3) {
+      return {
+        exitCode: 1,
+        output: "Too many arguments. Usage: universe logs [directory] [environment]",
+      };
+    }
+
+    const platformYamlDir = argv[1] ?? cwd;
+    const environment = argv[2] ?? "preview";
+    const platformYamlPath = join(platformYamlDir, "platform.yaml");
+
+    if (environment !== "preview" && environment !== "production") {
+      const envError = new UnsupportedCombinationError(
+        `environment "${environment}" — valid values are: preview, production`,
+      );
+      return { exitCode: envError.exitCode, output: envError.message };
+    }
+
+    safeTrack(observability, "logs.start", { environment });
+
+    try {
+      const yaml = await projectReader.readFile(platformYamlPath);
+
+      let manifest: PlatformManifest;
+      try {
+        manifest = platformManifestGenerator.validateManifest(yaml);
+      } catch (validationError) {
+        const invalidError = new ManifestInvalidError(
+          platformYamlPath,
+          validationError instanceof Error ? validationError.message : String(validationError),
+        );
+        safeError(observability, invalidError);
+        return { exitCode: invalidError.exitCode, output: invalidError.message };
+      }
+
+      const response = await logsClient.getLogs({ environment, manifest });
+
+      safeTrack(observability, "logs.success", { environment, name: response.name });
+
+      const renderedEntries = response.entries
+        .map((e) => `${e.timestamp} [${e.level}] ${e.message}`)
+        .join("\n");
+
+      return {
+        exitCode: 0,
+        output: `Logs for project "${response.name}" in ${response.environment}:\n${renderedEntries}`,
+      };
+    } catch (error) {
+      if (error instanceof CliError) {
+        safeError(observability, error);
+        safeTrack(observability, "logs.failure", { environment });
         return { exitCode: error.exitCode, output: error.message };
       }
 

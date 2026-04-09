@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.16.0] - 2026-04-09
+
+### Phase 1 — Logs Command Trivial Prototype
+
+- **`LogsClient` port** (`src/ports/logs-client.ts`): `getLogs(request): Promise<LogsResponse>`; request carries `manifest` and `environment`; response carries `name`, `environment`, and ordered log `entries`.
+- **`LogsError`** (`src/errors/cli-errors.ts`): exit code 17; message includes project name and reason.
+- **`StubLogsClient`** (`src/adapters/stub-logs-client.ts`): stateless adapter returning three deterministic entries (info/info/warn); sentinel name `logs-failure` rejects with `LogsError`.
+- **`logs` command** (`src/cli.ts`): reads `platform.yaml` from `cwd` or optional directory; environment defaults to `preview`; exits 11/12/17 on error paths; exits 0 with project name, environment, and rendered log lines on success.
+- **Container wiring** (`src/container.ts`, `src/bin.ts`): `StubLogsClient` exported as `logsClient` and wired into `runCli`.
+
 ## [2.15.0] - 2026-04-09
 
 ### Phases 1–3 — Rollback Command (Stub Adapter)
