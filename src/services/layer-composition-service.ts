@@ -1,3 +1,4 @@
+import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import { LayerConflictError, MissingLayerError } from "../errors/cli-errors.js";
 import type { CreateSelections } from "../ports/prompt-port.js";
 
@@ -307,7 +308,7 @@ class LayerCompositionService {
       return JSON.parse(content) as JsonValue;
     }
 
-    return JSON.parse(content) as JsonValue;
+    return parseYaml(content) as JsonValue;
   }
 
   private stringifyConfig(filePath: string, value: JsonValue): string {
@@ -315,7 +316,7 @@ class LayerCompositionService {
       return JSON.stringify(this.sortJson(value));
     }
 
-    return JSON.stringify(this.sortJson(value));
+    return stringifyYaml(value);
   }
 
   private mergeValues(left: JsonValue, right: JsonValue): JsonValue {

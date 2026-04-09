@@ -18,7 +18,7 @@
 
 > ⚠️ **Dependency gate:** a YAML library must be installed before implementation. Ask for `pnpm add --save-exact yaml` before starting.
 
-- [ ] CODE: Implement correct YAML parse and serialise in `LayerCompositionService`'s `parseConfig`/`stringifyConfig` methods
+- [x] CODE: Implement correct YAML parse and serialise in `LayerCompositionService`'s `parseConfig`/`stringifyConfig` methods
   - Acceptance:
     - `.yaml`/`.yml` files are parsed with a YAML parser, not `JSON.parse`.
     - `stringifyConfig` emits valid YAML (not JSON) for `.yaml`/`.yml` paths.

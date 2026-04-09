@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.0] - 2026-04-09
+
+### Phase 2 — YAML Config Serialisation
+
+- **YAML parse and serialise in `LayerCompositionService`** ([src/services/layer-composition-service.ts](src/services/layer-composition-service.ts)): `.yaml`/`.yml` config files are now parsed with the `yaml` library instead of `JSON.parse`, and `stringifyConfig` emits valid human-readable YAML for those paths; JSON round-trip behavior is unchanged.
+- **YAML serialisation tests** ([src/services/layer-composition-service.test.ts](src/services/layer-composition-service.test.ts)): added four cases covering YAML-only merge, `.yml` merge, JSON-only round-trip preservation, and combined JSON+YAML layer resolution.
+
 ## [2.1.0] - 2026-04-09
 
 ### Phase 1 — E2E Test Strategy Refactor

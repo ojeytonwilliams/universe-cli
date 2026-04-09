@@ -182,6 +182,116 @@ describe(LayerCompositionService, () => {
     expect(act).toThrow(LayerConflictError);
   });
 
+  describe("yaml config serialisation", () => {
+    const makeYamlService = (overrides?: Record<string, Record<string, string>>) =>
+      new LayerCompositionService({
+        always: { "README.md": "# test\n" },
+        "base/node-js-typescript": { "package.json": '{"name":"test"}' },
+        "base/static": { "public/index.html": "<h1>test</h1>\n" },
+        "frameworks/express": {},
+        "frameworks/none": {},
+        ...overrides,
+      });
+
+    it("merges YAML config files and emits valid YAML output", () => {
+      const service = makeYamlService({
+        "base/node-js-typescript": {
+          "docker-compose.yaml": "version: '3'\nservices:\n  app:\n    image: node:22\n",
+        },
+        "frameworks/express": {
+          "docker-compose.yaml": "services:\n  app:\n    ports:\n      - '3000:3000'\n",
+        },
+      });
+
+      const result = service.resolveLayers({
+        confirmed: true,
+        databases: ["None"],
+        framework: "Express",
+        name: "test",
+        platformServices: ["None"],
+        runtime: "Node.js (TypeScript)",
+      });
+
+      const output = result.files["docker-compose.yaml"];
+
+      expect(output).toBeDefined();
+      expect(output).toContain("image: node:22");
+      expect(output).toContain("3000:3000");
+      expect(output).not.toContain("{");
+    });
+
+    it("merges .yml config files and emits valid YAML output", () => {
+      const service = makeYamlService({
+        "base/node-js-typescript": { "config.yml": "env: base\nshared: common\n" },
+        "frameworks/express": { "config.yml": "env: extended\n" },
+      });
+
+      const result = service.resolveLayers({
+        confirmed: true,
+        databases: ["None"],
+        framework: "Express",
+        name: "test",
+        platformServices: ["None"],
+        runtime: "Node.js (TypeScript)",
+      });
+
+      const output = result.files["config.yml"];
+
+      expect(output).toContain("env: extended");
+      expect(output).toContain("shared: common");
+      expect(output).not.toContain("{");
+    });
+
+    it("preserves JSON round-trip behavior unchanged", () => {
+      const service = makeYamlService({
+        "base/node-js-typescript": { "package.json": '{"scripts":{"build":"tsc"}}' },
+        "frameworks/express": { "package.json": '{"dependencies":{"express":"5.1.0"}}' },
+      });
+
+      const result = service.resolveLayers({
+        confirmed: true,
+        databases: ["None"],
+        framework: "Express",
+        name: "test",
+        platformServices: ["None"],
+        runtime: "Node.js (TypeScript)",
+      });
+
+      expect(result.files["package.json"]).toBe(
+        '{"dependencies":{"express":"5.1.0"},"scripts":{"build":"tsc"}}',
+      );
+    });
+
+    it("resolves layers containing both JSON and YAML config files", () => {
+      const service = makeYamlService({
+        "base/node-js-typescript": {
+          "docker-compose.yaml": "services:\n  app:\n    image: node:22\n",
+          "package.json": '{"scripts":{"build":"tsc"}}',
+        },
+        "frameworks/express": {
+          "docker-compose.yaml": "services:\n  app:\n    ports:\n      - '3000:3000'\n",
+          "package.json": '{"dependencies":{"express":"5.1.0"}}',
+        },
+      });
+
+      const result = service.resolveLayers({
+        confirmed: true,
+        databases: ["None"],
+        framework: "Express",
+        name: "test",
+        platformServices: ["None"],
+        runtime: "Node.js (TypeScript)",
+      });
+
+      expect(result.files["package.json"]).toBe(
+        '{"dependencies":{"express":"5.1.0"},"scripts":{"build":"tsc"}}',
+      );
+      expect(result.files["docker-compose.yaml"]).toContain("image: node:22");
+      expect(result.files["docker-compose.yaml"]).toContain("3000:3000");
+      expect(result.files["docker-compose.yaml"]).not.toContain("{");
+    });
+  });
+
   describe("combination coverage with default registry", () => {
     const service = new LayerCompositionService();
 
