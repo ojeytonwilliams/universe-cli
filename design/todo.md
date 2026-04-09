@@ -35,7 +35,7 @@
 
 ## Phase 2 — Behavior Hardening and UX Consistency
 
-- [ ] CODE: Add logs argument validation and usage guards
+- [x] CODE: Add logs argument validation and usage guards
   - Feature: Enforce bounded logs arguments and deterministic defaults.
   - Acceptance:
     - Command accepts `universe logs`, `universe logs [directory]`, and `universe logs [directory] [environment]`.
@@ -43,14 +43,14 @@
     - Unsupported environment value returns typed unsupported-combination style error.
     - Environment defaults to `preview` when omitted.
 
-- [ ] CODE: Add non-blocking observability calls for logs flow
+- [x] CODE: Add non-blocking observability calls for logs flow
   - Feature: Emit logs retrieval telemetry through `ObservabilityClient` using safe wrappers.
   - Acceptance:
     - Logs request start, success, and failure are tracked with non-sensitive fields only.
     - Observability failures do not change logs result or exit code.
     - No tokens, credentials, or raw environment values are emitted in telemetry payloads.
 
-- [ ] TASK: Align logs UX copy with existing command output style
+- [x] TASK: Align logs UX copy with existing command output style
   - Acceptance:
     - Error and success copy follows existing imperative/actionable tone.
     - Logs output remains deterministic for snapshot-friendly testing.

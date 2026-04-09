@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.17.0] - 2026-04-09
+
+### Phase 2 — Logs Command Behavior Hardening
+
+- **Argument validation**: `universe logs` accepts zero, one, or two arguments; excess arguments exit 1 with usage guidance; unsupported environment exits 6 via `UnsupportedCombinationError`; environment defaults to `preview`.
+- **Observability**: `logs.start`, `logs.success`, and `logs.failure` events emitted via `safeTrack`; observability errors do not affect exit code or output.
+- **UX copy**: success output format `Logs for project "<name>" in <env>:\n<entries>`; log entries rendered as `<timestamp> [<level>] <message>`.
+
 ## [2.16.0] - 2026-04-09
 
 ### Phase 1 — Logs Command Trivial Prototype
