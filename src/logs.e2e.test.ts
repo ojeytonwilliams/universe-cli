@@ -1,0 +1,96 @@
+/* oxlint-disable import/max-dependencies -- E2E tests require full adapter wiring */
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { LocalFilesystemWriter } from "./adapters/local-filesystem-writer.js";
+import { LocalProjectReader } from "./adapters/local-project-reader.js";
+import { StubDeployClient } from "./adapters/stub-deploy-client.js";
+import { StubLogsClient } from "./adapters/stub-logs-client.js";
+import { StubObservabilityClient } from "./adapters/stub-observability-client.js";
+import { StubPromoteClient } from "./adapters/stub-promote-client.js";
+import { StubRegistrationClient } from "./adapters/stub-registration-client.js";
+import { StubRollbackClient } from "./adapters/stub-rollback-client.js";
+import { CreateInputValidationService } from "./services/create-input-validation-service.js";
+import { LayerCompositionService } from "./services/layer-composition-service.js";
+import { PlatformManifestService } from "./services/platform-manifest-service.js";
+import { runCli } from "./cli.js";
+import type { CreateSelections, PromptPort } from "./ports/prompt-port.js";
+
+const createNodeSelection = (name: string): CreateSelections => ({
+  confirmed: true,
+  databases: ["none"],
+  framework: "express",
+  name,
+  platformServices: ["none"],
+  runtime: "node_ts",
+});
+
+const createPromptPort = (selection: CreateSelections | null): PromptPort => ({
+  promptForCreateInputs() {
+    return Promise.resolve(selection);
+  },
+});
+
+const createDependencies = (cwd: string, promptPort: PromptPort) => ({
+  cwd,
+  deployClient: new StubDeployClient(),
+  filesystemWriter: new LocalFilesystemWriter(),
+  layerResolver: new LayerCompositionService(),
+  logsClient: new StubLogsClient(),
+  observability: new StubObservabilityClient(),
+  platformManifestGenerator: new PlatformManifestService(),
+  projectReader: new LocalProjectReader(),
+  promoteClient: new StubPromoteClient(),
+  promptPort,
+  registrationClient: new StubRegistrationClient(),
+  rollbackClient: new StubRollbackClient(),
+  validator: new CreateInputValidationService((path) => existsSync(join(cwd, path))),
+});
+
+describe("logs e2e", () => {
+  const tempDirectories: string[] = [];
+
+  afterEach(() => {
+    for (const directory of tempDirectories) {
+      rmSync(directory, { force: true, recursive: true });
+    }
+
+    tempDirectories.length = 0;
+  });
+
+  it("retrieves logs for a project scaffolded by universe create", async () => {
+    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-logs-e2e-"));
+    tempDirectories.push(rootDirectory);
+
+    const projectName = "e2e-logs-app";
+    const deps = createDependencies(
+      rootDirectory,
+      createPromptPort(createNodeSelection(projectName)),
+    );
+    const projectDir = join(rootDirectory, projectName);
+
+    const createResult = await runCli(["create"], deps);
+    expect(createResult.exitCode).toBe(0);
+
+    const logsResult = await runCli(["logs", projectDir], deps);
+    expect(logsResult.exitCode).toBe(0);
+    expect(logsResult.output).toContain(projectName);
+    expect(logsResult.output).toContain("preview");
+  });
+
+  it("exits 17 for the sentinel failure project name", async () => {
+    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-logs-e2e-"));
+    tempDirectories.push(rootDirectory);
+
+    const deps = createDependencies(
+      rootDirectory,
+      createPromptPort(createNodeSelection("logs-failure")),
+    );
+    const projectDir = join(rootDirectory, "logs-failure");
+
+    await runCli(["create"], deps);
+
+    const result = await runCli(["logs", projectDir], deps);
+    expect(result.exitCode).toBe(17);
+  });
+});

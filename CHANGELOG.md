@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.18.0] - 2026-04-09
+
+### Phase 3 — Logs Command Test Coverage, Guardrails, and Documentation
+
+- **Stub adapter unit tests** (`src/adapters/stub-logs-client.test.ts`): deterministic entry ordering, stable field types, repeated calls return same entries, sentinel failure raises `LogsError`, instance isolation.
+- **CLI integration tests** (`src/cli.logs.test.ts`): 13 tests covering all success and error paths, argument validation, observability, and default environment.
+- **E2E tests** (`src/logs.e2e.test.ts`): create-then-logs flow, sentinel failure exit 17.
+- **Container guard** (`src/container.test.ts`): asserts `logsClient` is an instance of `StubLogsClient`.
+- **Design docs**: LOG-001–005 validated in `design/assumptions-register.md`; `design/future-command-expansion.md` lists `logs` as implemented at v2.16.0.
+
 ## [2.17.0] - 2026-04-09
 
 ### Phase 2 — Logs Command Behavior Hardening

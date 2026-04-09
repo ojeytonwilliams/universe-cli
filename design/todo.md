@@ -57,14 +57,14 @@
 
 ## Phase 3 — Test Coverage, Guardrails, and Documentation
 
-- [ ] CODE: Add unit tests for logs stub adapter and port contract behavior
+- [x] CODE: Add unit tests for logs stub adapter and port contract behavior
   - Feature: Create `StubLogsClient` tests covering success, deterministic entries, and simulated failures.
   - Acceptance:
     - Tests verify deterministic entry ordering and stable field values.
     - Tests verify failure path raises `LogsError`.
     - Tests verify state isolation between adapter instances when applicable.
 
-- [ ] CODE: Add CLI integration tests for logs success and error paths
+- [x] CODE: Add CLI integration tests for logs success and error paths
   - Feature: Extend `src/cli.test.ts` logs coverage for implemented behavior.
   - Acceptance:
     - Success path validates output and exit code `0`.
@@ -73,14 +73,14 @@
     - Logs-client failure path validates typed logs error exit code.
     - Deferred-command test set excludes `logs` and still validates remaining deferred commands.
 
-- [ ] CODE: Add E2E flow for create-then-logs and container guard
+- [x] CODE: Add E2E flow for create-then-logs and container guard
   - Feature: Add `logs.e2e` coverage and spike container guard for logs wiring.
   - Acceptance:
     - E2E test scaffolds with `create`, then successfully runs `logs` against generated `platform.yaml`.
     - E2E test covers at least one logs failure fixture with deterministic assertion.
     - Container guard test asserts `logsClient` is an instance of `StubLogsClient`.
 
-- [ ] TASK: Update design docs and migration notes for logs promotion
+- [x] TASK: Update design docs and migration notes for logs promotion
   - Acceptance:
     - `design/future-command-expansion.md` marks `logs` as implemented in spike mode.
     - `design/assumptions-register.md` records logs-specific assumptions and validation outcomes.
