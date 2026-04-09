@@ -8,7 +8,6 @@ Document how the remaining deferred commands evolve from the shared non-implemen
 
 The deferred commands are:
 
-- `rollback`
 - `logs`
 - `status`
 - `list`
@@ -31,13 +30,14 @@ The following commands have been promoted from deferred to fully implemented aga
 | `register` | `RegistrationClient` | `StubRegistrationClient` | v2.8.0      |
 | `deploy`   | `DeployClient`       | `StubDeployClient`       | v2.10.0     |
 | `promote`  | `PromoteClient`      | `StubPromoteClient`      | v2.12.0     |
+| `rollback` | `RollbackClient`     | `StubRollbackClient`     | v2.14.0     |
 
 Each implemented command:
 
 - Reads `platform.yaml` via `ProjectReaderPort` / `LocalProjectReader`.
 - Validates the manifest via `PlatformManifestService.validateManifest`.
 - Delegates to its port adapter.
-- Emits lifecycle telemetry via `safeTrack` (deploy) or errors via `safeError`.
+- Emits lifecycle telemetry via `safeTrack` and routes failures through best-effort observability handling.
 - Has typed error classes with stable exit codes.
 
 ## Migration Path by Command
@@ -63,9 +63,9 @@ For each deferred command:
 - Add E2E flows for success/failure paths per command.
 - Keep standardized error style and exit semantics across commands.
 
-## Shared Infrastructure Reusable for `register`
+## Shared Infrastructure Reusable for promoted commands
 
-`register` can reuse the following existing infrastructure directly:
+`register`, `deploy`, `promote`, and `rollback` can reuse the following existing infrastructure directly:
 
 - `runCli` command dispatch and result contract (`CliResult`).
 - Shared typed error base (`CliError`) and exit-code mapping style.
@@ -73,12 +73,12 @@ For each deferred command:
 - Existing deferred command test patterns for CLI flow assertions.
 - Current dependency-injection style used by `create` tests (prompt/validator/writer style).
 
-## New Adapter Capabilities Needed for `register`
+## New Adapter Capabilities Needed for future promoted commands
 
-When `register` is implemented, expected new ports/adapters include:
+When the next deferred commands are implemented, expected new ports/adapters include:
 
 - Project state reader (read generated project metadata and manifest safely).
-- Registration API client (stub + real implementation).
+- Command-specific lifecycle client (stub + real implementation).
 - Identity/owner resolution adapter.
 - Optional artifact validation adapter (manifest/schema checks).
 

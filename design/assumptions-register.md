@@ -271,6 +271,56 @@ Use this register throughout the spike. Update it at the end of each phase.
 
 ---
 
+## Command — `rollback`
+
+### Current assumptions
+
+| ID      | Port/Area             | Assumption                                                                                                                                    | Why Needed                                                                         | Validation Plan                                                                                      | Status | Notes                                                                                |
+| ------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------ |
+| RLB-001 | rollback command flow | `rollback` can follow the same manifest-first pattern as `deploy` and `promote`, reading `platform.yaml` from a directory or `cwd` by default | Reuses existing manifest parsing/validation path and keeps CLI behavior consistent | Validate with CLI tests for default-path and explicit-directory rollback flows                       | open   | Keeps rollback non-interactive in spike mode                                         |
+| RLB-002 | target environment    | A reduced rollback target set with `production` as the default is sufficient for the spike                                                    | Keeps scope small while exercising command-specific rollback behavior              | Validate with argument parsing tests, success-path tests, and assumptions review                     | open   | Additional target environments can be added when real provider contracts are defined |
+| RLB-003 | stub rollback adapter | A deterministic in-memory stub is sufficient to validate rollback UX without simulating full deployment-history orchestration                 | Avoids premature modeling of provider internals while proving command shape        | Validate with unit tests for deterministic IDs, repeated rollbacks, and explicit failure fixtures    | open   | Stub must remain network-free and reset between instances                            |
+| RLB-004 | error taxonomy        | `rollback` needs a command-specific typed failure (`RollbackError`) rather than the shared deferred-command contract once promoted            | Preserves actionable UX and stable exit semantics after command promotion          | Validate with CLI and adapter tests covering rollback-client failures                                | open   | Exit code must be unique and documented in `EXIT_CODES`                              |
+| RLB-005 | observability guard   | Rollback telemetry can use the existing `ObservabilityClient` port and must remain best-effort and secret-safe                                | Avoids introducing a new observability boundary for one command                    | Validate with tests that simulate observability failure and assert rollback exit/result is unchanged | open   | Payloads must exclude secrets, credentials, and raw environment configuration values |
+
+#### Unknowns
+
+| ID      | Port/Area         | Unknown                                                                                                       | Risk if Wrong | Decision Needed By                         | Owner    | Notes                                                                 |
+| ------- | ----------------- | ------------------------------------------------------------------------------------------------------------- | ------------- | ------------------------------------------ | -------- | --------------------------------------------------------------------- |
+| RLB-U01 | rollback receipt  | Whether the real platform returns only a rollback identifier or richer metadata (restored version, timestamp) | Medium        | Before replacing the stub adapter          | platform | Keep stub receipt minimal but extendable                              |
+| RLB-U02 | target mapping    | Whether future rollback targets will use friendly names (`production`) or provider-specific labels            | Medium        | Before real rollback contract is finalized | platform | Normalize to CLI-facing names in spike; map later if provider differs |
+| RLB-U03 | failure semantics | Which provider failure classes should become typed errors beyond `RollbackError`                              | Medium        | Before production adapter implementation   | platform | Spike keeps one typed rollback failure to avoid speculative taxonomy  |
+
+#### Required adapter/provider capabilities
+
+| ID      | Port/Area                 | Required capability (CLI-owned contract)                                                     | Source command behavior             | Priority    | Notes                                                            |
+| ------- | ------------------------- | -------------------------------------------------------------------------------------------- | ----------------------------------- | ----------- | ---------------------------------------------------------------- |
+| RLB-C01 | rollback client           | `rollback(input) -> receipt` with normalized `RollbackError` failures                        | `universe rollback` success path    | must-have   | Input should include manifest and target environment             |
+| RLB-C02 | project reader            | `readFile(filePath) -> manifestYaml`                                                         | Manifest lookup for rollback        | must-have   | Reuses existing `ProjectReaderPort` capability from `register`   |
+| RLB-C03 | platform manifest service | `validateManifest(yaml) -> PlatformManifest`                                                 | Manifest validation before rollback | must-have   | Reuses existing validation path                                  |
+| RLB-C04 | observability client      | `track()` and `error()` remain non-blocking when rollback emits start/success/failure events | Rollback telemetry                  | should-have | Must preserve safe wrapper behavior already used by the CLI flow |
+
+#### New assumptions discovered during implementation
+
+| ID  | Port/Area | New assumption | Trigger/Context | Validation Plan | Status | Notes |
+| --- | --------- | -------------- | --------------- | --------------- | ------ | ----- |
+
+#### Validation evidence and outcomes
+
+- Evidence links / artifacts:
+  - [ ] Test(s):
+  - [ ] Notes/docs:
+  - [ ] Decision updates:
+- ## Outcome summary:
+
+#### Impact if assumptions changed
+
+- Affected command behavior: `universe rollback` argument model, success output, and failure mapping
+- Affected ports/adapters: `RollbackClient`, stub rollback adapter, manifest validation reuse, observability wrappers
+- Required TODO/PRD changes: rollback TODO phase ordering, rollback error taxonomy, and migration notes for real adapter parity
+
+---
+
 ## Command Template
 
 ### Command — `<name>`
