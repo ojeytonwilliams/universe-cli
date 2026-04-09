@@ -321,6 +321,56 @@ Use this register throughout the spike. Update it at the end of each phase.
 
 ---
 
+## Command — `logs`
+
+### Current assumptions
+
+| ID      | Port/Area         | Assumption                                                                                                                                     | Why Needed                                                                         | Validation Plan                                                                                  | Status | Notes                                                                         |
+| ------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ------ | ----------------------------------------------------------------------------- |
+| LOG-001 | logs command flow | `logs` can follow the same manifest-first pattern as the other promoted commands, reading `platform.yaml` from a directory or `cwd` by default | Reuses existing manifest parsing/validation path and keeps CLI behavior consistent | Validate with CLI tests for default-path and explicit-directory logs flows                       | open   | Keeps logs non-interactive in spike mode                                      |
+| LOG-002 | environment scope | A reduced environment set with `preview` as the default is sufficient for the spike                                                            | Keeps scope small while exercising command-specific log retrieval behavior         | Validate with argument parsing tests, success-path tests, and assumptions review                 | open   | Additional environments can be added when real provider contracts are defined |
+| LOG-003 | stub logs adapter | A deterministic stub response is sufficient to validate logs UX without simulating a real streaming backend                                    | Avoids premature modeling of provider internals while proving command shape        | Validate with unit tests for stable entries, repeated reads, and explicit failure fixtures       | open   | Stub must remain network-free and snapshot-friendly                           |
+| LOG-004 | error taxonomy    | `logs` needs a command-specific typed failure (`LogsError`) rather than the shared deferred-command contract once promoted                     | Preserves actionable UX and stable exit semantics after command promotion          | Validate with CLI and adapter tests covering logs-client failures                                | open   | Exit code must be unique and documented in `EXIT_CODES`                       |
+| LOG-005 | observability     | Logs telemetry can use the existing `ObservabilityClient` port and must remain best-effort and secret-safe                                     | Avoids introducing a new observability boundary for one command                    | Validate with tests that simulate observability failure and assert logs exit/result is unchanged | open   | Payloads must exclude secrets and raw configuration values                    |
+
+#### Unknowns
+
+| ID      | Port/Area       | Unknown                                                                                  | Risk if Wrong | Decision Needed By                       | Owner    | Notes                                                            |
+| ------- | --------------- | ---------------------------------------------------------------------------------------- | ------------- | ---------------------------------------- | -------- | ---------------------------------------------------------------- |
+| LOG-U01 | logs response   | Whether the real platform will return raw lines only or structured entries with metadata | Medium        | Before replacing the stub adapter        | platform | Keep stub entries structured but minimal                         |
+| LOG-U02 | retention model | Whether future logs queries need paging, tailing, or time-range filters                  | Medium        | Before real logs contract is finalized   | platform | Spike keeps one simple deterministic fetch path                  |
+| LOG-U03 | failure model   | Which provider failure classes should become typed errors beyond `LogsError`             | Medium        | Before production adapter implementation | platform | Spike keeps one typed logs failure to avoid speculative taxonomy |
+
+#### Required adapter/provider capabilities
+
+| ID      | Port/Area                 | Required capability (CLI-owned contract)                                                 | Source command behavior         | Priority    | Notes                                                            |
+| ------- | ------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------- | ----------- | ---------------------------------------------------------------- |
+| LOG-C01 | logs client               | `fetchLogs(input) -> response` with normalized `LogsError` failures                      | `universe logs` success path    | must-have   | Input should include manifest and target environment             |
+| LOG-C02 | project reader            | `readFile(filePath) -> manifestYaml`                                                     | Manifest lookup for logs        | must-have   | Reuses existing `ProjectReaderPort` capability from `register`   |
+| LOG-C03 | platform manifest service | `validateManifest(yaml) -> PlatformManifest`                                             | Manifest validation before logs | must-have   | Reuses existing validation path                                  |
+| LOG-C04 | observability client      | `track()` and `error()` remain non-blocking when logs emits start/success/failure events | Logs telemetry                  | should-have | Must preserve safe wrapper behavior already used by the CLI flow |
+
+#### New assumptions discovered during implementation
+
+| ID  | Port/Area | New assumption | Trigger/Context | Validation Plan | Status | Notes |
+| --- | --------- | -------------- | --------------- | --------------- | ------ | ----- |
+
+#### Validation evidence and outcomes
+
+- Evidence links / artifacts:
+  - [ ] Test(s):
+  - [ ] Notes/docs:
+  - [ ] Decision updates:
+- ## Outcome summary:
+
+#### Impact if assumptions changed
+
+- Affected command behavior: `universe logs` argument model, rendered output, and failure mapping
+- Affected ports/adapters: `LogsClient`, stub logs adapter, manifest validation reuse, observability wrappers
+- Required TODO/PRD changes: logs TODO phase ordering, logs error taxonomy, and migration notes for real adapter parity
+
+---
+
 ## Command Template
 
 ### Command — `<name>`

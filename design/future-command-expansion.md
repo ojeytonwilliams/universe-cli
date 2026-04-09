@@ -8,7 +8,6 @@ Document how the remaining deferred commands evolve from the shared non-implemen
 
 The deferred commands are:
 
-- `logs`
 - `status`
 - `list`
 - `teardown`
@@ -31,13 +30,14 @@ The following commands have been promoted from deferred to fully implemented aga
 | `deploy`   | `DeployClient`       | `StubDeployClient`       | v2.10.0     |
 | `promote`  | `PromoteClient`      | `StubPromoteClient`      | v2.12.0     |
 | `rollback` | `RollbackClient`     | `StubRollbackClient`     | v2.14.0     |
+| `logs`     | `LogsClient`         | `StubLogsClient`         | v2.16.0     |
 
 Each implemented command:
 
 - Reads `platform.yaml` via `ProjectReaderPort` / `LocalProjectReader`.
 - Validates the manifest via `PlatformManifestService.validateManifest`.
 - Delegates to its port adapter.
-- Emits lifecycle telemetry via `safeTrack` and routes failures through best-effort observability handling.
+- Uses best-effort observability handling for command telemetry and failures.
 - Has typed error classes with stable exit codes.
 
 ## Migration Path by Command
@@ -65,7 +65,7 @@ For each deferred command:
 
 ## Shared Infrastructure Reusable for promoted commands
 
-`register`, `deploy`, `promote`, and `rollback` can reuse the following existing infrastructure directly:
+`register`, `deploy`, `promote`, `rollback`, and `logs` can reuse the following existing infrastructure directly:
 
 - `runCli` command dispatch and result contract (`CliResult`).
 - Shared typed error base (`CliError`) and exit-code mapping style.
@@ -78,7 +78,7 @@ For each deferred command:
 When the next deferred commands are implemented, expected new ports/adapters include:
 
 - Project state reader (read generated project metadata and manifest safely).
-- Command-specific lifecycle client (stub + real implementation).
+- Command-specific lifecycle or query client (stub + real implementation).
 - Identity/owner resolution adapter.
 - Optional artifact validation adapter (manifest/schema checks).
 
