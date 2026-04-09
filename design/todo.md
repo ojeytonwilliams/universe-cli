@@ -1,107 +1,101 @@
-# TODO — `universe register`
+# Deploy Command TODO Plan (Stub Adapter)
 
-`register` is the first command to go through the contract-first, stub-backed cycle after
-`create`. Port contract definition is the implementation gate (FR-12): no adapter or
-command code is written until the contracts for `ProjectReaderPort` and
-`RegistrationClient` are agreed.
+## Phase 1 — Trivial Prototype (first working `universe deploy`)
 
-## Phase 1: Contract definition (implementation gate)
-
-- [x] TASK: Define `ProjectReaderPort` contract
-  - Files: `src/ports/project-reader.ts`
+- [ ] CODE: Define deploy port contract and typed deploy error
+  - Feature: Add `DeployClient` port (request/receipt types) and `DeploymentError` in the CLI error taxonomy.
   - Acceptance:
-    - Interface declares `readFile(filePath: string): Promise<string>`.
-    - Throws `ManifestNotFoundError` when the file does not exist; any other filesystem error propagates as-is.
-    - File contains no implementation code.
-    - Exported and importable via `import type`.
+    - `src/ports/deploy-client.ts` exports a documented interface with a single deploy method.
+    - Deploy request includes normalized manifest and target environment (`preview` default).
+    - Deploy receipt includes deterministic `deploymentId`, project `name`, and `environment`.
+    - `DeploymentError` has one stable user-facing message style and one stable exit code.
 
-- [x] TASK: Define `RegistrationClient` contract
-  - Files: `src/ports/registration-client.ts`
+- [ ] CODE: Implement stub deploy adapter with deterministic behavior
+  - Feature: Add `StubDeployClient` adapter that simulates a successful deployment without network access.
   - Acceptance:
-    - Interface declares `register(manifest: PlatformManifest): Promise<RegistrationReceipt>`.
-    - `RegistrationReceipt` type is defined in the same file and captures the fields the real platform service will return (at minimum: `registrationId: string`, `name: string`).
-    - Throws `RegistrationError` on failure.
-    - File contains no implementation code.
-    - Imports `PlatformManifest` type from `src/services/platform-manifest-service.ts`.
+    - First deploy for a project/environment returns `deploymentId` `stub-<name>-<environment>-1`.
+    - Repeated deploys for the same project/environment increment the sequence number deterministically.
+    - Adapter can simulate failure for explicit test fixtures (e.g., known sentinel project name).
+    - Adapter performs no external network calls.
 
-- [x] TASK: Extend error taxonomy with `register`-specific errors
-  - Files: `src/errors/cli-errors.ts`, `src/errors/cli-errors.test.ts`
+- [ ] CODE: Promote `deploy` from deferred to implemented CLI handler
+  - Feature: Implement `universe deploy [directory] [environment]` in `runCli` and remove `deploy` from deferred command set.
   - Acceptance:
-    - `ManifestNotFoundError` (exit 11): message includes the attempted file path.
-    - `ManifestInvalidError` (exit 12): message includes the file path and the validation reason.
-    - `RegistrationError` (exit 13): message includes the project name and the failure reason.
-    - Exit codes 11–13 added to `EXIT_CODES`; the existing uniqueness test continues to pass.
-    - All three classes are snapshot-tested in `cli-errors.test.ts`.
+    - `deploy` reads `platform.yaml` from `[directory]` or `cwd` when omitted.
+    - Missing `platform.yaml` returns typed missing-manifest error path.
+    - Invalid manifest returns typed manifest-invalid error with validation reason.
+    - Valid manifest is passed to `DeployClient` and successful result exits `0`.
+    - Success output includes project name, environment, and deployment ID.
 
-## Phase 2: `ProjectReader` adapter
-
-- [x] CODE: `LocalProjectReader` adapter
-  - Feature: Read the content of an existing file from the local filesystem, mapping `ENOENT` to `ManifestNotFoundError`.
-  - Files: `src/adapters/local-project-reader.ts`, `src/adapters/local-project-reader.test.ts`
+- [ ] TASK: Wire container and dependency graph for deploy
   - Acceptance:
-    - `readFile(filePath)` resolves with the UTF-8 string content of the file when it exists.
-    - `readFile(filePath)` throws `ManifestNotFoundError` (with the path) when the file does not exist.
-    - Any other filesystem error propagates as-is without wrapping.
-    - Unit tests cover the success and `ENOENT` paths using a real temp directory (no mocks).
+    - `src/container.ts` exports `deployClient` wired to `StubDeployClient` in spike mode.
+    - CLI dependency composition includes `deployClient` without breaking existing commands.
+    - Help text and usage strings remain accurate after deploy promotion.
 
-## Phase 3: `RegistrationClient` stub adapter
+## Phase 2 — Behavior Hardening and UX Consistency
 
-- [x] CODE: `StubRegistrationClient` adapter
-  - Feature: A stub adapter that simulates realistic registration behaviour, fulfilling `RegistrationClient` until the real platform service exists.
-  - Files: `src/adapters/stub-registration-client.ts`, `src/adapters/stub-registration-client.test.ts`
+- [ ] CODE: Add deploy argument validation and usage guards
+  - Feature: Enforce bounded deploy arguments and deterministic defaults.
   - Acceptance:
-    - `register(manifest)` returns a `RegistrationReceipt` with a deterministic fabricated `registrationId` derived from the project name (e.g. `stub-<name>`) and the manifest `name`.
-    - Simulates an already-registered failure: a second call with the same project name throws `RegistrationError`.
-    - In-memory state is reset on construction; each test creates a fresh instance.
-    - Unit tests cover: first registration succeeds and returns a receipt, second registration for the same name throws `RegistrationError`, app and static manifests both succeed.
-    - `src/container.ts` is updated to wire `StubRegistrationClient`.
-    - The spike-guard test in `src/container.test.ts` is updated to include `StubRegistrationClient`.
+    - Command accepts `universe deploy`, `universe deploy [directory]`, and `universe deploy [directory] [environment]`.
+    - Invalid arity returns stable usage guidance and non-zero exit code.
+    - Unsupported environment value returns typed unsupported-combination style error.
+    - Environment defaults to `preview` when omitted.
 
-## Phase 4: `register` command
-
-- [x] CODE: `register` command implementation
-  - Feature: Implement `universe register [directory]` — reads `platform.yaml`, validates it, submits to `RegistrationClient`, and exits 0 with the project name and registration ID on success.
-  - Files: `src/cli.ts`, `src/bin.ts`
+- [ ] CODE: Add non-blocking observability calls for deploy flow
+  - Feature: Emit deploy lifecycle telemetry through `ObservabilityClient` using safe wrappers.
   - Acceptance:
-    - `register` is removed from `DEFERRED_COMMANDS` in `src/cli.ts`.
-    - `CliDependencies` gains `projectReader` and `registrationClient` as inline structural types.
-    - `universe register` (no args) resolves `platform.yaml` relative to `cwd`.
-    - `universe register <dir>` resolves `platform.yaml` relative to the given directory.
-    - Arguments beyond one optional directory return exit 1 with an actionable message.
-    - A missing `platform.yaml` throws `ManifestNotFoundError` (exit 11).
-    - A malformed or schema-invalid `platform.yaml` throws `ManifestInvalidError` (exit 12); both YAML parse errors and `ZodError` are caught and wrapped.
-    - A `RegistrationError` from the client returns exit 13.
-    - On success, exits 0 and output contains the project name and registration ID.
-    - `src/bin.ts` wires `LocalProjectReader` and `StubRegistrationClient`.
+    - Deploy start, success, and failure are tracked with non-sensitive fields only.
+    - Observability failures do not change deploy result or exit code.
+    - No tokens, credentials, or raw environment values are emitted in telemetry payloads.
 
-- [x] CODE: CLI unit tests for `register`
-  - Feature: Unit test coverage for all `register` command paths via `runCli`.
-  - Files: `src/cli.test.ts`
+- [ ] TASK: Align deploy UX copy with existing command output style
   - Acceptance:
-    - Happy path: exits 0, output contains the project name and registration ID.
-    - Missing `platform.yaml`: exits 11.
-    - Invalid `platform.yaml` (bad YAML): exits 12.
-    - Invalid `platform.yaml` (fails schema): exits 12.
-    - Registration client throws `RegistrationError`: exits 13.
-    - Extra arguments beyond one directory: exits 1.
+    - Error and success copy follows existing imperative/actionable tone.
+    - Deploy output remains deterministic for snapshot-friendly testing.
 
-- [x] CODE: E2E test for `create` → `register` flow
-  - Feature: End-to-end test that scaffolds a project with `create` then registers it with `register`, verifying both commands succeed in sequence.
-  - Files: `src/register.e2e.test.ts`
+## Phase 3 — Test Coverage, Guardrails, and Documentation
+
+- [ ] CODE: Add unit tests for deploy stub adapter and port contract behavior
+  - Feature: Create `StubDeployClient` tests covering success, sequencing, and simulated failures.
   - Acceptance:
-    - `create` is run (via `runCli`) to scaffold a Node.js project in a temp directory.
-    - `register` is run (via `runCli`) against the scaffolded directory.
-    - `register` exits 0 and output contains the project name and registration ID.
-    - A second `register` call against the same directory exits 13 (already registered).
-    - Temp directory is cleaned up after the test.
+    - Tests verify deterministic deployment ID format and incrementing behavior.
+    - Tests verify failure path raises `DeploymentError`.
+    - Tests verify state isolation between adapter instances.
+
+- [ ] CODE: Add CLI integration tests for deploy success and error paths
+  - Feature: Extend `src/cli.test.ts` deploy coverage for implemented behavior.
+  - Acceptance:
+    - Success path validates output and exit code `0`.
+    - Missing manifest path validates typed missing-manifest error exit code.
+    - Invalid manifest path validates typed manifest-invalid error exit code.
+    - Deploy-client failure path validates typed deployment error exit code.
+    - Deferred-command test set excludes `deploy` and still validates remaining deferred commands.
+
+- [ ] CODE: Add E2E flow for create-then-deploy and container guard
+  - Feature: Add `deploy.e2e` coverage and spike container guard for deploy wiring.
+  - Acceptance:
+    - E2E test scaffolds with `create`, then successfully runs `deploy` against generated `platform.yaml`.
+    - E2E test covers at least one deploy failure fixture with deterministic assertion.
+    - Container guard test asserts `deployClient` is an instance of `StubDeployClient`.
+
+- [ ] TASK: Update design docs and migration notes for deploy promotion
+  - Acceptance:
+    - `design/future-command-expansion.md` marks `deploy` as implemented in spike mode.
+    - `design/assumptions-register.md` records deploy-specific assumptions and validation outcomes.
+    - Any remaining unknowns for real deploy adapter migration are captured explicitly.
 
 ## Traceability Matrix
 
-| PRD Requirement ID | TODO Item                                                                         | Status       |
-| ------------------ | --------------------------------------------------------------------------------- | ------------ |
-| FR-1               | Phase 4 / CODE: `register` command implementation (remove from DEFERRED_COMMANDS) | not started  |
-| FR-8               | Phase 3 / CODE: `StubRegistrationClient` (simulates realistic behaviour)          | not started  |
-| FR-10              | Phase 1 / TASK: Define `ProjectReaderPort` and `RegistrationClient` contracts     | not started  |
-| FR-11              | (existing — migration notes in `design/future-command-expansion.md`)              | pre-existing |
-| FR-12              | Phase 1 / TASK: Contract definition gate                                          | not started  |
-| FR-12              | Phase 4 / CODE: `register` command implementation + E2E test                      | not started  |
+| Requirement ID | Requirement                                                                    | TODO Items                                           |
+| -------------- | ------------------------------------------------------------------------------ | ---------------------------------------------------- |
+| DPL-01         | `deploy` is promoted from `DeferredCommandError` to a full command handler     | Phase 1 / Item 3                                     |
+| DPL-02         | Deploy reads `platform.yaml` from provided directory or `cwd` by default       | Phase 1 / Item 3                                     |
+| DPL-03         | Missing/invalid manifest paths return typed, deterministic errors              | Phase 1 / Item 3; Phase 3 / Item 2                   |
+| DPL-04         | Deploy uses a stubbed port adapter (no external network calls)                 | Phase 1 / Item 1; Phase 1 / Item 2; Phase 1 / Item 4 |
+| DPL-05         | Success output is deterministic and includes project/environment/deployment ID | Phase 1 / Item 2; Phase 1 / Item 3; Phase 2 / Item 3 |
+| DPL-06         | Deploy flow is observable but non-blocking and secret-safe                     | Phase 2 / Item 2                                     |
+| DPL-07         | CLI, adapter, and E2E tests cover deploy success and failure paths             | Phase 3 / Item 1; Phase 3 / Item 2; Phase 3 / Item 3 |
+| DPL-08         | Spike-mode guardrail prevents accidental non-stub deploy wiring                | Phase 3 / Item 3                                     |
+| DPL-09         | Deploy migration assumptions and next-step unknowns are documented             | Phase 3 / Item 4                                     |
