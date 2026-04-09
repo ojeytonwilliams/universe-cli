@@ -172,3 +172,4 @@ See `src/errors/cli-errors.ts` for canonical error classes. Exit codes:
 3. **O11y is best-effort.** All observability calls go through `safeTrack` / `safeError`; failures are swallowed and must not affect command exit codes.
 4. **Deterministic layer composition.** Same inputs always produce the same resolved layer set.
 5. **No partial scaffolds.** The filesystem writer rolls back on unrecoverable failure.
+6. **Manifest validation remains portable.** `platform.yaml` is parsed with `yaml` into an in-memory object, validated with a `zod` schema, and that schema must remain JSON Schema-exportable to preserve a migration path away from `zod`.

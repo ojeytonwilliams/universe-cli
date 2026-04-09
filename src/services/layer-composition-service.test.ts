@@ -2,6 +2,70 @@ import type { CreateSelections } from "../ports/prompt-port.js";
 import { LayerConflictError, MissingLayerError } from "../errors/cli-errors.js";
 import { LayerCompositionService } from "./layer-composition-service.js";
 
+// ---------------------------------------------------------------------------
+// Combination coverage helpers
+// ---------------------------------------------------------------------------
+
+const NODE_DATABASES = ["PostgreSQL", "Redis"] as const;
+const NODE_SERVICES = ["Auth", "Email", "Analytics"] as const;
+const NODE_FRAMEWORKS = ["Express", "None"] as const;
+
+const buildPowerSet = <T>(items: readonly T[]): T[][] => {
+  const subsets: T[][] = [[]];
+
+  for (const item of items) {
+    const existing = [...subsets];
+
+    for (const subset of existing) {
+      subsets.push([...subset, item]);
+    }
+  }
+
+  return subsets;
+};
+
+const toMultiSelect = <T extends string>(items: T[]): (T | "None")[] =>
+  items.length === 0 ? ["None"] : ([...items].sort() as (T | "None")[]);
+
+const expectedNodeLayerNames = (
+  framework: (typeof NODE_FRAMEWORKS)[number],
+  databases: CreateSelections["databases"],
+  platformServices: CreateSelections["platformServices"],
+): string[] => {
+  const frameworkLayer = framework === "Express" ? "frameworks/express" : "frameworks/none";
+  const serviceLayerSlugs = [
+    ...databases.filter((d) => d !== "None"),
+    ...platformServices.filter((s) => s !== "None"),
+  ]
+    .map((v) => `services/${v.toLowerCase()}`)
+    .sort((a, b) => a.localeCompare(b));
+
+  return ["always", "base/node-js-typescript", frameworkLayer, ...serviceLayerSlugs];
+};
+
+interface NodeCase {
+  databases: CreateSelections["databases"];
+  databaseLabel: string;
+  framework: (typeof NODE_FRAMEWORKS)[number];
+  platformServices: CreateSelections["platformServices"];
+  serviceLabel: string;
+}
+
+const databaseSubsets = buildPowerSet(NODE_DATABASES).map((s) => toMultiSelect([...s]));
+const serviceSubsets = buildPowerSet(NODE_SERVICES).map((s) => toMultiSelect([...s]));
+
+const nodeCombinations: NodeCase[] = NODE_FRAMEWORKS.flatMap((framework) =>
+  databaseSubsets.flatMap((databases) =>
+    serviceSubsets.map((platformServices) => ({
+      databaseLabel: databases.join(","),
+      databases: databases as CreateSelections["databases"],
+      framework,
+      platformServices: platformServices as CreateSelections["platformServices"],
+      serviceLabel: platformServices.join(","),
+    })),
+  ),
+);
+
 const nodeExpressSelection: CreateSelections = {
   confirmed: true,
   databases: ["Redis", "PostgreSQL"],
@@ -116,5 +180,44 @@ describe(LayerCompositionService, () => {
     const act = () => service.resolveLayers(nodeExpressSelection);
 
     expect(act).toThrow(LayerConflictError);
+  });
+
+  describe("combination coverage with default registry", () => {
+    const service = new LayerCompositionService();
+
+    it("resolves Static to always, base/static, and frameworks/none", () => {
+      const result = service.resolveLayers({
+        confirmed: true,
+        databases: ["None"],
+        framework: "None",
+        name: "test",
+        platformServices: ["None"],
+        runtime: "Static (HTML/CSS/JS)",
+      });
+
+      expect(result.layers.map((layer) => layer.name)).toStrictEqual([
+        "always",
+        "base/static",
+        "frameworks/none",
+      ]);
+    });
+
+    it.each(nodeCombinations)(
+      "resolves Node.js + $framework + db:[$databaseLabel] + svc:[$serviceLabel]",
+      ({ framework, databases, platformServices }) => {
+        const result = service.resolveLayers({
+          confirmed: true,
+          databases,
+          framework,
+          name: "test",
+          platformServices,
+          runtime: "Node.js (TypeScript)",
+        });
+
+        expect(result.layers.map((layer) => layer.name)).toStrictEqual(
+          expectedNodeLayerNames(framework, databases, platformServices),
+        );
+      },
+    );
   });
 });

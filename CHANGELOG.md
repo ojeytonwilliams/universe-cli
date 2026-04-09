@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.0] - 2026-04-09
+
+### Phase 1 — E2E Test Strategy Refactor
+
+- **Combination coverage at unit level** ([src/services/layer-composition-service.test.ts](src/services/layer-composition-service.test.ts)): added 65 parameterised tests covering every allowed runtime/framework/database/service combination; each asserts resolved layer names against a computed expectation using the default registry with no filesystem I/O.
+- **Replaced exhaustive e2e power-set loop with smoke tests** ([src/create.e2e.test.ts](src/create.e2e.test.ts)): removed the 65-combination loop and its helpers; added three representative e2e paths (Node.js + Express + all services, Node.js + no framework/services, Static) to keep integration coverage meaningful without CI cost.
+
 ## [2.0.0] - 2026-04-09
 
 ### Refactor Phase 5 — Simplify Composition and Contracts

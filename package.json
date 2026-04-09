@@ -1,6 +1,6 @@
 {
   "name": "universe",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "",
   "keywords": [],
   "license": "BSD-3-Clause",
@@ -22,7 +22,9 @@
     "prepare": "husky"
   },
   "dependencies": {
-    "@clack/prompts": "1.2.0"
+    "@clack/prompts": "1.2.0",
+    "yaml": "2.8.3",
+    "zod": "4.3.6"
   },
   "devDependencies": {
     "@types/node": "24.12.2",

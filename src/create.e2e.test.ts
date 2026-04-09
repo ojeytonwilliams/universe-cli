@@ -21,9 +21,6 @@ const DEFERRED_COMMANDS = [
   "teardown",
 ] as const;
 
-const NODE_DATABASE_OPTIONS = ["PostgreSQL", "Redis"] as const;
-const NODE_PLATFORM_SERVICE_OPTIONS = ["Auth", "Email", "Analytics"] as const;
-
 const createPromptPort = (selection: CreateSelections | null): PromptPort => ({
   promptForCreateInputs() {
     return Promise.resolve(selection);
@@ -52,23 +49,6 @@ const createStaticSelection = (name: string): CreateSelections => ({
   platformServices: ["None"],
   runtime: "Static (HTML/CSS/JS)",
 });
-
-const buildPowerSet = <TValue>(items: readonly TValue[]): TValue[][] => {
-  const subsets: TValue[][] = [[]];
-
-  for (const item of items) {
-    const existingSubsets = [...subsets];
-
-    for (const subset of existingSubsets) {
-      subsets.push([...subset, item]);
-    }
-  }
-
-  return subsets;
-};
-
-const toMultiSelectValues = (items: string[]): string[] =>
-  items.length === 0 ? ["None"] : [...items].sort((left, right) => left.localeCompare(right));
 
 const collectGeneratedFiles = (directory: string): Record<string, string> => {
   const files: Record<string, string> = {};
@@ -126,53 +106,59 @@ describe("create e2e", () => {
     tempDirectories.length = 0;
   });
 
-  it("creates a project folder for every allowed runtime/framework/services combination", async () => {
+  it("scaffolds Node.js + Express with all services", async () => {
     const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-e2e-"));
-    const nodeFrameworks = ["Express", "None"] as const;
-    const nodeDatabaseSelections = buildPowerSet(NODE_DATABASE_OPTIONS).map((selection) =>
-      toMultiSelectValues([...selection]),
-    );
-    const nodePlatformServiceSelections = buildPowerSet(NODE_PLATFORM_SERVICE_OPTIONS).map(
-      (selection) => toMultiSelectValues([...selection]),
-    );
-    const allSelections: CreateSelections[] = [];
-    let sequence = 0;
+    const selection = createNodeSelection({
+      databases: ["PostgreSQL", "Redis"],
+      framework: "Express",
+      name: "node-express-full",
+      platformServices: ["Analytics", "Auth", "Email"],
+    });
 
     tempDirectories.push(rootDirectory);
 
-    for (const framework of nodeFrameworks) {
-      for (const databases of nodeDatabaseSelections) {
-        for (const platformServices of nodePlatformServiceSelections) {
-          allSelections.push(
-            createNodeSelection({
-              databases: databases as CreateSelections["databases"],
-              framework,
-              name: `node-${sequence.toString().padStart(3, "0")}`,
-              platformServices: platformServices as CreateSelections["platformServices"],
-            }),
-          );
-          sequence += 1;
-        }
-      }
-    }
-
-    allSelections.push(createStaticSelection("static-000"));
-
-    const results = await Promise.all(
-      allSelections.map(async (selection) => {
-        const result = await runCli(
-          ["create"],
-          createDependencies(rootDirectory, createPromptPort(selection)),
-        );
-
-        return { result, selection };
-      }),
+    const result = await runCli(
+      ["create"],
+      createDependencies(rootDirectory, createPromptPort(selection)),
     );
 
-    for (const { result, selection } of results) {
-      expect(result.exitCode).toBe(0);
-      expect(existsSync(join(rootDirectory, selection.name))).toBe(true);
-    }
+    expect(result.exitCode).toBe(0);
+    expect(existsSync(join(rootDirectory, selection.name))).toBe(true);
+  });
+
+  it("scaffolds Node.js + no framework + no services", async () => {
+    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-e2e-"));
+    const selection = createNodeSelection({
+      databases: ["None"],
+      framework: "None",
+      name: "node-bare",
+      platformServices: ["None"],
+    });
+
+    tempDirectories.push(rootDirectory);
+
+    const result = await runCli(
+      ["create"],
+      createDependencies(rootDirectory, createPromptPort(selection)),
+    );
+
+    expect(result.exitCode).toBe(0);
+    expect(existsSync(join(rootDirectory, selection.name))).toBe(true);
+  });
+
+  it("scaffolds Static", async () => {
+    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-e2e-"));
+    const selection = createStaticSelection("static-smoke");
+
+    tempDirectories.push(rootDirectory);
+
+    const result = await runCli(
+      ["create"],
+      createDependencies(rootDirectory, createPromptPort(selection)),
+    );
+
+    expect(result.exitCode).toBe(0);
+    expect(existsSync(join(rootDirectory, selection.name))).toBe(true);
   });
 
   it("covers deferred command flows with the standardized contract", async () => {

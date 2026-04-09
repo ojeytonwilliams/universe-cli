@@ -2,13 +2,13 @@
 
 ## Phase 1 — E2E Test Strategy Refactor
 
-- [ ] CODE: Add combination-coverage unit tests to `LayerCompositionService` for every allowed runtime/framework/services combination
+- [x] CODE: Add combination-coverage unit tests to `LayerCompositionService` for every allowed runtime/framework/services combination
   - Acceptance:
     - Each allowed matrix entry is exercised as a `resolveLayers` call.
     - Tests assert the resolved layer names (not file content) for each combination.
     - No filesystem writes occur.
 
-- [ ] CODE: Replace the exhaustive combination loop in `create.e2e.test.ts` with a small set of smoke tests
+- [x] CODE: Replace the exhaustive combination loop in `create.e2e.test.ts` with a small set of smoke tests
   - Acceptance:
     - 3 representative paths are tested: Node.js + Express + all services, Node.js + None + no services, Static.
     - The power-set loop is removed.
@@ -50,6 +50,13 @@
 
 > ⚠️ **Dependency gate:** Phase 2 must be complete (YAML serialiser needed).
 
+- [ ] TASK: Lock validation strategy with migration guardrails
+  - Acceptance:
+    - Validation flow is defined as: parse `platform.yaml` with `yaml` into an in-memory object, then validate that object against a `zod` schema.
+    - The chosen `zod` schema design avoids `zod`-only features that cannot be represented in JSON Schema.
+    - A JSON Schema export path from the `zod` schema is documented and exercised by a unit test.
+    - Failure behavior is defined for both invalid YAML parse and schema validation errors.
+
 - [ ] TASK: Define a versioned `PlatformManifest` TypeScript type covering both app and static shapes
   - Acceptance:
     - Type is defined in `src/services/` and includes a `schemaVersion` field.
@@ -65,6 +72,8 @@
 
 - [ ] CODE: Add manifest validation logic to `PlatformManifestService`
   - Acceptance:
+    - Validation parses YAML into an object first, then validates the object against the `zod` schema.
     - Validation rejects manifests missing required fields.
     - Validation rejects manifests with an invalid or missing `schemaVersion`.
+    - Validation schema can be exported to JSON Schema, and a unit test fails if export cannot be produced.
     - Unit tests cover: valid app manifest, valid static manifest, missing required field, unknown `schemaVersion`.
