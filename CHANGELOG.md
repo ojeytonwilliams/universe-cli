@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.4.0] - 2026-04-09
+
+### Phase 4 — `platform.yaml` Schema
+
+- **Defined `PlatformManifest` types** ([src/services/platform-manifest-service.ts](src/services/platform-manifest-service.ts)): `AppPlatformManifest` and `StaticPlatformManifest` are inferred from Zod schemas using a discriminated union on `stack`; `schemaVersion` is a `z.literal("1")` field present on both shapes; schemas use only JSON-Schema-representable Zod constructs.
+- **Refactored `PlatformManifestService.generatePlatformManifest`** ([src/services/platform-manifest-service.ts](src/services/platform-manifest-service.ts)): string template concatenation replaced by building a typed `PlatformManifest` object first, then serialising with `yaml.stringify`; `schemaVersion: "1"` and `stack` now appear in all generated `platform.yaml` files.
+- **Added `PlatformManifestService.validateManifest`** ([src/services/platform-manifest-service.ts](src/services/platform-manifest-service.ts)): parses a YAML string with `yaml.parse`, then validates the in-memory object against `PlatformManifestSchema`; propagates `ZodError` on invalid input.
+- **Validation unit tests** ([src/services/platform-manifest-service.test.ts](src/services/platform-manifest-service.test.ts)): added tests for valid app manifest, valid static manifest, missing required field, unrecognised `schemaVersion`, and JSON Schema export via `z.toJSONSchema(PlatformManifestSchema)`.
+- **Updated snapshots** ([src/services/**snapshots**/platform-manifest-service.test.ts.snap](src/services/__snapshots__/platform-manifest-service.test.ts.snap), [src/**snapshots**/create.e2e.test.ts.snap](src/__snapshots__/create.e2e.test.ts.snap)): snapshot output updated to include `schemaVersion: "1"` and `stack` fields.
+
 ## [2.3.0] - 2026-04-09
 
 ### Phase 3 — Layer Templating

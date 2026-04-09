@@ -1,5 +1,6 @@
+import { ZodError, z } from "zod";
 import type { CreateSelections } from "../ports/prompt-port.js";
-import { PlatformManifestService } from "./platform-manifest-service.js";
+import { PlatformManifestSchema, PlatformManifestService } from "./platform-manifest-service.js";
 
 const nodeSelection: CreateSelections = {
   confirmed: true,
@@ -8,6 +9,15 @@ const nodeSelection: CreateSelections = {
   name: "hello-universe",
   platformServices: ["Email", "Auth"],
   runtime: "Node.js (TypeScript)",
+};
+
+const staticSelection: CreateSelections = {
+  confirmed: true,
+  databases: ["None"],
+  framework: "None",
+  name: "marketing-site",
+  platformServices: ["None"],
+  runtime: "Static (HTML/CSS/JS)",
 };
 
 describe(PlatformManifestService, () => {
@@ -36,15 +46,58 @@ describe(PlatformManifestService, () => {
   it("generates the static stack shape without app-only fields", () => {
     const service = new PlatformManifestService();
 
-    const result = service.generatePlatformManifest({
-      confirmed: true,
-      databases: ["None"],
-      framework: "None",
-      name: "marketing-site",
-      platformServices: ["None"],
-      runtime: "Static (HTML/CSS/JS)",
-    });
+    const result = service.generatePlatformManifest(staticSelection);
 
     expect(result).toMatchSnapshot();
+  });
+
+  it("can export PlatformManifestSchema to JSON Schema", () => {
+    const jsonSchema = z.toJSONSchema(PlatformManifestSchema);
+
+    expect(jsonSchema).toBeDefined();
+  });
+
+  describe("validateManifest", () => {
+    it("returns a typed manifest for a valid app manifest", () => {
+      const service = new PlatformManifestService();
+      const yaml = service.generatePlatformManifest(nodeSelection);
+
+      const result = service.validateManifest(yaml);
+
+      expect(result.stack).toBe("app");
+    });
+
+    it("returns a typed manifest for a valid static manifest", () => {
+      const service = new PlatformManifestService();
+      const yaml = service.generatePlatformManifest(staticSelection);
+
+      const result = service.validateManifest(yaml);
+
+      expect(result.stack).toBe("static");
+    });
+
+    it("throws when a required field is missing", () => {
+      const service = new PlatformManifestService();
+
+      expect(() => service.validateManifest("stack: app\n")).toThrow(ZodError);
+    });
+
+    it("throws when schemaVersion is not recognised", () => {
+      const service = new PlatformManifestService();
+      const yaml = `stack: static
+schemaVersion: "999"
+name: hello
+domain:
+  preview: hello.preview.example.com
+  production: hello.example.com
+environments:
+  preview:
+    branch: preview
+  production:
+    branch: main
+`;
+
+      expect(() => service.validateManifest(yaml)).toThrow(ZodError);
+    });
   });
 });

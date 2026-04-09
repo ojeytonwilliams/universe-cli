@@ -54,27 +54,33 @@
 
 > ⚠️ **Dependency gate:** Phase 2 must be complete (YAML serialiser needed).
 
-- [ ] TASK: Lock validation strategy with migration guardrails
+- [x] TASK: Lock validation strategy with migration guardrails
   - Acceptance:
     - Validation flow is defined as: parse `platform.yaml` with `yaml` into an in-memory object, then validate that object against a `zod` schema.
     - The chosen `zod` schema design avoids `zod`-only features that cannot be represented in JSON Schema.
     - A JSON Schema export path from the `zod` schema is documented and exercised by a unit test.
     - Failure behavior is defined for both invalid YAML parse and schema validation errors.
+  - Decisions:
+    - Flow: `yaml.parse(string)` → in-memory object → `PlatformManifestSchema.parse(object)`.
+    - Schema uses only `z.object`, `z.string`, `z.literal`, `z.discriminatedUnion`, `z.array`, `z.tuple` — all JSON Schema representable; no `z.transform` or `z.refine`.
+    - JSON Schema export: `z.toJSONSchema(PlatformManifestSchema)` from zod v4, exercised by a unit test.
+    - Invalid YAML parse: the `yaml` library throws — propagated as-is; callers handle it.
+    - Schema validation failure: zod throws `ZodError` — propagated as-is; callers handle it.
 
-- [ ] TASK: Define a versioned `PlatformManifest` TypeScript type covering both app and static shapes
+- [x] TASK: Define a versioned `PlatformManifest` TypeScript type covering both app and static shapes
   - Acceptance:
     - Type is defined in `src/services/` and includes a `schemaVersion` field.
     - App and static shapes are captured as a discriminated union.
     - Type documents the invariants from PRD FR-6.
 
-- [ ] CODE: Refactor `PlatformManifestService` to build a typed `PlatformManifest` object and serialise to YAML via the Phase 2 implementation
+- [x] CODE: Refactor `PlatformManifestService` to build a typed `PlatformManifest` object and serialise to YAML via the Phase 2 implementation
   - Acceptance:
     - String template concatenation is removed from `PlatformManifestService`.
     - The service builds a typed object first, then emits YAML.
     - `schemaVersion` field appears in all generated `platform.yaml` files.
     - Existing E2E snapshot tests are updated to reflect the new field.
 
-- [ ] CODE: Add manifest validation logic to `PlatformManifestService`
+- [x] CODE: Add manifest validation logic to `PlatformManifestService`
   - Acceptance:
     - Validation parses YAML into an object first, then validates the object against the `zod` schema.
     - Validation rejects manifests missing required fields.

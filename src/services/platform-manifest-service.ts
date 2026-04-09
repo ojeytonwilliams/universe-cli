@@ -1,50 +1,127 @@
+import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
+import { z } from "zod";
 import type { CreateSelections } from "../ports/prompt-port.js";
+
+// ---------------------------------------------------------------------------
+// Schema version
+// ---------------------------------------------------------------------------
+
+const SCHEMA_VERSION = "1" as const;
+
+// ---------------------------------------------------------------------------
+// Zod schema (JSON Schema representable — no .transform or .refine)
+// ---------------------------------------------------------------------------
+
+const ManifestDomainSchema = z.object({
+  preview: z.string(),
+  production: z.string(),
+});
+
+const ManifestEnvironmentEntrySchema = z.object({
+  branch: z.string(),
+});
+
+const ManifestEnvironmentsSchema = z.object({
+  preview: ManifestEnvironmentEntrySchema,
+  production: ManifestEnvironmentEntrySchema,
+});
+
+const AppPlatformManifestSchema = z.object({
+  domain: ManifestDomainSchema,
+  environments: ManifestEnvironmentsSchema,
+  name: z.string(),
+  owner: z.literal("platform-engineering"),
+  resources: z.array(z.string()),
+  schemaVersion: z.literal(SCHEMA_VERSION),
+  services: z.array(z.string()),
+  stack: z.literal("app"),
+});
+
+const StaticPlatformManifestSchema = z.object({
+  domain: ManifestDomainSchema,
+  environments: ManifestEnvironmentsSchema,
+  name: z.string(),
+  schemaVersion: z.literal(SCHEMA_VERSION),
+  stack: z.literal("static"),
+});
+
+const PlatformManifestSchema = z.discriminatedUnion("stack", [
+  AppPlatformManifestSchema,
+  StaticPlatformManifestSchema,
+]);
+
+// ---------------------------------------------------------------------------
+// TypeScript types (inferred from schema — single source of truth)
+// ---------------------------------------------------------------------------
+
+type AppPlatformManifest = z.infer<typeof AppPlatformManifestSchema>;
+type StaticPlatformManifest = z.infer<typeof StaticPlatformManifestSchema>;
+type PlatformManifest = z.infer<typeof PlatformManifestSchema>;
+
+// ---------------------------------------------------------------------------
+// Service
+// ---------------------------------------------------------------------------
+
+const ENVIRONMENTS = {
+  preview: { branch: "preview" },
+  production: { branch: "main" },
+} as const;
 
 class PlatformManifestService {
   generatePlatformManifest(input: CreateSelections): string {
+    const manifest = this.buildManifest(input);
+
+    return stringifyYaml(manifest);
+  }
+
+  validateManifest(yaml: string): PlatformManifest {
+    const parsed = parseYaml(yaml) as unknown;
+
+    return PlatformManifestSchema.parse(parsed);
+  }
+
+  private buildManifest(input: CreateSelections): PlatformManifest {
+    const domain = {
+      preview: `${input.name}.preview.example.com`,
+      production: `${input.name}.example.com`,
+    };
+
     if (input.runtime === "Static (HTML/CSS/JS)") {
-      return [
-        `name: ${input.name}`,
-        "stack: static",
-        "domain:",
-        `  production: ${input.name}.example.com`,
-        `  preview: ${input.name}.preview.example.com`,
-        "environments:",
-        "  preview:",
-        "    branch: preview",
-        "  production:",
-        "    branch: main",
-        "",
-      ].join("\n");
+      const manifest: StaticPlatformManifest = {
+        domain,
+        environments: ENVIRONMENTS,
+        name: input.name,
+        schemaVersion: SCHEMA_VERSION,
+        stack: "static",
+      };
+
+      return manifest;
     }
 
-    const services = input.platformServices.filter((value) => value !== "None").sort();
-    const resources = input.databases.filter((value) => value !== "None").sort();
-    const serviceLines =
-      services.length === 0
-        ? ["services: []"]
-        : ["services:", ...services.map((service) => `  - ${service.toLowerCase()}`)];
-    const resourceLines =
-      resources.length === 0
-        ? ["resources: []"]
-        : ["resources:", ...resources.map((resource) => `  - ${resource.toLowerCase()}`)];
+    const services = input.platformServices
+      .filter((value) => value !== "None")
+      .sort()
+      .map((s) => s.toLowerCase());
 
-    return [
-      `name: ${input.name}`,
-      "owner: platform-engineering",
-      "domain:",
-      `  production: ${input.name}.example.com`,
-      `  preview: ${input.name}.preview.example.com`,
-      "environments:",
-      "  preview:",
-      "    branch: preview",
-      "  production:",
-      "    branch: main",
-      ...serviceLines,
-      ...resourceLines,
-      "",
-    ].join("\n");
+    const resources = input.databases
+      .filter((value) => value !== "None")
+      .sort()
+      .map((r) => r.toLowerCase());
+
+    const manifest: AppPlatformManifest = {
+      domain,
+      environments: ENVIRONMENTS,
+      name: input.name,
+      owner: "platform-engineering",
+      resources,
+      schemaVersion: SCHEMA_VERSION,
+      services,
+      stack: "app",
+    };
+
+    return manifest;
   }
 }
 
-export { PlatformManifestService };
+export { PlatformManifestSchema, PlatformManifestService };
+export type { AppPlatformManifest, PlatformManifest, StaticPlatformManifest };
