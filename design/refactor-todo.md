@@ -2,14 +2,14 @@
 
 ## Phase 1 — Refactor Plan and Target Boundaries
 
-- [ ] TASK: Document the target service boundaries for the create flow refactor
+- [x] TASK: Document the target service boundaries for the create flow refactor
   - Acceptance:
     - The design names `DefaultCreateInputValidator`, `LocalLayerResolver`, and `LocalPlatformManifestGenerator` as internal services rather than adapters.
     - The replacement service names are recorded as `CreateInputValidationService`, `LayerCompositionService`, and `PlatformManifestService`.
     - The target folder for these implementations is recorded as `src/services/`.
     - The design states that `PromptPort`, `FilesystemWriter`, and `ObservabilityClient` remain ports because they are external boundaries.
 
-- [ ] TASK: Define the naming and import migration rules for the refactor
+- [x] TASK: Define the naming and import migration rules for the refactor
   - Acceptance:
     - Replacement class names are fixed as `CreateInputValidationService`, `LayerCompositionService`, and `PlatformManifestService` before code changes begin.
     - Imports from `src/adapters/` to the three selected classes are identified as migration points.

@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.6.0] - 2026-04-09
+
+### Refactor Phase 1 — Refactor Plan and Target Boundaries
+
+- **Reclassified three misplaced adapters as internal services** ([plans/universe-cli/architecture.md](plans/universe-cli/architecture.md)): documented that `DefaultCreateInputValidator`, `LocalLayerResolver`, and `LocalPlatformManifestGenerator` contain pure create-flow policy and belong in `src/services/`, not in `src/adapters/` behind port interfaces.
+- **Fixed port boundary** ([plans/universe-cli/architecture.md](plans/universe-cli/architecture.md)): confirmed that `PromptPort`, `FilesystemWriter`, and `ObservabilityClient` are the only true external boundaries; the three validator/resolver/generator port interfaces will be deleted.
+- **Recorded migration strategy** ([plans/universe-cli/architecture.md](plans/universe-cli/architecture.md)): one-pass import updates per class with no compatibility re-exports; migration points identified as `src/bin.ts`, `src/cli.ts` (`CliDependencies`), and affected test files.
+
 ## [1.5.0] - 2026-04-08
 
 ### Phase 4 — Tests, Documentation, and Migration Notes

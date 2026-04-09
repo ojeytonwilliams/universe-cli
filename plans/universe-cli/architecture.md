@@ -101,6 +101,30 @@ unless a later design introduces a real boundary.
 
 ---
 
+## Reclassification and Migration
+
+Three classes that were initially placed in `src/adapters/` have been reclassified as
+internal services. None of them cross a real infrastructure boundary — they contain
+pure create-flow policy and are owned by the application layer.
+
+| Old adapter name                 | Reclassified as                | Location        |
+| -------------------------------- | ------------------------------ | --------------- |
+| `DefaultCreateInputValidator`    | `CreateInputValidationService` | `src/services/` |
+| `LocalLayerResolver`             | `LayerCompositionService`      | `src/services/` |
+| `LocalPlatformManifestGenerator` | `PlatformManifestService`      | `src/services/` |
+
+The corresponding port interfaces (`CreateInputValidator`, `LayerResolver`,
+`PlatformManifestGenerator`) are deleted — they modelled no real external boundary.
+`PromptPort`, `FilesystemWriter`, and `ObservabilityClient` remain ports because they
+represent genuine infrastructure boundaries (terminal I/O, disk writes, telemetry).
+
+**Migration strategy:** imports are updated in a single pass per class. No
+compatibility re-exports are introduced. The migration points are the `src/bin.ts`
+entry point, the `CliDependencies` interface in `src/cli.ts`, and any test files that
+import the old adapter names.
+
+---
+
 ## Spike-Mode Guardrail
 
 `src/container.test.ts` guards the observability wiring so spike mode does not
