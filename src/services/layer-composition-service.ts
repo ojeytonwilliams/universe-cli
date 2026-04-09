@@ -1,5 +1,12 @@
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import { LayerConflictError, MissingLayerError } from "../errors/cli-errors.js";
+import {
+  DATABASE_OPTIONS,
+  FRAMEWORK_LABELS,
+  FRAMEWORK_OPTIONS,
+  RUNTIME_LABELS,
+  RUNTIME_OPTIONS,
+} from "../ports/prompt-port.js";
 import type { CreateSelections } from "../ports/prompt-port.js";
 import { defaultLayerRegistry } from "./default-layer-registry.js";
 import type { LayerRegistry } from "./default-layer-registry.js";
@@ -29,19 +36,9 @@ interface FileOwner {
 }
 
 const CONFIG_EXTENSIONS = new Set([".json", ".yaml", ".yml"]);
-const NONE_VALUE = "None";
+const NONE_VALUE = DATABASE_OPTIONS.NONE;
 const NODE_RUNTIME_LAYER = "base/node-js-typescript";
 const STATIC_RUNTIME_LAYER = "base/static";
-
-const FRAMEWORK_LAYER_BY_NAME: Record<CreateSelections["framework"], string> = {
-  Express: "frameworks/express",
-  None: "frameworks/none",
-};
-
-const RUNTIME_LAYER_BY_NAME: Record<CreateSelections["runtime"], string> = {
-  "Node.js (TypeScript)": NODE_RUNTIME_LAYER,
-  "Static (HTML/CSS/JS)": STATIC_RUNTIME_LAYER,
-};
 
 class LayerCompositionService {
   private readonly layers: LayerRegistry;
@@ -84,7 +81,11 @@ class LayerCompositionService {
     }
 
     const renderer = new LayerTemplateRenderer();
-    const context = { framework: input.framework, name: input.name, runtime: input.runtime };
+    const context = {
+      framework: FRAMEWORK_LABELS[input.framework],
+      name: input.name,
+      runtime: RUNTIME_LABELS[input.runtime],
+    };
     const renderedFiles = Object.fromEntries(
       Object.entries(composedFiles).map(([filePath, content]) => [
         filePath,
@@ -101,8 +102,8 @@ class LayerCompositionService {
   private resolveOrderedLayers(input: CreateSelections): ResolvedLayer[] {
     const orderedLayerNames = [
       "always",
-      RUNTIME_LAYER_BY_NAME[input.runtime],
-      FRAMEWORK_LAYER_BY_NAME[input.framework],
+      this.resolveRuntimeLayer(input.runtime),
+      this.resolveFrameworkLayer(input.framework),
       ...this.resolveServiceLayers(input),
     ];
 
@@ -124,8 +125,24 @@ class LayerCompositionService {
   private resolveServiceLayers(input: CreateSelections): string[] {
     return [...input.databases, ...input.platformServices]
       .filter((value) => value !== NONE_VALUE)
-      .map((value) => `services/${this.toLayerSlug(value)}`)
+      .map((value) => `services/${value}`)
       .sort((left, right) => left.localeCompare(right));
+  }
+
+  private resolveRuntimeLayer(runtime: CreateSelections["runtime"]): string {
+    if (runtime === RUNTIME_OPTIONS.NODE_TS) {
+      return NODE_RUNTIME_LAYER;
+    }
+
+    return STATIC_RUNTIME_LAYER;
+  }
+
+  private resolveFrameworkLayer(framework: CreateSelections["framework"]): string {
+    if (framework === FRAMEWORK_OPTIONS.EXPRESS) {
+      return "frameworks/express";
+    }
+
+    return "frameworks/none";
   }
 
   private resolveStage(layerName: string): LayerStage {
@@ -215,10 +232,6 @@ class LayerCompositionService {
       .map(([key, entryValue]) => [key, this.sortJson(entryValue)] as const);
 
     return Object.fromEntries(sortedEntries);
-  }
-
-  private toLayerSlug(value: string): string {
-    return value.toLowerCase().replaceAll(/[.()\s/]+/g, "-");
   }
 }
 

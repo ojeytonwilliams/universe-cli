@@ -1,4 +1,14 @@
 import { confirm, isCancel, multiselect, select, text } from "@clack/prompts";
+import {
+  DATABASE_LABELS,
+  DATABASE_OPTIONS,
+  FRAMEWORK_LABELS,
+  FRAMEWORK_OPTIONS,
+  PLATFORM_SERVICE_LABELS,
+  PLATFORM_SERVICE_OPTIONS,
+  RUNTIME_LABELS,
+  RUNTIME_OPTIONS,
+} from "../ports/prompt-port.js";
 import type {
   CreateSelections,
   DatabaseOption,
@@ -36,19 +46,72 @@ const defaultClackApi: ClackPromptApi = {
   text,
 };
 
-const FRAMEWORKS_BY_RUNTIME: Record<RuntimeOption, FrameworkOption[]> = {
-  "Node.js (TypeScript)": ["Express", "None"],
-  "Static (HTML/CSS/JS)": ["None"],
+const RUNTIME_PROMPT_OPTIONS: { label: string; value: RuntimeOption }[] = [
+  {
+    label: RUNTIME_LABELS[RUNTIME_OPTIONS.NODE_TS],
+    value: RUNTIME_OPTIONS.NODE_TS,
+  },
+  {
+    label: RUNTIME_LABELS[RUNTIME_OPTIONS.STATIC_WEB],
+    value: RUNTIME_OPTIONS.STATIC_WEB,
+  },
+];
+
+const NODE_FRAMEWORK_OPTIONS: FrameworkOption[] = [
+  FRAMEWORK_OPTIONS.EXPRESS,
+  FRAMEWORK_OPTIONS.NONE,
+];
+const STATIC_FRAMEWORK_OPTIONS: FrameworkOption[] = [FRAMEWORK_OPTIONS.NONE];
+
+const NODE_DATABASE_OPTIONS: DatabaseOption[] = [
+  DATABASE_OPTIONS.POSTGRESQL,
+  DATABASE_OPTIONS.REDIS,
+  DATABASE_OPTIONS.NONE,
+];
+const STATIC_DATABASE_OPTIONS: DatabaseOption[] = [DATABASE_OPTIONS.NONE];
+
+const NODE_SERVICE_OPTIONS: PlatformServiceOption[] = [
+  PLATFORM_SERVICE_OPTIONS.AUTH,
+  PLATFORM_SERVICE_OPTIONS.EMAIL,
+  PLATFORM_SERVICE_OPTIONS.ANALYTICS,
+  PLATFORM_SERVICE_OPTIONS.NONE,
+];
+const STATIC_SERVICE_OPTIONS: PlatformServiceOption[] = [PLATFORM_SERVICE_OPTIONS.NONE];
+
+const toPromptOptions = <T extends string>(
+  values: T[],
+  labels: Record<T, string>,
+): { label: string; value: T }[] =>
+  values.map((value) => ({
+    label: labels[value],
+    value,
+  }));
+
+const toLabelList = <T extends string>(values: T[], labels: Record<T, string>): string =>
+  values.map((value) => labels[value]).join(", ");
+
+const getFrameworkOptions = (runtime: RuntimeOption): FrameworkOption[] => {
+  if (runtime === RUNTIME_OPTIONS.NODE_TS) {
+    return NODE_FRAMEWORK_OPTIONS;
+  }
+
+  return STATIC_FRAMEWORK_OPTIONS;
 };
 
-const DATABASES_BY_RUNTIME: Record<RuntimeOption, DatabaseOption[]> = {
-  "Node.js (TypeScript)": ["PostgreSQL", "Redis", "None"],
-  "Static (HTML/CSS/JS)": ["None"],
+const getDatabaseOptions = (runtime: RuntimeOption): DatabaseOption[] => {
+  if (runtime === RUNTIME_OPTIONS.NODE_TS) {
+    return NODE_DATABASE_OPTIONS;
+  }
+
+  return STATIC_DATABASE_OPTIONS;
 };
 
-const SERVICES_BY_RUNTIME: Record<RuntimeOption, PlatformServiceOption[]> = {
-  "Node.js (TypeScript)": ["Auth", "Email", "Analytics", "None"],
-  "Static (HTML/CSS/JS)": ["None"],
+const getServiceOptions = (runtime: RuntimeOption): PlatformServiceOption[] => {
+  if (runtime === RUNTIME_OPTIONS.NODE_TS) {
+    return NODE_SERVICE_OPTIONS;
+  }
+
+  return STATIC_SERVICE_OPTIONS;
 };
 
 class ClackPromptAdapter implements PromptPort {
@@ -77,10 +140,7 @@ class ClackPromptAdapter implements PromptPort {
 
     const runtime = await this.api.select({
       message: "Select runtime",
-      options: [
-        { label: "Node.js (TypeScript)", value: "Node.js (TypeScript)" },
-        { label: "Static (HTML/CSS/JS)", value: "Static (HTML/CSS/JS)" },
-      ],
+      options: RUNTIME_PROMPT_OPTIONS,
     });
 
     if (this.api.isCancel(runtime)) {
@@ -89,10 +149,7 @@ class ClackPromptAdapter implements PromptPort {
 
     const framework = await this.api.select({
       message: "Select framework",
-      options: FRAMEWORKS_BY_RUNTIME[runtime as RuntimeOption].map((value) => ({
-        label: value,
-        value,
-      })),
+      options: toPromptOptions(getFrameworkOptions(runtime as RuntimeOption), FRAMEWORK_LABELS),
     });
 
     if (this.api.isCancel(framework)) {
@@ -101,10 +158,7 @@ class ClackPromptAdapter implements PromptPort {
 
     const databases = await this.api.multiselect({
       message: "Select databases",
-      options: DATABASES_BY_RUNTIME[runtime as RuntimeOption].map((value) => ({
-        label: value,
-        value,
-      })),
+      options: toPromptOptions(getDatabaseOptions(runtime as RuntimeOption), DATABASE_LABELS),
     });
 
     if (this.api.isCancel(databases)) {
@@ -113,10 +167,10 @@ class ClackPromptAdapter implements PromptPort {
 
     const platformServices = await this.api.multiselect({
       message: "Select platform services",
-      options: SERVICES_BY_RUNTIME[runtime as RuntimeOption].map((value) => ({
-        label: value,
-        value,
-      })),
+      options: toPromptOptions(
+        getServiceOptions(runtime as RuntimeOption),
+        PLATFORM_SERVICE_LABELS,
+      ),
     });
 
     if (this.api.isCancel(platformServices)) {
@@ -127,10 +181,13 @@ class ClackPromptAdapter implements PromptPort {
       message:
         "Confirm create configuration:\n" +
         `- Name: ${name}\n` +
-        `- Runtime: ${runtime}\n` +
-        `- Framework: ${framework}\n` +
-        `- Databases: ${databases.join(", ")}\n` +
-        `- Platform services: ${platformServices.join(", ")}`,
+        `- Runtime: ${RUNTIME_LABELS[runtime as RuntimeOption]}\n` +
+        `- Framework: ${FRAMEWORK_LABELS[framework as FrameworkOption]}\n` +
+        `- Databases: ${toLabelList(databases as DatabaseOption[], DATABASE_LABELS)}\n` +
+        `- Platform services: ${toLabelList(
+          platformServices as PlatformServiceOption[],
+          PLATFORM_SERVICE_LABELS,
+        )}`,
     });
 
     if (this.api.isCancel(isConfirmed)) {

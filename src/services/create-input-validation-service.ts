@@ -6,24 +6,61 @@ import {
   UnsupportedFrameworkError,
   UnsupportedRuntimeError,
 } from "../errors/cli-errors.js";
+import {
+  DATABASE_OPTIONS,
+  FRAMEWORK_LABELS,
+  FRAMEWORK_OPTIONS,
+  PLATFORM_SERVICE_OPTIONS,
+  RUNTIME_LABELS,
+  RUNTIME_OPTIONS,
+} from "../ports/prompt-port.js";
 import type {
   CreateSelections,
   DatabaseOption,
   FrameworkOption,
   PlatformServiceOption,
+  RuntimeOption,
 } from "../ports/prompt-port.js";
 
 type PathExists = (path: string) => boolean;
 
 const PROJECT_NAME_PATTERN = /^[a-z][a-z0-9-]{2,49}$/;
 
-const NODE_RUNTIME = "Node.js (TypeScript)";
-const STATIC_RUNTIME = "Static (HTML/CSS/JS)";
-const NONE_VALUE = "None";
+const NODE_RUNTIME = RUNTIME_OPTIONS.NODE_TS;
+const STATIC_RUNTIME = RUNTIME_OPTIONS.STATIC_WEB;
+const NONE_VALUE = DATABASE_OPTIONS.NONE;
 
-const SUPPORTED_NODE_FRAMEWORKS: FrameworkOption[] = ["Express", NONE_VALUE];
-const SUPPORTED_NODE_DATABASES: DatabaseOption[] = ["PostgreSQL", "Redis", NONE_VALUE];
-const SUPPORTED_NODE_SERVICES: PlatformServiceOption[] = ["Auth", "Email", "Analytics", NONE_VALUE];
+const SUPPORTED_NODE_FRAMEWORKS: FrameworkOption[] = [
+  FRAMEWORK_OPTIONS.EXPRESS,
+  FRAMEWORK_OPTIONS.NONE,
+];
+const SUPPORTED_NODE_DATABASES: DatabaseOption[] = [
+  DATABASE_OPTIONS.POSTGRESQL,
+  DATABASE_OPTIONS.REDIS,
+  DATABASE_OPTIONS.NONE,
+];
+const SUPPORTED_NODE_SERVICES: PlatformServiceOption[] = [
+  PLATFORM_SERVICE_OPTIONS.AUTH,
+  PLATFORM_SERVICE_OPTIONS.EMAIL,
+  PLATFORM_SERVICE_OPTIONS.ANALYTICS,
+  PLATFORM_SERVICE_OPTIONS.NONE,
+];
+
+const getRuntimeLabel = (runtime: string): string => {
+  if (runtime in RUNTIME_LABELS) {
+    return RUNTIME_LABELS[runtime as RuntimeOption];
+  }
+
+  return runtime;
+};
+
+const getFrameworkLabel = (framework: string): string => {
+  if (framework in FRAMEWORK_LABELS) {
+    return FRAMEWORK_LABELS[framework as FrameworkOption];
+  }
+
+  return framework;
+};
 
 class CreateInputValidationService {
   private readonly pathExists: PathExists;
@@ -63,12 +100,15 @@ class CreateInputValidationService {
       return;
     }
 
-    throw new UnsupportedRuntimeError(input.runtime);
+    throw new UnsupportedRuntimeError(getRuntimeLabel(input.runtime));
   }
 
   private validateNodeSelections(input: CreateSelections): void {
     if (!SUPPORTED_NODE_FRAMEWORKS.includes(input.framework)) {
-      throw new UnsupportedFrameworkError(input.framework, input.runtime);
+      throw new UnsupportedFrameworkError(
+        getFrameworkLabel(input.framework),
+        getRuntimeLabel(input.runtime),
+      );
     }
 
     this.ensureNoneExclusive("databases", input.databases);
@@ -79,15 +119,21 @@ class CreateInputValidationService {
   }
 
   private validateStaticSelections(input: CreateSelections): void {
-    if (input.framework !== NONE_VALUE) {
-      throw new UnsupportedFrameworkError(input.framework, input.runtime);
+    if (input.framework !== FRAMEWORK_OPTIONS.NONE) {
+      throw new UnsupportedFrameworkError(
+        getFrameworkLabel(input.framework),
+        getRuntimeLabel(input.runtime),
+      );
     }
 
-    if (input.databases.length !== 1 || input.databases[0] !== NONE_VALUE) {
+    if (input.databases.length !== 1 || input.databases[0] !== DATABASE_OPTIONS.NONE) {
       throw new UnsupportedCombinationError("Static projects only support databases: None");
     }
 
-    if (input.platformServices.length !== 1 || input.platformServices[0] !== NONE_VALUE) {
+    if (
+      input.platformServices.length !== 1 ||
+      input.platformServices[0] !== PLATFORM_SERVICE_OPTIONS.NONE
+    ) {
       throw new UnsupportedCombinationError("Static projects only support platform services: None");
     }
   }

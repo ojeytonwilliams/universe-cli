@@ -5,8 +5,8 @@ import type { ClackPromptApi } from "./clack-prompt-adapter.js";
 const CANCELLED = Symbol("cancelled");
 
 const createMockApi = (
-  selectResponses: string[] = ["Node.js (TypeScript)", "Express"],
-  multiselectResponses: string[][] = [["PostgreSQL"], ["Auth"]],
+  selectResponses: string[] = ["node_ts", "express"],
+  multiselectResponses: string[][] = [["postgresql"], ["auth"]],
 ): ClackPromptApi => {
   const selectQueue = [...selectResponses];
   const multiselectQueue = [...multiselectResponses];
@@ -33,16 +33,16 @@ const createMockApi = (
 describe(ClackPromptAdapter, () => {
   it("prompts in the required order", async () => {
     const events: string[] = [];
-    const selectQueue = ["Node.js (TypeScript)", "None"];
+    const selectQueue = ["node_ts", "none"];
     const mockApi: ClackPromptApi = {
-      ...createMockApi(["Node.js (TypeScript)", "None"], [["None"], ["None"]]),
+      ...createMockApi(["node_ts", "none"], [["none"], ["none"]]),
       confirm() {
         events.push("confirmation");
         return Promise.resolve(true);
       },
       multiselect(options) {
         events.push(options.message);
-        return Promise.resolve(["None"]);
+        return Promise.resolve(["none"]);
       },
       select(options) {
         events.push(options.message);
@@ -71,9 +71,9 @@ describe(ClackPromptAdapter, () => {
 
   it("filters framework options for Static runtime", async () => {
     const frameworkOptions: { label: string; value: string }[][] = [];
-    const selectQueue = ["Static (HTML/CSS/JS)", "None"];
+    const selectQueue = ["static_web", "none"];
     const mockApi: ClackPromptApi = {
-      ...createMockApi(["Static (HTML/CSS/JS)", "None"], [["None"], ["None"]]),
+      ...createMockApi(["static_web", "none"], [["none"], ["none"]]),
       select(options) {
         frameworkOptions.push(options.options);
         const nextSelection = selectQueue.shift() as string;
@@ -85,7 +85,7 @@ describe(ClackPromptAdapter, () => {
 
     await adapter.promptForCreateInputs();
 
-    expect(frameworkOptions[1]).toStrictEqual([{ label: "None", value: "None" }]);
+    expect(frameworkOptions[1]).toStrictEqual([{ label: "None", value: "none" }]);
   });
 
   it("returns null when cancelled", async () => {
@@ -128,18 +128,18 @@ describe(ClackPromptAdapter, () => {
   it("returns selected values and confirmation state", async () => {
     const expected: CreateSelections = {
       confirmed: true,
-      databases: ["PostgreSQL", "Redis"],
-      framework: "Express",
+      databases: ["postgresql", "redis"],
+      framework: "express",
       name: "hello-universe",
-      platformServices: ["Auth", "Analytics"],
-      runtime: "Node.js (TypeScript)",
+      platformServices: ["auth", "analytics"],
+      runtime: "node_ts",
     };
 
     const mockApi = createMockApi(
-      ["Node.js (TypeScript)", "Express"],
+      ["node_ts", "express"],
       [
-        ["PostgreSQL", "Redis"],
-        ["Auth", "Analytics"],
+        ["postgresql", "redis"],
+        ["auth", "analytics"],
       ],
     );
 

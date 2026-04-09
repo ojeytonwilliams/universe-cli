@@ -11,11 +11,11 @@ import { CreateInputValidationService } from "./create-input-validation-service.
 
 const validNodeSelection: CreateSelections = {
   confirmed: true,
-  databases: ["PostgreSQL"],
-  framework: "Express",
+  databases: ["postgresql"],
+  framework: "express",
   name: "hello-universe",
-  platformServices: ["Auth"],
-  runtime: "Node.js (TypeScript)",
+  platformServices: ["auth"],
+  runtime: "node_ts",
 };
 
 describe(CreateInputValidationService, () => {
@@ -32,14 +32,14 @@ describe(CreateInputValidationService, () => {
 
     const result = service.validateCreateInput({
       confirmed: true,
-      databases: ["None"],
-      framework: "None",
+      databases: ["none"],
+      framework: "none",
       name: "site-app",
-      platformServices: ["None"],
-      runtime: "Static (HTML/CSS/JS)",
+      platformServices: ["none"],
+      runtime: "static_web",
     });
 
-    expect(result.runtime).toBe("Static (HTML/CSS/JS)");
+    expect(result.runtime).toBe("static_web");
   });
 
   it("rejects invalid project names with typed errors", () => {
@@ -68,7 +68,7 @@ describe(CreateInputValidationService, () => {
     const act = () =>
       service.validateCreateInput({
         ...validNodeSelection,
-        databases: ["None", "Redis"],
+        databases: ["none", "redis"],
       });
 
     expect(act).toThrow(InvalidMultiSelectError);
@@ -104,11 +104,11 @@ describe(CreateInputValidationService, () => {
     const act = () =>
       service.validateCreateInput({
         confirmed: true,
-        databases: ["PostgreSQL"],
-        framework: "None",
+        databases: ["postgresql"],
+        framework: "none",
         name: "site-app",
-        platformServices: ["None"],
-        runtime: "Static (HTML/CSS/JS)",
+        platformServices: ["none"],
+        runtime: "static_web",
       });
 
     expect(act).toThrow(UnsupportedCombinationError);
@@ -120,11 +120,11 @@ describe(CreateInputValidationService, () => {
     const act = () =>
       service.validateCreateInput({
         confirmed: true,
-        databases: ["None"],
-        framework: "None",
+        databases: ["none"],
+        framework: "none",
         name: "site-app",
-        platformServices: ["Auth"],
-        runtime: "Static (HTML/CSS/JS)",
+        platformServices: ["auth"],
+        runtime: "static_web",
       });
 
     expect(act).toThrow(UnsupportedCombinationError);

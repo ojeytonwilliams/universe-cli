@@ -6,9 +6,9 @@ import { LayerCompositionService } from "./layer-composition-service.js";
 // Combination coverage helpers
 // ---------------------------------------------------------------------------
 
-const NODE_DATABASES = ["PostgreSQL", "Redis"] as const;
-const NODE_SERVICES = ["Auth", "Email", "Analytics"] as const;
-const NODE_FRAMEWORKS = ["Express", "None"] as const;
+const NODE_DATABASES = ["postgresql", "redis"] as const;
+const NODE_SERVICES = ["auth", "email", "analytics"] as const;
+const NODE_FRAMEWORKS = ["express", "none"] as const;
 
 const buildPowerSet = <T>(items: readonly T[]): T[][] => {
   const subsets: T[][] = [[]];
@@ -24,20 +24,20 @@ const buildPowerSet = <T>(items: readonly T[]): T[][] => {
   return subsets;
 };
 
-const toMultiSelect = <T extends string>(items: T[]): (T | "None")[] =>
-  items.length === 0 ? ["None"] : ([...items].sort() as (T | "None")[]);
+const toMultiSelect = <T extends string>(items: T[]): (T | "none")[] =>
+  items.length === 0 ? ["none"] : ([...items].sort() as (T | "none")[]);
 
 const expectedNodeLayerNames = (
   framework: (typeof NODE_FRAMEWORKS)[number],
   databases: CreateSelections["databases"],
   platformServices: CreateSelections["platformServices"],
 ): string[] => {
-  const frameworkLayer = framework === "Express" ? "frameworks/express" : "frameworks/none";
+  const frameworkLayer = framework === "express" ? "frameworks/express" : "frameworks/none";
   const serviceLayerSlugs = [
-    ...databases.filter((d) => d !== "None"),
-    ...platformServices.filter((s) => s !== "None"),
+    ...databases.filter((d) => d !== "none"),
+    ...platformServices.filter((s) => s !== "none"),
   ]
-    .map((v) => `services/${v.toLowerCase()}`)
+    .map((v) => `services/${v}`)
     .sort((a, b) => a.localeCompare(b));
 
   return ["always", "base/node-js-typescript", frameworkLayer, ...serviceLayerSlugs];
@@ -68,11 +68,11 @@ const nodeCombinations: NodeCase[] = NODE_FRAMEWORKS.flatMap((framework) =>
 
 const nodeExpressSelection: CreateSelections = {
   confirmed: true,
-  databases: ["Redis", "PostgreSQL"],
-  framework: "Express",
+  databases: ["redis", "postgresql"],
+  framework: "express",
   name: "hello-universe",
-  platformServices: ["Email", "Auth"],
-  runtime: "Node.js (TypeScript)",
+  platformServices: ["email", "auth"],
+  runtime: "node_ts",
 };
 
 const createService = (overrides?: Record<string, Record<string, string>>) =>
@@ -128,8 +128,8 @@ describe(LayerCompositionService, () => {
     const firstResult = service.resolveLayers(nodeExpressSelection);
     const secondResult = service.resolveLayers({
       ...nodeExpressSelection,
-      databases: ["PostgreSQL", "Redis"],
-      platformServices: ["Auth", "Email"],
+      databases: ["postgresql", "redis"],
+      platformServices: ["auth", "email"],
     });
 
     expect(secondResult).toStrictEqual(firstResult);
@@ -192,11 +192,11 @@ describe(LayerCompositionService, () => {
 
       const result = service.resolveLayers({
         confirmed: true,
-        databases: ["None"],
-        framework: "None",
+        databases: ["none"],
+        framework: "none",
         name: "my-app",
-        platformServices: ["None"],
-        runtime: "Node.js (TypeScript)",
+        platformServices: ["none"],
+        runtime: "node_ts",
       });
 
       expect(result.files["README.md"]).toBe("# my-app\n");
@@ -211,11 +211,11 @@ describe(LayerCompositionService, () => {
 
       const result = service.resolveLayers({
         confirmed: true,
-        databases: ["None"],
-        framework: "Express",
+        databases: ["none"],
+        framework: "express",
         name: "app",
-        platformServices: ["None"],
-        runtime: "Node.js (TypeScript)",
+        platformServices: ["none"],
+        runtime: "node_ts",
       });
 
       expect(result.files["meta.txt"]).toBe("rt=Node.js (TypeScript) fw=Express\n");
@@ -230,11 +230,11 @@ describe(LayerCompositionService, () => {
 
       const result = service.resolveLayers({
         confirmed: true,
-        databases: ["None"],
-        framework: "None",
+        databases: ["none"],
+        framework: "none",
         name: "my-app",
-        platformServices: ["None"],
-        runtime: "Node.js (TypeScript)",
+        platformServices: ["none"],
+        runtime: "node_ts",
       });
 
       expect(result.files["note.txt"]).toBe("my-app {{unknown}}\n");
@@ -264,11 +264,11 @@ describe(LayerCompositionService, () => {
 
       const result = service.resolveLayers({
         confirmed: true,
-        databases: ["None"],
-        framework: "Express",
+        databases: ["none"],
+        framework: "express",
         name: "test",
-        platformServices: ["None"],
-        runtime: "Node.js (TypeScript)",
+        platformServices: ["none"],
+        runtime: "node_ts",
       });
 
       const output = result.files["docker-compose.yaml"];
@@ -287,11 +287,11 @@ describe(LayerCompositionService, () => {
 
       const result = service.resolveLayers({
         confirmed: true,
-        databases: ["None"],
-        framework: "Express",
+        databases: ["none"],
+        framework: "express",
         name: "test",
-        platformServices: ["None"],
-        runtime: "Node.js (TypeScript)",
+        platformServices: ["none"],
+        runtime: "node_ts",
       });
 
       const output = result.files["config.yml"];
@@ -309,11 +309,11 @@ describe(LayerCompositionService, () => {
 
       const result = service.resolveLayers({
         confirmed: true,
-        databases: ["None"],
-        framework: "Express",
+        databases: ["none"],
+        framework: "express",
         name: "test",
-        platformServices: ["None"],
-        runtime: "Node.js (TypeScript)",
+        platformServices: ["none"],
+        runtime: "node_ts",
       });
 
       expect(result.files["package.json"]).toBe(
@@ -335,11 +335,11 @@ describe(LayerCompositionService, () => {
 
       const result = service.resolveLayers({
         confirmed: true,
-        databases: ["None"],
-        framework: "Express",
+        databases: ["none"],
+        framework: "express",
         name: "test",
-        platformServices: ["None"],
-        runtime: "Node.js (TypeScript)",
+        platformServices: ["none"],
+        runtime: "node_ts",
       });
 
       expect(result.files["package.json"]).toBe(
@@ -357,11 +357,11 @@ describe(LayerCompositionService, () => {
     it("resolves Static to always, base/static, and frameworks/none", () => {
       const result = service.resolveLayers({
         confirmed: true,
-        databases: ["None"],
-        framework: "None",
+        databases: ["none"],
+        framework: "none",
         name: "test",
-        platformServices: ["None"],
-        runtime: "Static (HTML/CSS/JS)",
+        platformServices: ["none"],
+        runtime: "static_web",
       });
 
       expect(result.layers.map((layer) => layer.name)).toStrictEqual([
@@ -380,7 +380,7 @@ describe(LayerCompositionService, () => {
           framework,
           name: "test",
           platformServices,
-          runtime: "Node.js (TypeScript)",
+          runtime: "node_ts",
         });
 
         expect(result.layers.map((layer) => layer.name)).toStrictEqual(

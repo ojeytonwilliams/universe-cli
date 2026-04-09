@@ -23,11 +23,11 @@ const DEFERRED_COMMANDS = [
 
 const createPromptResult: CreateSelections = {
   confirmed: true,
-  databases: ["PostgreSQL"],
-  framework: "Express",
+  databases: ["postgresql"],
+  framework: "express",
   name: "hello-universe",
-  platformServices: ["Auth", "Email"],
-  runtime: "Node.js (TypeScript)",
+  platformServices: ["auth", "email"],
+  runtime: "node_ts",
 };
 
 const createPrompt: PromptPort = {

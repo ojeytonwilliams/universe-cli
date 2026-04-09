@@ -1,5 +1,10 @@
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
+import {
+  DATABASE_OPTIONS,
+  PLATFORM_SERVICE_OPTIONS,
+  RUNTIME_OPTIONS,
+} from "../ports/prompt-port.js";
 import type { CreateSelections } from "../ports/prompt-port.js";
 
 // ---------------------------------------------------------------------------
@@ -86,7 +91,7 @@ class PlatformManifestService {
       production: `${input.name}.example.com`,
     };
 
-    if (input.runtime === "Static (HTML/CSS/JS)") {
+    if (input.runtime === RUNTIME_OPTIONS.STATIC_WEB) {
       const manifest: StaticPlatformManifest = {
         domain,
         environments: ENVIRONMENTS,
@@ -99,14 +104,10 @@ class PlatformManifestService {
     }
 
     const services = input.platformServices
-      .filter((value) => value !== "None")
-      .sort()
-      .map((s) => s.toLowerCase());
+      .filter((value) => value !== PLATFORM_SERVICE_OPTIONS.NONE)
+      .sort();
 
-    const resources = input.databases
-      .filter((value) => value !== "None")
-      .sort()
-      .map((r) => r.toLowerCase());
+    const resources = input.databases.filter((value) => value !== DATABASE_OPTIONS.NONE).sort();
 
     const manifest: AppPlatformManifest = {
       domain,

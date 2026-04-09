@@ -4,20 +4,20 @@ import { PlatformManifestSchema, PlatformManifestService } from "./platform-mani
 
 const nodeSelection: CreateSelections = {
   confirmed: true,
-  databases: ["Redis", "PostgreSQL"],
-  framework: "Express",
+  databases: ["redis", "postgresql"],
+  framework: "express",
   name: "hello-universe",
-  platformServices: ["Email", "Auth"],
-  runtime: "Node.js (TypeScript)",
+  platformServices: ["email", "auth"],
+  runtime: "node_ts",
 };
 
 const staticSelection: CreateSelections = {
   confirmed: true,
-  databases: ["None"],
-  framework: "None",
+  databases: ["none"],
+  framework: "none",
   name: "marketing-site",
-  platformServices: ["None"],
-  runtime: "Static (HTML/CSS/JS)",
+  platformServices: ["none"],
+  runtime: "static_web",
 };
 
 describe(PlatformManifestService, () => {
@@ -34,9 +34,9 @@ describe(PlatformManifestService, () => {
 
     const result = service.generatePlatformManifest({
       ...nodeSelection,
-      databases: ["None"],
-      framework: "None",
-      platformServices: ["None"],
+      databases: ["none"],
+      framework: "none",
+      platformServices: ["none"],
     });
 
     expect(result).toContain("services: []");

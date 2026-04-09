@@ -29,7 +29,7 @@ const createPromptPort = (selection: CreateSelections | null): PromptPort => ({
 
 const createNodeSelection = (selection: {
   databases: CreateSelections["databases"];
-  framework: "Express" | "None";
+  framework: "express" | "none";
   name: string;
   platformServices: CreateSelections["platformServices"];
 }): CreateSelections => ({
@@ -38,16 +38,16 @@ const createNodeSelection = (selection: {
   framework: selection.framework,
   name: selection.name,
   platformServices: selection.platformServices,
-  runtime: "Node.js (TypeScript)",
+  runtime: "node_ts",
 });
 
 const createStaticSelection = (name: string): CreateSelections => ({
   confirmed: true,
-  databases: ["None"],
-  framework: "None",
+  databases: ["none"],
+  framework: "none",
   name,
-  platformServices: ["None"],
-  runtime: "Static (HTML/CSS/JS)",
+  platformServices: ["none"],
+  runtime: "static_web",
 });
 
 const collectGeneratedFiles = (directory: string): Record<string, string> => {
@@ -109,10 +109,10 @@ describe("create e2e", () => {
   it("scaffolds Node.js + Express with all services", async () => {
     const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-e2e-"));
     const selection = createNodeSelection({
-      databases: ["PostgreSQL", "Redis"],
-      framework: "Express",
+      databases: ["postgresql", "redis"],
+      framework: "express",
       name: "node-express-full",
-      platformServices: ["Analytics", "Auth", "Email"],
+      platformServices: ["analytics", "auth", "email"],
     });
 
     tempDirectories.push(rootDirectory);
@@ -129,10 +129,10 @@ describe("create e2e", () => {
   it("scaffolds Node.js + no framework + no services", async () => {
     const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-e2e-"));
     const selection = createNodeSelection({
-      databases: ["None"],
-      framework: "None",
+      databases: ["none"],
+      framework: "none",
       name: "node-bare",
-      platformServices: ["None"],
+      platformServices: ["none"],
     });
 
     tempDirectories.push(rootDirectory);
@@ -206,10 +206,10 @@ describe("create e2e", () => {
         rootDirectory,
         createPromptPort(
           createNodeSelection({
-            databases: ["None"],
-            framework: "Express",
+            databases: ["none"],
+            framework: "express",
             name: conflictProjectName,
-            platformServices: ["None"],
+            platformServices: ["none"],
           }),
         ),
       ),
@@ -223,10 +223,10 @@ describe("create e2e", () => {
         rootDirectory,
         createPromptPort(
           createNodeSelection({
-            databases: ["None"],
-            framework: "Express",
+            databases: ["none"],
+            framework: "express",
             name: conflictProjectName,
-            platformServices: ["None"],
+            platformServices: ["none"],
           }),
         ),
       ),
@@ -239,10 +239,10 @@ describe("create e2e", () => {
   it("covers config merge overwrite behavior in a create e2e flow", async () => {
     const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-e2e-"));
     const selection = createNodeSelection({
-      databases: ["None"],
-      framework: "Express",
+      databases: ["none"],
+      framework: "express",
       name: "config-merge-app",
-      platformServices: ["None"],
+      platformServices: ["none"],
     });
     const customLayers: LayerRegistry = {
       always: {
@@ -294,10 +294,10 @@ describe("create e2e", () => {
   it("covers non-config collision failure behavior in a create e2e flow", async () => {
     const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-e2e-"));
     const selection = createNodeSelection({
-      databases: ["None"],
-      framework: "Express",
+      databases: ["none"],
+      framework: "express",
       name: "collision-app",
-      platformServices: ["None"],
+      platformServices: ["none"],
     });
     const customLayers: LayerRegistry = {
       always: {
@@ -328,10 +328,10 @@ describe("create e2e", () => {
   it("snapshots generated Node.js scaffold output", async () => {
     const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-e2e-"));
     const selection = createNodeSelection({
-      databases: ["PostgreSQL", "Redis"],
-      framework: "Express",
+      databases: ["postgresql", "redis"],
+      framework: "express",
       name: "snapshot-node-app",
-      platformServices: ["Analytics", "Auth", "Email"],
+      platformServices: ["analytics", "auth", "email"],
     });
 
     tempDirectories.push(rootDirectory);
