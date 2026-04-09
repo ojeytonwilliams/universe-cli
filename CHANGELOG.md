@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.12.0] - 2026-04-09
+
+### Phase 1 — Promote Trivial Prototype
+
+- **`PromoteClient` port** (`src/ports/promote-client.ts`): interface declaring `promote(request: PromoteRequest): Promise<PromoteReceipt>`; `PromoteRequest` carries `manifest` and `targetEnvironment`; `PromoteReceipt` carries `name`, `targetEnvironment`, and `promotionId`.
+- **`PromotionError`** (`src/errors/cli-errors.ts`): exit code 15; message includes project name and reason.
+- **`StubPromoteClient`** (`src/adapters/stub-promote-client.ts`): tracks per-project/target-environment promotion counts; returns `stub-promote-<name>-<target>-N` receipts; rejects with `PromotionError` for the sentinel name `promote-failure`; state resets on construction.
+- **`promote` command** (`src/cli.ts`): removed from `DEFERRED_COMMANDS`; reads `platform.yaml` from `cwd` or an optional directory argument; target environment defaults to `production`; exits 0 with name/targetEnvironment/promotionId on success; exits 11/12/15 on error paths.
+- **Container wiring** (`src/container.ts`, `src/bin.ts`): `StubPromoteClient` exported as `promoteClient` and wired into `runCli`.
+
 ## [2.11.0] - 2026-04-09
 
 ### Phase 3 — Deploy Test Coverage, Guardrails, and Documentation

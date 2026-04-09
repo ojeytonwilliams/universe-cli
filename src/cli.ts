@@ -6,6 +6,7 @@ import {
   UnsupportedCombinationError,
 } from "./errors/cli-errors.js";
 import type { DeployReceipt, DeployRequest } from "./ports/deploy-client.js";
+import type { PromoteReceipt, PromoteRequest } from "./ports/promote-client.js";
 import type { FilesystemWriter } from "./ports/filesystem-writer.js";
 import type { ObservabilityClient } from "./ports/observability-client.js";
 import { safeError, safeTrack } from "./ports/observability-client.js";
@@ -47,6 +48,7 @@ interface CliDependencies {
     validateManifest(yaml: string): PlatformManifest;
   };
   projectReader: { readFile(filePath: string): Promise<string> };
+  promoteClient: { promote(request: PromoteRequest): Promise<PromoteReceipt> };
   promptPort: PromptPort;
   registrationClient: {
     register(manifest: PlatformManifest): Promise<{ name: string; registrationId: string }>;
@@ -54,7 +56,7 @@ interface CliDependencies {
   validator: { validateCreateInput(input: CreateSelections): CreateSelections };
 }
 
-const DEFERRED_COMMANDS = new Set(["list", "logs", "promote", "rollback", "status", "teardown"]);
+const DEFERRED_COMMANDS = new Set(["list", "logs", "rollback", "status", "teardown"]);
 
 const runCli = async (argv: string[], deps: CliDependencies): Promise<CliResult> => {
   const {
@@ -65,6 +67,7 @@ const runCli = async (argv: string[], deps: CliDependencies): Promise<CliResult>
     observability,
     platformManifestGenerator,
     projectReader,
+    promoteClient,
     promptPort,
     registrationClient,
     validator,
@@ -211,6 +214,42 @@ const runCli = async (argv: string[], deps: CliDependencies): Promise<CliResult>
       if (error instanceof CliError) {
         safeError(observability, error);
         safeTrack(observability, "deploy.failure", { environment });
+        return { exitCode: error.exitCode, output: error.message };
+      }
+
+      throw error;
+    }
+  }
+
+  if (command === "promote") {
+    const platformYamlDir = argv[1] ?? cwd;
+    const targetEnvironment = argv[2] ?? "production";
+    const platformYamlPath = join(platformYamlDir, "platform.yaml");
+
+    try {
+      const yaml = await projectReader.readFile(platformYamlPath);
+
+      let manifest: PlatformManifest;
+      try {
+        manifest = platformManifestGenerator.validateManifest(yaml);
+      } catch (validationError) {
+        const invalidError = new ManifestInvalidError(
+          platformYamlPath,
+          validationError instanceof Error ? validationError.message : String(validationError),
+        );
+        safeError(observability, invalidError);
+        return { exitCode: invalidError.exitCode, output: invalidError.message };
+      }
+
+      const receipt = await promoteClient.promote({ manifest, targetEnvironment });
+
+      return {
+        exitCode: 0,
+        output: `Promoted project "${receipt.name}" to ${receipt.targetEnvironment}. Promotion ID: ${receipt.promotionId}`,
+      };
+    } catch (error) {
+      if (error instanceof CliError) {
+        safeError(observability, error);
         return { exitCode: error.exitCode, output: error.message };
       }
 

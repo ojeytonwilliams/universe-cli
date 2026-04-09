@@ -10,7 +10,7 @@ import { PlatformManifestService } from "./services/platform-manifest-service.js
 import { runCli } from "./cli.js";
 import type { CreateSelections, PromptPort } from "./ports/prompt-port.js";
 
-const DEFERRED_COMMANDS = ["list", "logs", "promote", "rollback", "status", "teardown"] as const;
+const DEFERRED_COMMANDS = ["list", "logs", "rollback", "status", "teardown"] as const;
 
 const createPromptPort = (selection: CreateSelections | null): PromptPort => ({
   promptForCreateInputs() {
@@ -90,6 +90,13 @@ const createDependencies = (
   projectReader: {
     readFile(_filePath: string): Promise<string> {
       return Promise.reject(new Error("projectReader not exercised in create tests"));
+    },
+  },
+  promoteClient: {
+    promote(
+      _request: never,
+    ): Promise<{ name: string; promotionId: string; targetEnvironment: string }> {
+      return Promise.reject(new Error("promoteClient not exercised in create tests"));
     },
   },
   promptPort,

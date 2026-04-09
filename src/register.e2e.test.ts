@@ -6,6 +6,7 @@ import { LocalFilesystemWriter } from "./adapters/local-filesystem-writer.js";
 import { LocalProjectReader } from "./adapters/local-project-reader.js";
 import { StubDeployClient } from "./adapters/stub-deploy-client.js";
 import { StubObservabilityClient } from "./adapters/stub-observability-client.js";
+import { StubPromoteClient } from "./adapters/stub-promote-client.js";
 import { StubRegistrationClient } from "./adapters/stub-registration-client.js";
 import { CreateInputValidationService } from "./services/create-input-validation-service.js";
 import { LayerCompositionService } from "./services/layer-composition-service.js";
@@ -40,6 +41,7 @@ const createDependencies = (
   observability: new StubObservabilityClient(),
   platformManifestGenerator: new PlatformManifestService(),
   projectReader: new LocalProjectReader(),
+  promoteClient: new StubPromoteClient(),
   promptPort,
   registrationClient,
   validator: new CreateInputValidationService((path) => existsSync(join(cwd, path))),

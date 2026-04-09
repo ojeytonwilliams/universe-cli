@@ -2,7 +2,7 @@
 
 ## Phase 1 — Trivial Prototype (first working `universe promote`)
 
-- [ ] CODE: Define promote port contract and typed promote error
+- [x] CODE: Define promote port contract and typed promote error
   - Feature: Add `PromoteClient` port (request/receipt types) and `PromotionError` in the CLI error taxonomy.
   - Acceptance:
     - `src/ports/promote-client.ts` exports a documented interface with one promote method.
@@ -10,7 +10,7 @@
     - Promote receipt includes deterministic `promotionId`, project `name`, and `targetEnvironment`.
     - `PromotionError` has one stable user-facing message style and one stable exit code.
 
-- [ ] CODE: Implement stub promote adapter with deterministic behavior
+- [x] CODE: Implement stub promote adapter with deterministic behavior
   - Feature: Add `StubPromoteClient` adapter that simulates a successful promotion without network access.
   - Acceptance:
     - First promotion for a project/target returns `promotionId` `stub-promote-<name>-<target>-1`.
@@ -18,7 +18,7 @@
     - Adapter can simulate promotion failure for explicit test fixtures (for example, sentinel project names).
     - Adapter performs no external network calls.
 
-- [ ] CODE: Promote `promote` from deferred to implemented CLI handler
+- [x] CODE: Promote `promote` from deferred to implemented CLI handler
   - Feature: Implement `universe promote [directory] [target-environment]` in `runCli` and remove `promote` from deferred command set.
   - Acceptance:
     - `promote` reads `platform.yaml` from `[directory]` or `cwd` when omitted.
@@ -27,7 +27,7 @@
     - Valid manifest is passed to `PromoteClient` and successful result exits `0`.
     - Success output includes project name, target environment, and promotion ID.
 
-- [ ] TASK: Wire container and dependency graph for promote
+- [x] TASK: Wire container and dependency graph for promote
   - Acceptance:
     - `src/container.ts` exports `promoteClient` wired to `StubPromoteClient` in spike mode.
     - CLI dependency composition includes `promoteClient` without breaking existing commands.

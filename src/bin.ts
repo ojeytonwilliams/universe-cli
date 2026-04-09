@@ -7,7 +7,12 @@ import { LocalProjectReader } from "./adapters/local-project-reader.js";
 import { CreateInputValidationService } from "./services/create-input-validation-service.js";
 import { LayerCompositionService } from "./services/layer-composition-service.js";
 import { PlatformManifestService } from "./services/platform-manifest-service.js";
-import { deployClient, observabilityClient, registrationClient } from "./container.js";
+import {
+  deployClient,
+  observabilityClient,
+  promoteClient,
+  registrationClient,
+} from "./container.js";
 import { runCli } from "./cli.js";
 
 const filesystemWriter = new LocalFilesystemWriter();
@@ -24,6 +29,7 @@ const { exitCode, output } = await runCli(process.argv.slice(2), {
   observability: observabilityClient,
   platformManifestGenerator: manifestGenerator,
   projectReader,
+  promoteClient,
   promptPort,
   registrationClient,
   validator: inputValidator,

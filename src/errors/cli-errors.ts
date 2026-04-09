@@ -7,6 +7,7 @@ const EXIT_CODES = {
   MANIFEST_INVALID: 12,
   MANIFEST_NOT_FOUND: 11,
   MISSING_LAYER: 8,
+  PROMOTION: 15,
   REGISTRATION: 13,
   SCAFFOLD_WRITE: 10,
   TARGET_EXISTS: 3,
@@ -144,6 +145,13 @@ class DeploymentError extends CliError {
   }
 }
 
+class PromotionError extends CliError {
+  constructor(name: string, reason: string) {
+    super(`Failed to promote project "${name}": ${reason}`, EXIT_CODES.PROMOTION);
+    this.name = "PromotionError";
+  }
+}
+
 class DeferredCommandError extends CliError {
   constructor(command: string) {
     super(
@@ -158,6 +166,7 @@ export {
   CliError,
   DeferredCommandError,
   DeploymentError,
+  PromotionError,
   InvalidMultiSelectError,
   InvalidNameError,
   LayerConflictError,

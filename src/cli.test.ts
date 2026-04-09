@@ -11,6 +11,7 @@ import {
   DeploymentError,
   InvalidNameError,
   ManifestNotFoundError,
+  PromotionError,
   RegistrationError,
   ScaffoldWriteError,
 } from "./errors/cli-errors.js";
@@ -20,7 +21,7 @@ const client: ObservabilityClient = {
   track() {},
 };
 
-const DEFERRED_COMMANDS = ["list", "logs", "promote", "rollback", "status", "teardown"] as const;
+const DEFERRED_COMMANDS = ["list", "logs", "rollback", "status", "teardown"] as const;
 
 const createPromptResult: CreateSelections = {
   confirmed: true,
@@ -122,6 +123,15 @@ const defaultDeployClient = {
   },
 };
 
+const defaultPromoteClient = {
+  promote(_request: {
+    manifest: PlatformManifest;
+    targetEnvironment: string;
+  }): Promise<{ name: string; promotionId: string; targetEnvironment: string }> {
+    return Promise.reject(new Error("promoteClient.promote should not be called in this test"));
+  },
+};
+
 const createDeps = (
   promptPort: PromptPort,
   validator: { validateCreateInput(input: CreateSelections): CreateSelections },
@@ -134,6 +144,7 @@ const createDeps = (
   observability: client,
   platformManifestGenerator: manifestGenerator,
   projectReader: defaultProjectReader,
+  promoteClient: defaultPromoteClient,
   promptPort,
   registrationClient: defaultRegistrationClient,
   validator,
@@ -535,6 +546,125 @@ describe(runCli, () => {
       });
 
       expect(result.exitCode).toBe(0);
+    });
+  });
+
+  describe("promote", () => {
+    const promoteManifest: AppPlatformManifest = {
+      domain: { preview: "my-app.preview.example.com", production: "my-app.example.com" },
+      environments: { preview: { branch: "preview" }, production: { branch: "main" } },
+      name: "my-app",
+      owner: "platform-engineering",
+      resources: [],
+      schemaVersion: "1",
+      services: [],
+      stack: "app",
+    };
+
+    const successReader = {
+      readFile(_filePath: string) {
+        return Promise.resolve("stack: app\n");
+      },
+    };
+    const successValidator = (_yaml: string): PlatformManifest => promoteManifest;
+    const successPromoteClient = {
+      promote(_request: { manifest: PlatformManifest; targetEnvironment: string }) {
+        return Promise.resolve({
+          name: "my-app",
+          promotionId: "stub-promote-my-app-production-1",
+          targetEnvironment: "production",
+        });
+      },
+    };
+
+    const promoteDeps = (
+      reader = successReader,
+      validator = successValidator,
+      promoteClient = successPromoteClient,
+    ) => ({
+      ...createDeps(createPrompt, passThroughValidator),
+      platformManifestGenerator: { ...manifestGenerator, validateManifest: validator },
+      projectReader: reader,
+      promoteClient,
+    });
+
+    it("exits 0 on successful promotion", async () => {
+      const result = await runCli(["promote"], promoteDeps());
+
+      expect(result.exitCode).toBe(0);
+    });
+
+    it("output contains the project name, target environment, and promotion ID", async () => {
+      const { output } = await runCli(["promote"], promoteDeps());
+
+      expect(output).toContain("my-app");
+      expect(output).toContain("production");
+      expect(output).toContain("stub-promote-my-app-production-1");
+    });
+
+    it("reads platform.yaml from cwd when no directory argument is given", async () => {
+      const paths: string[] = [];
+      const trackingReader = {
+        readFile(filePath: string) {
+          paths.push(filePath);
+          return Promise.resolve("stack: app\n");
+        },
+      };
+
+      await runCli(["promote"], promoteDeps(trackingReader));
+
+      expect(paths[0]).toBe("/workspace/platform.yaml");
+    });
+
+    it("reads platform.yaml from the given directory argument", async () => {
+      const paths: string[] = [];
+      const trackingReader = {
+        readFile(filePath: string) {
+          paths.push(filePath);
+          return Promise.resolve("stack: app\n");
+        },
+      };
+
+      await runCli(["promote", "/some/project"], promoteDeps(trackingReader));
+
+      expect(paths[0]).toBe("/some/project/platform.yaml");
+    });
+
+    it("exits 11 when platform.yaml is missing", async () => {
+      const missingReader = {
+        readFile(filePath: string) {
+          return Promise.reject(new ManifestNotFoundError(filePath));
+        },
+      };
+
+      const result = await runCli(["promote"], promoteDeps(missingReader));
+
+      expect(result.exitCode).toBe(11);
+    });
+
+    it("exits 12 when platform.yaml fails validation", async () => {
+      const failingValidator = (_yaml: string): PlatformManifest => {
+        throw new Error("invalid schema");
+      };
+
+      const result = await runCli(["promote"], promoteDeps(successReader, failingValidator));
+
+      expect(result.exitCode).toBe(12);
+    });
+
+    it("exits 15 when promotion fails", async () => {
+      const failingClient = {
+        promote(request: { manifest: PlatformManifest; targetEnvironment: string }) {
+          return Promise.reject(new PromotionError(request.manifest.name, "timeout"));
+        },
+      };
+
+      const result = await runCli(
+        ["promote"],
+        promoteDeps(successReader, successValidator, failingClient),
+      );
+
+      expect(result.exitCode).toBe(15);
     });
   });
 });
