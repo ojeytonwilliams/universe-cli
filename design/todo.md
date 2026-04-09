@@ -35,7 +35,7 @@ command code is written until the contracts for `ProjectReaderPort` and
 
 ## Phase 2: `ProjectReader` adapter
 
-- [ ] CODE: `LocalProjectReader` adapter
+- [x] CODE: `LocalProjectReader` adapter
   - Feature: Read the content of an existing file from the local filesystem, mapping `ENOENT` to `ManifestNotFoundError`.
   - Files: `src/adapters/local-project-reader.ts`, `src/adapters/local-project-reader.test.ts`
   - Acceptance:

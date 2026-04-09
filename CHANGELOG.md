@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.6.0] - 2026-04-09
+
+### Phase 2 — `ProjectReader` Adapter
+
+- **`LocalProjectReader`** (`src/adapters/local-project-reader.ts`): implements `ProjectReaderPort`; reads files from the local filesystem via `fs/promises.readFile`; maps `ENOENT` to `ManifestNotFoundError` with the attempted path; all other errors propagate as-is.
+- **Adapter tests** (`src/adapters/local-project-reader.test.ts`): covers file-exists success, missing-file throws `ManifestNotFoundError`, and path included in error message; uses a real temp directory.
+
 ## [2.5.0] - 2026-04-09
 
 ### Phase 1 — `register` Contract Definition
