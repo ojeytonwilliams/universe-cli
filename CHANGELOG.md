@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.7.0] - 2026-04-09
+
+### Refactor Phase 2 — Move `DefaultCreateInputValidator` into `src/services`
+
+- **Created `CreateInputValidationService`** ([src/services/create-input-validation-service.ts](src/services/create-input-validation-service.ts)): moved create-name rules and runtime/framework/services compatibility checks out of `src/adapters/` into `src/services/` where pure application logic belongs.
+- **Deleted `DefaultCreateInputValidator`** (`src/adapters/default-create-input-validator.ts`): removed the misclassified adapter and its test; all coverage now lives alongside the service.
+- **Updated entry point and E2E wiring** ([src/bin.ts](src/bin.ts), [src/create.e2e.test.ts](src/create.e2e.test.ts)): replaced adapter import with service import at all call sites.
+- **Removed adapter framing from design docs** ([design/summary.md](design/summary.md), [design/prd.md](design/prd.md)): `CreateInputValidator` removed from port lists; `CreateInputValidationService` recorded as an internal service.
+
 ## [1.6.0] - 2026-04-09
 
 ### Refactor Phase 1 — Refactor Plan and Target Boundaries

@@ -7,7 +7,7 @@ import {
   UnsupportedRuntimeError,
 } from "../errors/cli-errors.js";
 import type { CreateSelections } from "../ports/prompt-port.js";
-import { DefaultCreateInputValidator } from "./default-create-input-validator.js";
+import { CreateInputValidationService } from "./create-input-validation-service.js";
 
 const validNodeSelection: CreateSelections = {
   confirmed: true,
@@ -18,19 +18,19 @@ const validNodeSelection: CreateSelections = {
   runtime: "Node.js (TypeScript)",
 };
 
-describe(DefaultCreateInputValidator, () => {
+describe(CreateInputValidationService, () => {
   it("accepts supported Node.js combinations", () => {
-    const validator = new DefaultCreateInputValidator(() => false);
+    const service = new CreateInputValidationService(() => false);
 
-    const result = validator.validateCreateInput(validNodeSelection);
+    const result = service.validateCreateInput(validNodeSelection);
 
     expect(result).toStrictEqual(validNodeSelection);
   });
 
   it("accepts supported Static combination", () => {
-    const validator = new DefaultCreateInputValidator(() => false);
+    const service = new CreateInputValidationService(() => false);
 
-    const result = validator.validateCreateInput({
+    const result = service.validateCreateInput({
       confirmed: true,
       databases: ["None"],
       framework: "None",
@@ -43,10 +43,10 @@ describe(DefaultCreateInputValidator, () => {
   });
 
   it("rejects invalid project names with typed errors", () => {
-    const validator = new DefaultCreateInputValidator(() => false);
+    const service = new CreateInputValidationService(() => false);
 
     const act = () =>
-      validator.validateCreateInput({
+      service.validateCreateInput({
         ...validNodeSelection,
         name: "InvalidName",
       });
@@ -55,18 +55,18 @@ describe(DefaultCreateInputValidator, () => {
   });
 
   it("rejects existing target directory with typed errors", () => {
-    const validator = new DefaultCreateInputValidator(() => true);
+    const service = new CreateInputValidationService(() => true);
 
-    const act = () => validator.validateCreateInput(validNodeSelection);
+    const act = () => service.validateCreateInput(validNodeSelection);
 
     expect(act).toThrow(TargetDirectoryExistsError);
   });
 
   it('rejects multi-select values when "None" is combined with others', () => {
-    const validator = new DefaultCreateInputValidator(() => false);
+    const service = new CreateInputValidationService(() => false);
 
     const act = () =>
-      validator.validateCreateInput({
+      service.validateCreateInput({
         ...validNodeSelection,
         databases: ["None", "Redis"],
       });
@@ -75,10 +75,10 @@ describe(DefaultCreateInputValidator, () => {
   });
 
   it("rejects unsupported runtimes", () => {
-    const validator = new DefaultCreateInputValidator(() => false);
+    const service = new CreateInputValidationService(() => false);
 
     const act = () =>
-      validator.validateCreateInput({
+      service.validateCreateInput({
         ...validNodeSelection,
         runtime: "Python" as CreateSelections["runtime"],
       });
@@ -87,10 +87,10 @@ describe(DefaultCreateInputValidator, () => {
   });
 
   it("rejects unsupported frameworks per runtime", () => {
-    const validator = new DefaultCreateInputValidator(() => false);
+    const service = new CreateInputValidationService(() => false);
 
     const act = () =>
-      validator.validateCreateInput({
+      service.validateCreateInput({
         ...validNodeSelection,
         framework: "Flask" as CreateSelections["framework"],
       });
@@ -99,10 +99,10 @@ describe(DefaultCreateInputValidator, () => {
   });
 
   it("rejects unsupported Static database combinations", () => {
-    const validator = new DefaultCreateInputValidator(() => false);
+    const service = new CreateInputValidationService(() => false);
 
     const act = () =>
-      validator.validateCreateInput({
+      service.validateCreateInput({
         confirmed: true,
         databases: ["PostgreSQL"],
         framework: "None",
@@ -115,10 +115,10 @@ describe(DefaultCreateInputValidator, () => {
   });
 
   it("rejects unsupported Static platform service combinations", () => {
-    const validator = new DefaultCreateInputValidator(() => false);
+    const service = new CreateInputValidationService(() => false);
 
     const act = () =>
-      validator.validateCreateInput({
+      service.validateCreateInput({
         confirmed: true,
         databases: ["None"],
         framework: "None",

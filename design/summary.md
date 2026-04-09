@@ -139,11 +139,14 @@ Universe CLI is defined in ADR-007, but the backing platform does not exist yet 
 ### Port interfaces in scope
 
 - `PromptPort` for interactive selection collection
-- `CreateInputValidator` for normalized validation and combination checks
 - `LayerResolver` for deterministic ordered layer resolution
 - `FilesystemWriter` for scaffold creation with rollback-on-failure behavior
 - `PlatformManifestGenerator` for `platform.yaml` output
 - `ObservabilityClient` for non-blocking stub telemetry
+
+### Internal services in scope
+
+- `CreateInputValidationService` for create-name rules and runtime/framework/services compatibility checks (application logic, not a port)
 
 ### Error categories in scope
 

@@ -6,7 +6,6 @@ import {
   UnsupportedFrameworkError,
   UnsupportedRuntimeError,
 } from "../errors/cli-errors.js";
-import type { CreateInputValidator } from "../ports/create-input-validator.js";
 import type {
   CreateSelections,
   DatabaseOption,
@@ -26,7 +25,7 @@ const SUPPORTED_NODE_FRAMEWORKS: FrameworkOption[] = ["Express", NONE_VALUE];
 const SUPPORTED_NODE_DATABASES: DatabaseOption[] = ["PostgreSQL", "Redis", NONE_VALUE];
 const SUPPORTED_NODE_SERVICES: PlatformServiceOption[] = ["Auth", "Email", "Analytics", NONE_VALUE];
 
-class DefaultCreateInputValidator implements CreateInputValidator {
+class CreateInputValidationService {
   private readonly pathExists: PathExists;
 
   constructor(pathExists: PathExists) {
@@ -112,5 +111,5 @@ class DefaultCreateInputValidator implements CreateInputValidator {
   }
 }
 
-export { DefaultCreateInputValidator };
+export { CreateInputValidationService };
 export type { PathExists };

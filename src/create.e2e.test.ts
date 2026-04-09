@@ -1,12 +1,12 @@
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
-import { DefaultCreateInputValidator } from "./adapters/default-create-input-validator.js";
 import { LocalFilesystemWriter } from "./adapters/local-filesystem-writer.js";
 import { LocalLayerResolver } from "./adapters/local-layer-resolver.js";
 import type { LayerRegistry } from "./adapters/local-layer-resolver.js";
 import { LocalPlatformManifestGenerator } from "./adapters/local-platform-manifest-generator.js";
 import { StubObservabilityClient } from "./adapters/stub-observability-client.js";
+import { CreateInputValidationService } from "./services/create-input-validation-service.js";
 import { runCli } from "./cli.js";
 import type { CreateSelections, PromptPort } from "./ports/prompt-port.js";
 
@@ -112,7 +112,7 @@ const createDependencies = (
   observability: new StubObservabilityClient(),
   platformManifestGenerator: new LocalPlatformManifestGenerator(),
   promptPort,
-  validator: new DefaultCreateInputValidator((path) => existsSync(join(cwd, path))),
+  validator: new CreateInputValidationService((path) => existsSync(join(cwd, path))),
 });
 
 describe("create e2e", () => {

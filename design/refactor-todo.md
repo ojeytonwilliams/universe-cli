@@ -17,7 +17,7 @@
 
 ## Phase 2 — Move `DefaultCreateInputValidator` into `src/services`
 
-- [ ] CODE: Move create-input validation into an internal service
+- [x] CODE: Move create-input validation into an internal service
   - Feature: Convert `DefaultCreateInputValidator` into `CreateInputValidationService` under `src/services/`
   - Acceptance:
     - A new `CreateInputValidationService` implementation lives under `src/services/` and owns the create validation rules.
@@ -25,7 +25,7 @@
     - Target-directory existence checks remain supported without reintroducing filesystem logic into `runCli()`.
     - Existing validation-focused tests are updated or replaced to target the new service location.
 
-- [ ] TASK: Remove adapter-oriented terminology from create-input validation docs and tests
+- [x] TASK: Remove adapter-oriented terminology from create-input validation docs and tests
   - Acceptance:
     - References describing the validator as an adapter are removed from affected design notes and test descriptions.
     - The updated wording describes validation as internal application logic.

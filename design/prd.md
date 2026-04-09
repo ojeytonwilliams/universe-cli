@@ -270,16 +270,20 @@ Define explicit ports for the boundaries needed by this spike, with contract tes
 **Required spike ports**
 
 - `PromptPort`
-- `CreateInputValidator`
 - `LayerResolver`
 - `FilesystemWriter`
 - `PlatformManifestGenerator`
 - `ObservabilityClient`
 
+**Required spike internal services**
+
+- `CreateInputValidationService` — create-name rules and compatibility checks (application logic, not a port)
+
 **Acceptance Criteria**
 
 - Each port has documented inputs, outputs, and normalized error behavior.
-- Contract tests exist for `PromptPort`, `CreateInputValidator`, `LayerResolver`, `FilesystemWriter`, `PlatformManifestGenerator`, and `ObservabilityClient`.
+- Contract tests exist for `PromptPort`, `LayerResolver`, `FilesystemWriter`, `PlatformManifestGenerator`, and `ObservabilityClient`.
+- `CreateInputValidationService` is tested as internal application logic, not as a port/adapter.
 - Deferred commands do not introduce extra platform lifecycle ports in this spike.
 
 ### FR-11 Migration Path Readiness

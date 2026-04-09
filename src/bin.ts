@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 import { existsSync } from "node:fs";
-import { DefaultCreateInputValidator } from "./adapters/default-create-input-validator.js";
 import { ClackPromptAdapter } from "./adapters/clack-prompt-adapter.js";
+import { CreateInputValidationService } from "./services/create-input-validation-service.js";
 import { LocalFilesystemWriter } from "./adapters/local-filesystem-writer.js";
 import { LocalLayerResolver } from "./adapters/local-layer-resolver.js";
 import { LocalPlatformManifestGenerator } from "./adapters/local-platform-manifest-generator.js";
@@ -13,7 +13,7 @@ const filesystemWriter = new LocalFilesystemWriter();
 const layerResolver = new LocalLayerResolver();
 const manifestGenerator = new LocalPlatformManifestGenerator();
 const promptPort = new ClackPromptAdapter();
-const inputValidator = new DefaultCreateInputValidator((path) => existsSync(path));
+const inputValidator = new CreateInputValidationService((path) => existsSync(path));
 const { exitCode, output } = await runCli(process.argv.slice(2), {
   cwd: process.cwd(),
   filesystemWriter,
