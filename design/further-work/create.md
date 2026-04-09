@@ -18,6 +18,8 @@ The current layer registry stores verbatim file content as strings. As layers gr
 - A **templating mechanism** to inject project-specific values (project name, runtime, framework) into layer files rather than doing post-hoc string replacement. Which engine (if any) TBD.
 - **JSON/YAML serialisers** for config-file layers so merging and output are driven by structured data rather than raw string concatenation.
 
+Both items are implemented as additions to `LayerCompositionService` (internal service), not as new ports or adapters — they contain no external infrastructure dependency.
+
 ## `platform.yaml` schema
 
 The manifest generator currently branches on runtime (app vs static) with no formal contract. Before expanding the supported matrix or connecting to a real platform, a versioned `platform.yaml` schema is needed to:
@@ -25,3 +27,5 @@ The manifest generator currently branches on runtime (app vs static) with no for
 - Validate generated manifests against a known structure.
 - Provide a stable migration path when the platform schema evolves.
 - Decouple the generator from runtime-specific branching logic.
+
+Schema validation and serialisation are implemented as additions to `PlatformManifestService` (internal service), not as new ports or adapters — they contain no external infrastructure dependency.

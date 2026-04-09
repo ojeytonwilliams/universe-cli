@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.9.0] - 2026-04-09
+
+### Refactor Phase 4 — Move `LocalPlatformManifestGenerator` into `src/services`
+
+- **Created `PlatformManifestService`** ([src/services/platform-manifest-service.ts](src/services/platform-manifest-service.ts)): moved runtime-specific manifest construction out of `src/adapters/` into `src/services/` where pure application logic belongs.
+- **Deleted `LocalPlatformManifestGenerator`** (`src/adapters/local-platform-manifest-generator.ts`): removed the misclassified adapter and its test; all coverage now lives alongside the service.
+- **Updated entry point and E2E wiring** ([src/bin.ts](src/bin.ts), [src/create.e2e.test.ts](src/create.e2e.test.ts)): replaced adapter import with service import at all call sites.
+- **Aligned future manifest work** ([design/further-work/create.md](design/further-work/create.md), [design/summary.md](design/summary.md), [design/prd.md](design/prd.md)): `PlatformManifestGenerator` removed from port lists; `PlatformManifestService` recorded as internal service; schema validation and serialisation noted as service-level additions, not new adapter boundaries.
+
 ## [1.8.0] - 2026-04-09
 
 ### Refactor Phase 3 — Move `LocalLayerResolver` into `src/services`

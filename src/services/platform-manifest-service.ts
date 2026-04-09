@@ -1,7 +1,6 @@
-import type { PlatformManifestGenerator } from "../ports/platform-manifest-generator.js";
 import type { CreateSelections } from "../ports/prompt-port.js";
 
-class LocalPlatformManifestGenerator implements PlatformManifestGenerator {
+class PlatformManifestService {
   generatePlatformManifest(input: CreateSelections): string {
     if (input.runtime === "Static (HTML/CSS/JS)") {
       return [
@@ -48,4 +47,4 @@ class LocalPlatformManifestGenerator implements PlatformManifestGenerator {
   }
 }
 
-export { LocalPlatformManifestGenerator };
+export { PlatformManifestService };

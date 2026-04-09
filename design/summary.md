@@ -140,13 +140,13 @@ Universe CLI is defined in ADR-007, but the backing platform does not exist yet 
 
 - `PromptPort` for interactive selection collection
 - `FilesystemWriter` for scaffold creation with rollback-on-failure behavior
-- `PlatformManifestGenerator` for `platform.yaml` output
 - `ObservabilityClient` for non-blocking stub telemetry
 
 ### Internal services in scope
 
 - `CreateInputValidationService` for create-name rules and runtime/framework/services compatibility checks (application logic, not a port)
 - `LayerCompositionService` for deterministic ordered layer resolution, conflict detection, and config merging — owns the default layer registry as internal scaffolding data (application logic, not a port)
+- `PlatformManifestService` for `platform.yaml` construction from create selections — future schema validation and serialisation extend this service, not a new port/adapter (application logic, not a port)
 
 ### Error categories in scope
 

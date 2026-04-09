@@ -47,7 +47,7 @@
 
 ## Phase 4 — Move `LocalPlatformManifestGenerator` into `src/services`
 
-- [ ] CODE: Move platform manifest construction into an internal service
+- [x] CODE: Move platform manifest construction into an internal service
   - Feature: Convert `LocalPlatformManifestGenerator` into `PlatformManifestService` under `src/services/`
   - Acceptance:
     - A new `PlatformManifestService` implementation lives under `src/services/` and owns runtime-specific manifest construction.
@@ -55,7 +55,7 @@
     - Existing manifest-generator tests are updated or replaced to target the new service location.
     - Manifest generation remains injectable into `runCli()` only if that still improves test setup after the refactor.
 
-- [ ] TASK: Align future manifest work with the internal-service decision
+- [x] TASK: Align future manifest work with the internal-service decision
   - Acceptance:
     - Design notes state that schema validation and serialisation will be implemented as internal services/helpers, not new ports/adapters.
     - Follow-on work for `platform.yaml` refers to service-level refactors instead of adapter additions.

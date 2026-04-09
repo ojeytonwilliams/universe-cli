@@ -4,7 +4,7 @@ import { join, relative } from "node:path";
 import { LocalFilesystemWriter } from "./adapters/local-filesystem-writer.js";
 import { LayerCompositionService } from "./services/layer-composition-service.js";
 import type { LayerRegistry } from "./services/layer-composition-service.js";
-import { LocalPlatformManifestGenerator } from "./adapters/local-platform-manifest-generator.js";
+import { PlatformManifestService } from "./services/platform-manifest-service.js";
 import { StubObservabilityClient } from "./adapters/stub-observability-client.js";
 import { CreateInputValidationService } from "./services/create-input-validation-service.js";
 import { runCli } from "./cli.js";
@@ -110,7 +110,7 @@ const createDependencies = (
   filesystemWriter: new LocalFilesystemWriter(),
   layerResolver: new LayerCompositionService(layerRegistry),
   observability: new StubObservabilityClient(),
-  platformManifestGenerator: new LocalPlatformManifestGenerator(),
+  platformManifestGenerator: new PlatformManifestService(),
   promptPort,
   validator: new CreateInputValidationService((path) => existsSync(join(cwd, path))),
 });
