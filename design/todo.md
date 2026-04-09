@@ -57,14 +57,14 @@
 
 ## Phase 3 — Test Coverage, Guardrails, and Documentation
 
-- [ ] CODE: Add unit tests for deploy stub adapter and port contract behavior
+- [x] CODE: Add unit tests for deploy stub adapter and port contract behavior
   - Feature: Create `StubDeployClient` tests covering success, sequencing, and simulated failures.
   - Acceptance:
     - Tests verify deterministic deployment ID format and incrementing behavior.
     - Tests verify failure path raises `DeploymentError`.
     - Tests verify state isolation between adapter instances.
 
-- [ ] CODE: Add CLI integration tests for deploy success and error paths
+- [x] CODE: Add CLI integration tests for deploy success and error paths
   - Feature: Extend `src/cli.test.ts` deploy coverage for implemented behavior.
   - Acceptance:
     - Success path validates output and exit code `0`.
@@ -73,14 +73,14 @@
     - Deploy-client failure path validates typed deployment error exit code.
     - Deferred-command test set excludes `deploy` and still validates remaining deferred commands.
 
-- [ ] CODE: Add E2E flow for create-then-deploy and container guard
+- [x] CODE: Add E2E flow for create-then-deploy and container guard
   - Feature: Add `deploy.e2e` coverage and spike container guard for deploy wiring.
   - Acceptance:
     - E2E test scaffolds with `create`, then successfully runs `deploy` against generated `platform.yaml`.
     - E2E test covers at least one deploy failure fixture with deterministic assertion.
     - Container guard test asserts `deployClient` is an instance of `StubDeployClient`.
 
-- [ ] TASK: Update design docs and migration notes for deploy promotion
+- [x] TASK: Update design docs and migration notes for deploy promotion
   - Acceptance:
     - `design/future-command-expansion.md` marks `deploy` as implemented in spike mode.
     - `design/assumptions-register.md` records deploy-specific assumptions and validation outcomes.

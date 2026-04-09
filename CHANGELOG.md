@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.11.0] - 2026-04-09
+
+### Phase 3 — Deploy Test Coverage, Guardrails, and Documentation
+
+- **`StubDeployClient` unit tests** (`src/adapters/stub-deploy-client.test.ts`): verify deterministic deployment ID format, incrementing sequence per project/environment, independent counters across environments, sentinel failure raises `DeploymentError`, and state isolation between instances.
+- **CLI integration tests** (`src/cli.test.ts`): deploy describe block with 11 tests covering exit 0, success output fields, default environment, missing/invalid manifest exit codes 11/12, deployment error exit 14, excess args exit 1, invalid environment exit 6, and observability tracking for start/success/failure without masking exit codes.
+- **E2E tests** (`src/deploy.e2e.test.ts`): create-then-deploy flow exits 0 with expected output; repeated deploys return incrementing deployment IDs; sentinel failure project exits 14.
+- **Container guard** (`src/container.test.ts`): asserts `deployClient` is an instance of `StubDeployClient`.
+- **Design docs**: `design/future-command-expansion.md` updated with "Implemented Commands (Spike Mode)" table listing `deploy` (v2.10.0); `design/assumptions-register.md` deploy assumptions DPL-001–DPL-005 marked `validated`.
+
 ## [2.10.0] - 2026-04-09
 
 ### Phase 2 — Deploy Behaviour Hardening

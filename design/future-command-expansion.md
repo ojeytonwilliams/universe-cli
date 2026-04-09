@@ -2,14 +2,12 @@
 
 ## Purpose
 
-Document how the 8 deferred commands evolve from the shared non-implemented contract and what infrastructure can be reused when `register` is implemented.
+Document how the remaining deferred commands evolve from the shared non-implemented contract.
 
 ## Current Stub Contract
 
 The deferred commands are:
 
-- `register`
-- `deploy`
 - `promote`
 - `rollback`
 - `logs`
@@ -24,6 +22,23 @@ Each command currently:
 - Shares one exact message template and one exact non-zero exit code.
 
 This keeps user-facing behavior deterministic while preserving command discoverability.
+
+## Implemented Commands (Spike Mode)
+
+The following commands have been promoted from deferred to fully implemented against behaviour-simulating stub adapters:
+
+| Command    | Port Contract        | Stub Adapter             | Promoted In |
+| ---------- | -------------------- | ------------------------ | ----------- |
+| `register` | `RegistrationClient` | `StubRegistrationClient` | v2.8.0      |
+| `deploy`   | `DeployClient`       | `StubDeployClient`       | v2.10.0     |
+
+Each implemented command:
+
+- Reads `platform.yaml` via `ProjectReaderPort` / `LocalProjectReader`.
+- Validates the manifest via `PlatformManifestService.validateManifest`.
+- Delegates to its port adapter.
+- Emits lifecycle telemetry via `safeTrack` (deploy) or errors via `safeError`.
+- Has typed error classes with stable exit codes.
 
 ## Migration Path by Command
 
