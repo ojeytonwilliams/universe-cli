@@ -12,6 +12,7 @@ import {
   observabilityClient,
   promoteClient,
   registrationClient,
+  rollbackClient,
 } from "./container.js";
 import { runCli } from "./cli.js";
 
@@ -32,6 +33,7 @@ const { exitCode, output } = await runCli(process.argv.slice(2), {
   promoteClient,
   promptPort,
   registrationClient,
+  rollbackClient,
   validator: inputValidator,
 });
 

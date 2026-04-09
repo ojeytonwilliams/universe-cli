@@ -13,6 +13,7 @@ import {
   ManifestNotFoundError,
   PromotionError,
   RegistrationError,
+  RollbackError,
   ScaffoldWriteError,
 } from "./errors/cli-errors.js";
 
@@ -21,7 +22,7 @@ const client: ObservabilityClient = {
   track() {},
 };
 
-const DEFERRED_COMMANDS = ["list", "logs", "rollback", "status", "teardown"] as const;
+const DEFERRED_COMMANDS = ["list", "logs", "status", "teardown"] as const;
 
 const createPromptResult: CreateSelections = {
   confirmed: true,
@@ -132,6 +133,15 @@ const defaultPromoteClient = {
   },
 };
 
+const defaultRollbackClient = {
+  rollback(_request: {
+    manifest: PlatformManifest;
+    targetEnvironment: string;
+  }): Promise<{ name: string; rollbackId: string; targetEnvironment: string }> {
+    return Promise.reject(new Error("rollbackClient.rollback should not be called in this test"));
+  },
+};
+
 const createDeps = (
   promptPort: PromptPort,
   validator: { validateCreateInput(input: CreateSelections): CreateSelections },
@@ -147,6 +157,7 @@ const createDeps = (
   promoteClient: defaultPromoteClient,
   promptPort,
   registrationClient: defaultRegistrationClient,
+  rollbackClient: defaultRollbackClient,
   validator,
 });
 
@@ -748,6 +759,212 @@ describe(runCli, () => {
 
       const result = await runCli(["promote"], {
         ...promoteDeps(),
+        observability: throwingObservability,
+      });
+
+      expect(result.exitCode).toBe(0);
+    });
+  });
+
+  describe("rollback", () => {
+    const rollbackManifest: AppPlatformManifest = {
+      domain: { preview: "my-app.preview.example.com", production: "my-app.example.com" },
+      environments: { preview: { branch: "preview" }, production: { branch: "main" } },
+      name: "my-app",
+      owner: "platform-engineering",
+      resources: [],
+      schemaVersion: "1",
+      services: [],
+      stack: "app",
+    };
+
+    const successReader = {
+      readFile(_filePath: string) {
+        return Promise.resolve("stack: app\n");
+      },
+    };
+    const successValidator = (_yaml: string): PlatformManifest => rollbackManifest;
+    const successRollbackClient = {
+      rollback(_request: { manifest: PlatformManifest; targetEnvironment: string }) {
+        return Promise.resolve({
+          name: "my-app",
+          rollbackId: "stub-rollback-my-app-production-1",
+          targetEnvironment: "production",
+        });
+      },
+    };
+
+    const rollbackDeps = (
+      reader = successReader,
+      validator = successValidator,
+      rollbackClient = successRollbackClient,
+    ) => ({
+      ...createDeps(createPrompt, passThroughValidator),
+      platformManifestGenerator: { ...manifestGenerator, validateManifest: validator },
+      projectReader: reader,
+      rollbackClient,
+    });
+
+    it("exits 0 on successful rollback", async () => {
+      const result = await runCli(["rollback"], rollbackDeps());
+
+      expect(result.exitCode).toBe(0);
+    });
+
+    it("output contains the project name, target environment, and rollback ID", async () => {
+      const { output } = await runCli(["rollback"], rollbackDeps());
+
+      expect(output).toContain("my-app");
+      expect(output).toContain("production");
+      expect(output).toContain("stub-rollback-my-app-production-1");
+    });
+
+    it("reads platform.yaml from cwd when no directory argument is given", async () => {
+      const paths: string[] = [];
+      const trackingReader = {
+        readFile(filePath: string) {
+          paths.push(filePath);
+          return Promise.resolve("stack: app\n");
+        },
+      };
+
+      await runCli(["rollback"], rollbackDeps(trackingReader));
+
+      expect(paths[0]).toBe("/workspace/platform.yaml");
+    });
+
+    it("reads platform.yaml from the given directory argument", async () => {
+      const paths: string[] = [];
+      const trackingReader = {
+        readFile(filePath: string) {
+          paths.push(filePath);
+          return Promise.resolve("stack: app\n");
+        },
+      };
+
+      await runCli(["rollback", "/some/project"], rollbackDeps(trackingReader));
+
+      expect(paths[0]).toBe("/some/project/platform.yaml");
+    });
+
+    it("exits 11 when platform.yaml is missing", async () => {
+      const missingReader = {
+        readFile(filePath: string) {
+          return Promise.reject(new ManifestNotFoundError(filePath));
+        },
+      };
+
+      const result = await runCli(["rollback"], rollbackDeps(missingReader));
+
+      expect(result.exitCode).toBe(11);
+    });
+
+    it("exits 12 when platform.yaml fails validation", async () => {
+      const failingValidator = (_yaml: string): PlatformManifest => {
+        throw new Error("invalid schema");
+      };
+
+      const result = await runCli(["rollback"], rollbackDeps(successReader, failingValidator));
+
+      expect(result.exitCode).toBe(12);
+    });
+
+    it("exits 16 when rollback fails", async () => {
+      const failingClient = {
+        rollback(request: { manifest: PlatformManifest; targetEnvironment: string }) {
+          return Promise.reject(new RollbackError(request.manifest.name, "timeout"));
+        },
+      };
+
+      const result = await runCli(
+        ["rollback"],
+        rollbackDeps(successReader, successValidator, failingClient),
+      );
+
+      expect(result.exitCode).toBe(16);
+    });
+
+    it("exits 1 when more than two arguments are provided", async () => {
+      const result = await runCli(["rollback", "/dir", "production", "extra"], rollbackDeps());
+
+      expect(result.exitCode).toBe(1);
+    });
+
+    it("exits 6 when target environment is not preview or production", async () => {
+      const result = await runCli(["rollback", "/dir", "staging"], rollbackDeps());
+
+      expect(result.exitCode).toBe(6);
+    });
+
+    it("defaults to the production target environment when no target argument is given", async () => {
+      const requests: { targetEnvironment: string }[] = [];
+      const trackingClient = {
+        rollback(request: { manifest: PlatformManifest; targetEnvironment: string }) {
+          requests.push(request);
+          return Promise.resolve({
+            name: "my-app",
+            rollbackId: "stub-rollback-my-app-production-1",
+            targetEnvironment: request.targetEnvironment,
+          });
+        },
+      };
+
+      await runCli(["rollback"], rollbackDeps(successReader, successValidator, trackingClient));
+
+      expect(requests[0]?.targetEnvironment).toBe("production");
+    });
+
+    it("tracks rollback.start and rollback.success on a successful rollback", async () => {
+      const trackedEvents: string[] = [];
+      const trackingObservability = {
+        error() {},
+        track(event: string) {
+          trackedEvents.push(event);
+        },
+      };
+
+      await runCli(["rollback"], {
+        ...rollbackDeps(),
+        observability: trackingObservability,
+      });
+
+      expect(trackedEvents).toContain("rollback.start");
+      expect(trackedEvents).toContain("rollback.success");
+    });
+
+    it("tracks rollback.start and rollback.failure on a failed rollback", async () => {
+      const trackedEvents: string[] = [];
+      const trackingObservability = {
+        error() {},
+        track(event: string) {
+          trackedEvents.push(event);
+        },
+      };
+      const failingClient = {
+        rollback(request: { manifest: PlatformManifest; targetEnvironment: string }) {
+          return Promise.reject(new RollbackError(request.manifest.name, "timeout"));
+        },
+      };
+
+      await runCli(["rollback"], {
+        ...rollbackDeps(successReader, successValidator, failingClient),
+        observability: trackingObservability,
+      });
+
+      expect(trackedEvents).toContain("rollback.start");
+      expect(trackedEvents).toContain("rollback.failure");
+    });
+
+    it("does not change exit code when observability.track throws", async () => {
+      const throwingObservability = {
+        error() {},
+        track() {
+          throw new Error("o11y down");
+        },
+      };
+
+      const result = await runCli(["rollback"], {
+        ...rollbackDeps(),
         observability: throwingObservability,
       });
 

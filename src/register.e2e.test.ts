@@ -8,6 +8,7 @@ import { StubDeployClient } from "./adapters/stub-deploy-client.js";
 import { StubObservabilityClient } from "./adapters/stub-observability-client.js";
 import { StubPromoteClient } from "./adapters/stub-promote-client.js";
 import { StubRegistrationClient } from "./adapters/stub-registration-client.js";
+import { StubRollbackClient } from "./adapters/stub-rollback-client.js";
 import { CreateInputValidationService } from "./services/create-input-validation-service.js";
 import { LayerCompositionService } from "./services/layer-composition-service.js";
 import { PlatformManifestService } from "./services/platform-manifest-service.js";
@@ -44,6 +45,7 @@ const createDependencies = (
   promoteClient: new StubPromoteClient(),
   promptPort,
   registrationClient,
+  rollbackClient: new StubRollbackClient(),
   validator: new CreateInputValidationService((path) => existsSync(join(cwd, path))),
 });
 

@@ -7,6 +7,7 @@ import {
 } from "./errors/cli-errors.js";
 import type { DeployReceipt, DeployRequest } from "./ports/deploy-client.js";
 import type { PromoteReceipt, PromoteRequest } from "./ports/promote-client.js";
+import type { RollbackReceipt, RollbackRequest } from "./ports/rollback-client.js";
 import type { FilesystemWriter } from "./ports/filesystem-writer.js";
 import type { ObservabilityClient } from "./ports/observability-client.js";
 import { safeError, safeTrack } from "./ports/observability-client.js";
@@ -50,13 +51,14 @@ interface CliDependencies {
   projectReader: { readFile(filePath: string): Promise<string> };
   promoteClient: { promote(request: PromoteRequest): Promise<PromoteReceipt> };
   promptPort: PromptPort;
+  rollbackClient: { rollback(request: RollbackRequest): Promise<RollbackReceipt> };
   registrationClient: {
     register(manifest: PlatformManifest): Promise<{ name: string; registrationId: string }>;
   };
   validator: { validateCreateInput(input: CreateSelections): CreateSelections };
 }
 
-const DEFERRED_COMMANDS = new Set(["list", "logs", "rollback", "status", "teardown"]);
+const DEFERRED_COMMANDS = new Set(["list", "logs", "status", "teardown"]);
 
 const runCli = async (argv: string[], deps: CliDependencies): Promise<CliResult> => {
   const {
@@ -70,6 +72,7 @@ const runCli = async (argv: string[], deps: CliDependencies): Promise<CliResult>
     promoteClient,
     promptPort,
     registrationClient,
+    rollbackClient,
     validator,
   } = deps;
   const [command] = argv;
@@ -269,6 +272,61 @@ const runCli = async (argv: string[], deps: CliDependencies): Promise<CliResult>
       if (error instanceof CliError) {
         safeError(observability, error);
         safeTrack(observability, "promote.failure", { targetEnvironment });
+        return { exitCode: error.exitCode, output: error.message };
+      }
+
+      throw error;
+    }
+  }
+
+  if (command === "rollback") {
+    if (argv.length > 3) {
+      return {
+        exitCode: 1,
+        output: "Too many arguments. Usage: universe rollback [directory] [target-environment]",
+      };
+    }
+
+    const platformYamlDir = argv[1] ?? cwd;
+    const targetEnvironment = argv[2] ?? "production";
+    const platformYamlPath = join(platformYamlDir, "platform.yaml");
+
+    if (targetEnvironment !== "preview" && targetEnvironment !== "production") {
+      const envError = new UnsupportedCombinationError(
+        `target-environment "${targetEnvironment}" — valid values are: preview, production`,
+      );
+      return { exitCode: envError.exitCode, output: envError.message };
+    }
+
+    safeTrack(observability, "rollback.start", { targetEnvironment });
+
+    try {
+      const yaml = await projectReader.readFile(platformYamlPath);
+
+      let manifest: PlatformManifest;
+      try {
+        manifest = platformManifestGenerator.validateManifest(yaml);
+      } catch (validationError) {
+        const invalidError = new ManifestInvalidError(
+          platformYamlPath,
+          validationError instanceof Error ? validationError.message : String(validationError),
+        );
+        safeError(observability, invalidError);
+        return { exitCode: invalidError.exitCode, output: invalidError.message };
+      }
+
+      const receipt = await rollbackClient.rollback({ manifest, targetEnvironment });
+
+      safeTrack(observability, "rollback.success", { name: receipt.name, targetEnvironment });
+
+      return {
+        exitCode: 0,
+        output: `Rolled back project "${receipt.name}" to ${receipt.targetEnvironment}. Rollback ID: ${receipt.rollbackId}`,
+      };
+    } catch (error) {
+      if (error instanceof CliError) {
+        safeError(observability, error);
+        safeTrack(observability, "rollback.failure", { targetEnvironment });
         return { exitCode: error.exitCode, output: error.message };
       }
 

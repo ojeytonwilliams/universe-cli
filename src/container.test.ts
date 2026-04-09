@@ -2,11 +2,13 @@ import { StubDeployClient } from "./adapters/stub-deploy-client.js";
 import { StubObservabilityClient } from "./adapters/stub-observability-client.js";
 import { StubPromoteClient } from "./adapters/stub-promote-client.js";
 import { StubRegistrationClient } from "./adapters/stub-registration-client.js";
+import { StubRollbackClient } from "./adapters/stub-rollback-client.js";
 import {
   deployClient,
   observabilityClient,
   promoteClient,
   registrationClient,
+  rollbackClient,
 } from "./container.js";
 
 describe("spike container guard", () => {
@@ -24,5 +26,9 @@ describe("spike container guard", () => {
 
   it("wires StubRegistrationClient as the registration adapter", () => {
     expect(registrationClient).toBeInstanceOf(StubRegistrationClient);
+  });
+
+  it("wires StubRollbackClient as the rollback adapter", () => {
+    expect(rollbackClient).toBeInstanceOf(StubRollbackClient);
   });
 });

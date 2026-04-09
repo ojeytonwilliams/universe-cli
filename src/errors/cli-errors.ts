@@ -9,6 +9,7 @@ const EXIT_CODES = {
   MISSING_LAYER: 8,
   PROMOTION: 15,
   REGISTRATION: 13,
+  ROLLBACK: 16,
   SCAFFOLD_WRITE: 10,
   TARGET_EXISTS: 3,
   UNSUPPORTED_COMBINATION: 6,
@@ -152,6 +153,13 @@ class PromotionError extends CliError {
   }
 }
 
+class RollbackError extends CliError {
+  constructor(name: string, reason: string) {
+    super(`Failed to roll back project "${name}": ${reason}`, EXIT_CODES.ROLLBACK);
+    this.name = "RollbackError";
+  }
+}
+
 class DeferredCommandError extends CliError {
   constructor(command: string) {
     super(
@@ -167,6 +175,7 @@ export {
   DeferredCommandError,
   DeploymentError,
   PromotionError,
+  RollbackError,
   InvalidMultiSelectError,
   InvalidNameError,
   LayerConflictError,

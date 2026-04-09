@@ -2,7 +2,7 @@
 
 ## Phase 1 — Trivial Prototype (first working `universe rollback`)
 
-- [ ] CODE: Define rollback port contract and typed rollback error
+- [x] CODE: Define rollback port contract and typed rollback error
   - Feature: Add `RollbackClient` port (request/receipt types) and `RollbackError` in the CLI error taxonomy.
   - Acceptance:
     - `src/ports/rollback-client.ts` exports a documented interface with one rollback method.
@@ -10,7 +10,7 @@
     - Rollback receipt includes deterministic `rollbackId`, project `name`, and `targetEnvironment`.
     - `RollbackError` has one stable user-facing message style and one stable exit code.
 
-- [ ] CODE: Implement stub rollback adapter with deterministic behavior
+- [x] CODE: Implement stub rollback adapter with deterministic behavior
   - Feature: Add `StubRollbackClient` adapter that simulates a successful rollback without network access.
   - Acceptance:
     - First rollback for a project/target returns `rollbackId` `stub-rollback-<name>-<target>-1`.
@@ -18,7 +18,7 @@
     - Adapter can simulate rollback failure for explicit test fixtures (for example, sentinel project names).
     - Adapter performs no external network calls.
 
-- [ ] CODE: Promote `rollback` from deferred to implemented CLI handler
+- [x] CODE: Promote `rollback` from deferred to implemented CLI handler
   - Feature: Implement `universe rollback [directory] [target-environment]` in `runCli` and remove `rollback` from deferred command set.
   - Acceptance:
     - `rollback` reads `platform.yaml` from `[directory]` or `cwd` when omitted.
@@ -27,7 +27,7 @@
     - Valid manifest is passed to `RollbackClient` and successful result exits `0`.
     - Success output includes project name, target environment, and rollback ID.
 
-- [ ] TASK: Wire container and dependency graph for rollback
+- [x] TASK: Wire container and dependency graph for rollback
   - Acceptance:
     - `src/container.ts` exports `rollbackClient` wired to `StubRollbackClient` in spike mode.
     - CLI dependency composition includes `rollbackClient` without breaking existing commands.
@@ -35,7 +35,7 @@
 
 ## Phase 2 — Behavior Hardening and UX Consistency
 
-- [ ] CODE: Add rollback argument validation and usage guards
+- [x] CODE: Add rollback argument validation and usage guards
   - Feature: Enforce bounded rollback arguments and deterministic defaults.
   - Acceptance:
     - Command accepts `universe rollback`, `universe rollback [directory]`, and `universe rollback [directory] [target-environment]`.
@@ -43,28 +43,28 @@
     - Unsupported target environment returns typed unsupported-combination style error.
     - Target environment defaults to `production` when omitted.
 
-- [ ] CODE: Add non-blocking observability calls for rollback flow
+- [x] CODE: Add non-blocking observability calls for rollback flow
   - Feature: Emit rollback lifecycle telemetry through `ObservabilityClient` using safe wrappers.
   - Acceptance:
     - Rollback start, success, and failure are tracked with non-sensitive fields only.
     - Observability failures do not change rollback result or exit code.
     - No tokens, credentials, or raw environment values are emitted in telemetry payloads.
 
-- [ ] TASK: Align rollback UX copy with existing command output style
+- [x] TASK: Align rollback UX copy with existing command output style
   - Acceptance:
     - Error and success copy follows existing imperative/actionable tone.
     - Rollback output remains deterministic for snapshot-friendly testing.
 
 ## Phase 3 — Test Coverage, Guardrails, and Documentation
 
-- [ ] CODE: Add unit tests for rollback stub adapter and port contract behavior
+- [x] CODE: Add unit tests for rollback stub adapter and port contract behavior
   - Feature: Create `StubRollbackClient` tests covering success, sequencing, and simulated failures.
   - Acceptance:
     - Tests verify deterministic rollback ID format and incrementing behavior.
     - Tests verify failure path raises `RollbackError`.
     - Tests verify state isolation between adapter instances.
 
-- [ ] CODE: Add CLI integration tests for rollback success and error paths
+- [x] CODE: Add CLI integration tests for rollback success and error paths
   - Feature: Extend `src/cli.test.ts` rollback coverage for implemented behavior.
   - Acceptance:
     - Success path validates output and exit code `0`.
@@ -73,14 +73,14 @@
     - Rollback-client failure path validates typed rollback error exit code.
     - Deferred-command test set excludes `rollback` and still validates remaining deferred commands.
 
-- [ ] CODE: Add E2E flow for create-then-rollback and container guard
+- [x] CODE: Add E2E flow for create-then-rollback and container guard
   - Feature: Add `rollback.e2e` coverage and spike container guard for rollback wiring.
   - Acceptance:
     - E2E test scaffolds with `create`, then successfully runs `rollback` against generated `platform.yaml`.
     - E2E test covers at least one rollback failure fixture with deterministic assertion.
     - Container guard test asserts `rollbackClient` is an instance of `StubRollbackClient`.
 
-- [ ] TASK: Update design docs and migration notes for rollback promotion
+- [x] TASK: Update design docs and migration notes for rollback promotion
   - Acceptance:
     - `design/future-command-expansion.md` marks `rollback` as implemented in spike mode.
     - `design/assumptions-register.md` records rollback-specific assumptions and validation outcomes.

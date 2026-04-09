@@ -33,10 +33,10 @@ const createPromptPort = (selection: CreateSelections | null): PromptPort => ({
 const createDependencies = (
   cwd: string,
   promptPort: PromptPort,
-  deployClient: StubDeployClient,
+  rollbackClient: StubRollbackClient,
 ) => ({
   cwd,
-  deployClient,
+  deployClient: new StubDeployClient(),
   filesystemWriter: new LocalFilesystemWriter(),
   layerResolver: new LayerCompositionService(),
   observability: new StubObservabilityClient(),
@@ -45,11 +45,11 @@ const createDependencies = (
   promoteClient: new StubPromoteClient(),
   promptPort,
   registrationClient: new StubRegistrationClient(),
-  rollbackClient: new StubRollbackClient(),
+  rollbackClient,
   validator: new CreateInputValidationService((path) => existsSync(join(cwd, path))),
 });
 
-describe("deploy e2e", () => {
+describe("rollback e2e", () => {
   const tempDirectories: string[] = [];
 
   afterEach(() => {
@@ -60,65 +60,65 @@ describe("deploy e2e", () => {
     tempDirectories.length = 0;
   });
 
-  it("deploys a project scaffolded by universe create", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-deploy-e2e-"));
+  it("rolls back a project scaffolded by universe create", async () => {
+    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-rollback-e2e-"));
     tempDirectories.push(rootDirectory);
 
-    const projectName = "e2e-deploy-app";
-    const deployClient = new StubDeployClient();
+    const projectName = "e2e-rollback-app";
+    const rollbackClient = new StubRollbackClient();
     const deps = createDependencies(
       rootDirectory,
       createPromptPort(createNodeSelection(projectName)),
-      deployClient,
+      rollbackClient,
     );
     const projectDir = join(rootDirectory, projectName);
 
     const createResult = await runCli(["create"], deps);
     expect(createResult.exitCode).toBe(0);
 
-    const deployResult = await runCli(["deploy", projectDir], deps);
-    expect(deployResult.exitCode).toBe(0);
-    expect(deployResult.output).toContain(projectName);
-    expect(deployResult.output).toContain("preview");
-    expect(deployResult.output).toContain(`stub-${projectName}-preview-1`);
+    const rollbackResult = await runCli(["rollback", projectDir], deps);
+    expect(rollbackResult.exitCode).toBe(0);
+    expect(rollbackResult.output).toContain(projectName);
+    expect(rollbackResult.output).toContain("production");
+    expect(rollbackResult.output).toContain(`stub-rollback-${projectName}-production-1`);
   });
 
-  it("returns a deterministic incremented deployment ID on repeated deploys", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-deploy-e2e-"));
+  it("returns a deterministic incremented rollback ID on repeated rollbacks", async () => {
+    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-rollback-e2e-"));
     tempDirectories.push(rootDirectory);
 
-    const projectName = "e2e-repeat-deploy";
-    const deployClient = new StubDeployClient();
+    const projectName = "e2e-repeat-rollback";
+    const rollbackClient = new StubRollbackClient();
     const deps = createDependencies(
       rootDirectory,
       createPromptPort(createNodeSelection(projectName)),
-      deployClient,
+      rollbackClient,
     );
     const projectDir = join(rootDirectory, projectName);
 
     await runCli(["create"], deps);
-    await runCli(["deploy", projectDir], deps);
+    await runCli(["rollback", projectDir], deps);
 
-    const secondResult = await runCli(["deploy", projectDir], deps);
+    const secondResult = await runCli(["rollback", projectDir], deps);
     expect(secondResult.exitCode).toBe(0);
-    expect(secondResult.output).toContain(`stub-${projectName}-preview-2`);
+    expect(secondResult.output).toContain(`stub-rollback-${projectName}-production-2`);
   });
 
-  it("exits 14 for the sentinel failure project name", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-deploy-e2e-"));
+  it("exits 16 for the sentinel failure project name", async () => {
+    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-rollback-e2e-"));
     tempDirectories.push(rootDirectory);
 
-    const deployClient = new StubDeployClient();
+    const rollbackClient = new StubRollbackClient();
     const deps = createDependencies(
       rootDirectory,
-      createPromptPort(createNodeSelection("deploy-failure")),
-      deployClient,
+      createPromptPort(createNodeSelection("rollback-failure")),
+      rollbackClient,
     );
-    const projectDir = join(rootDirectory, "deploy-failure");
+    const projectDir = join(rootDirectory, "rollback-failure");
 
     await runCli(["create"], deps);
 
-    const result = await runCli(["deploy", projectDir], deps);
-    expect(result.exitCode).toBe(14);
+    const result = await runCli(["rollback", projectDir], deps);
+    expect(result.exitCode).toBe(16);
   });
 });

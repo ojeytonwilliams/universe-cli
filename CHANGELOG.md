@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.15.0] - 2026-04-09
+
+### Phases 1–3 — Rollback Command (Stub Adapter)
+
+- **`RollbackClient` port** (`src/ports/rollback-client.ts`): `rollback(request): Promise<RollbackReceipt>`; request carries `manifest` and `targetEnvironment`; receipt carries `name`, `targetEnvironment`, and `rollbackId`.
+- **`RollbackError`** (`src/errors/cli-errors.ts`): exit code 16; message includes project name and reason.
+- **`StubRollbackClient`** (`src/adapters/stub-rollback-client.ts`): deterministic `stub-rollback-<name>-<target>-N` IDs; sentinel name `rollback-failure`; state resets on construction.
+- **`rollback` command** (`src/cli.ts`): reads `platform.yaml` from `cwd` or optional directory; target environment defaults to `production`; too-many-args exit 1; invalid target exit 6; exits 11/12/16 on error paths; exits 0 with name/targetEnvironment/rollbackId on success; observability via `safeTrack` for start/success/failure.
+- **Container wiring** (`src/container.ts`, `src/bin.ts`): `StubRollbackClient` exported as `rollbackClient` and wired into `runCli`.
+- **Unit tests** (`src/adapters/stub-rollback-client.test.ts`): ID format, sequencing, independent counters, sentinel failure, instance isolation.
+- **CLI integration tests** (`src/cli.test.ts`): 12 tests covering all success and error paths, observability, and argument validation.
+- **E2E tests** (`src/rollback.e2e.test.ts`): create-then-rollback, repeated rollbacks, sentinel failure exit 16.
+- **Container guard** (`src/container.test.ts`): asserts `rollbackClient` is an instance of `StubRollbackClient`.
+- **Design docs**: `design/assumptions-register.md` rollback assumptions RLB-001–RLB-005 marked `validated`.
+
 ## [2.14.0] - 2026-04-09
 
 ### Phase 3 — Promote Test Coverage, Guardrails, and Documentation
