@@ -43,4 +43,12 @@ be appended to the relevant section.
 
 ## Assumptions Added During Implementation
 
-_Append new assumptions here as they are discovered._
+| ID  | Assumption | Impact if wrong | Expansion trigger |
+| --- | ---------- | --------------- | ----------------- |
+
+### Additional Unknowns Discovered
+
+| ID    | Question                                                                                                | Status |
+| ----- | ------------------------------------------------------------------------------------------------------- | ------ |
+| OQ-04 | Should future `create` adapters expose a dry-run mode that returns resolved files without writing disk? | Open   |
+| OQ-05 | Should layer registries support external overrides (for internal templates) before matrix expansion?    | Open   |

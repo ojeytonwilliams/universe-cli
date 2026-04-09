@@ -1,7 +1,5 @@
-// oxlint-disable-next-line import/no-nodejs-modules
-import { mkdir, rm, writeFile } from "fs/promises";
-// oxlint-disable-next-line import/no-nodejs-modules
-import { dirname, join } from "path";
+import { mkdir, rm, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import { ScaffoldWriteError } from "../errors/cli-errors.js";
 import type { FilesystemWriter } from "../ports/filesystem-writer.js";
 

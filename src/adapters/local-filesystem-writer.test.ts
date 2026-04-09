@@ -1,11 +1,7 @@
-// oxlint-disable-next-line import/no-nodejs-modules
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "fs";
-// oxlint-disable-next-line import/no-nodejs-modules
-import { mkdir, rm, writeFile } from "fs/promises";
-// oxlint-disable-next-line import/no-nodejs-modules
-import { tmpdir } from "os";
-// oxlint-disable-next-line import/no-nodejs-modules
-import { join } from "path";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdir, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { ScaffoldWriteError } from "../errors/cli-errors.js";
 import { LocalFilesystemWriter } from "./local-filesystem-writer.js";
 

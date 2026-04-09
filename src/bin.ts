@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
-// oxlint-disable-next-line import/no-nodejs-modules
-import { existsSync } from "fs";
+import { existsSync } from "node:fs";
 import { DefaultCreateInputValidator } from "./adapters/default-create-input-validator.js";
 import { ClackPromptAdapter } from "./adapters/clack-prompt-adapter.js";
 import { LocalFilesystemWriter } from "./adapters/local-filesystem-writer.js";

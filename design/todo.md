@@ -140,7 +140,7 @@
 
 ## Phase 4 — Tests, Documentation, and Migration Notes
 
-- [ ] TASK: Test completion gate for `create`
+- [x] TASK: Test completion gate for `create`
   - Acceptance:
     - Unit tests cover validation and layer selection.
     - Contract tests pass for `PromptPort`, `CreateInputValidator`, `LayerResolver`, `FilesystemWriter`, `PlatformManifestGenerator`, and `ObservabilityClient`.
@@ -151,13 +151,13 @@
     - E2E tests cover all remaining CLI command flows in spike scope (`create` validation/conflict failures and all 8 deferred commands).
     - E2E conflict tests cover config merge overwrite behavior and non-config collision failure behavior.
 
-- [ ] TASK: Document assumptions, unknowns, and future adapter needs for `create`
+- [x] TASK: Document assumptions, unknowns, and future adapter needs for `create`
   - Acceptance:
     - Documents current assumptions and unknowns for template/layer interfaces.
     - Documents required future adapter capabilities and matrix-expansion triggers.
     - Appends any new assumptions discovered during `create` implementation to the assumptions register.
 
-- [ ] TASK: Define future-command expansion notes
+- [x] TASK: Define future-command expansion notes
   - Acceptance:
     - Documents how the 8 stubbed commands will evolve from the shared non-implemented contract.
     - Identifies what shared infrastructure can be reused when `register` is implemented later.

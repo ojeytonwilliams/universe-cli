@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.5.0] - 2026-04-08
+
+### Phase 4 — Tests, Documentation, and Migration Notes
+
+- **Expanded create E2E coverage** ([src/create.e2e.test.ts](src/create.e2e.test.ts)): added a matrix-wide `create` flow test so every allowed runtime/framework/services combination is exercised end-to-end and verified to scaffold successfully.
+- **Locked scaffold output snapshots** ([src/create.e2e.test.ts](src/create.e2e.test.ts)): added explicit Node.js and Static generated-file snapshots to make artifact regressions visible as future adapters and templates evolve.
+- **Added conflict behavior E2E checks** ([src/create.e2e.test.ts](src/create.e2e.test.ts)): added end-to-end assertions for config merge overwrite behavior and non-config collision failures to protect deterministic layer-composition guarantees.
+- **Covered remaining spike command flows** ([src/create.e2e.test.ts](src/create.e2e.test.ts)): validated all 8 deferred commands plus create validation/conflict failures in one integration-oriented suite to close the Phase 4 command-flow gate.
+- **Documented create assumptions and unknowns** ([plans/universe-cli/assumptions-register.md](plans/universe-cli/assumptions-register.md)): tracked assumptions and open questions that arose implementing `universe create`.
+- **Defined deferred-command migration notes** ([design/future-command-expansion.md](design/future-command-expansion.md)): documented how stubbed commands evolve from the shared deferred contract and what shared infrastructure can be reused when `register` is implemented.
+
 ## [1.4.0] - 2026-04-08
 
 ### Phase 3 — Layer Composition and Artifact Generation

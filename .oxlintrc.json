@@ -33,6 +33,10 @@
     /* Too dogmatic. A responsibility does not have to be contained with a
     single class */
     "max-classes-per-file": "off",
+    /* We're using node */
+    "import/no-nodejs-modules": "off",
+    /* Makes it explicit */
+    "import/enforce-node-protocol-usage": "error",
     /* Various rules conflict  */
     "no-duplicate-imports": ["error", { "allowSeparateTypeImports": true }],
     /* TEST SPECIFIC RULES BELOW. Move to override when override bugs are fixed */

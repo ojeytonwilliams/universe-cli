@@ -1,5 +1,4 @@
-// oxlint-disable-next-line import/no-nodejs-modules
-import { join } from "path";
+import { join } from "node:path";
 import { CliError, DeferredCommandError } from "./errors/cli-errors.js";
 import type { CreateInputValidator } from "./ports/create-input-validator.js";
 import type { FilesystemWriter } from "./ports/filesystem-writer.js";
