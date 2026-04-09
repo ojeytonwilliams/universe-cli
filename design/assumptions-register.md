@@ -221,6 +221,56 @@ Use this register throughout the spike. Update it at the end of each phase.
 
 ---
 
+## Command — `promote`
+
+### Current assumptions
+
+| ID      | Port/Area            | Assumption                                                                                                                         | Why Needed                                                                         | Validation Plan                                                                                     | Status | Notes                                                                                |
+| ------- | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------ |
+| PRM-001 | promote command flow | `promote` can follow the same manifest-first pattern as `deploy`, reading `platform.yaml` from a directory or `cwd` by default     | Reuses existing manifest parsing/validation path and keeps CLI behavior consistent | Validate with CLI tests for default-path and explicit-directory promote flows                       | open   | Keeps promote non-interactive in spike mode                                          |
+| PRM-002 | target environment   | A reduced promote target set with `production` as the default is sufficient for the spike                                          | Keeps scope small while exercising command-specific promotion behavior             | Validate with argument parsing tests, success-path tests, and assumptions review                    | open   | Additional target environments can be added when real provider contracts are defined |
+| PRM-003 | stub promote adapter | A deterministic in-memory stub is sufficient to validate promote UX without simulating full release orchestration                  | Avoids premature modeling of provider internals while proving command shape        | Validate with unit tests for deterministic IDs, repeated promotes, and explicit failure fixtures    | open   | Stub must remain network-free and reset between instances                            |
+| PRM-004 | error taxonomy       | `promote` needs a command-specific typed failure (`PromotionError`) rather than the shared deferred-command contract once promoted | Preserves actionable UX and stable exit semantics after command promotion          | Validate with CLI and adapter tests covering promote-client failures                                | open   | Exit code must be unique and documented in `EXIT_CODES`                              |
+| PRM-005 | observability guard  | Promote telemetry can use the existing `ObservabilityClient` port and must remain best-effort and secret-safe                      | Avoids introducing a new observability boundary for one command                    | Validate with tests that simulate observability failure and assert promote exit/result is unchanged | open   | Payloads must exclude secrets, credentials, and raw environment configuration values |
+
+#### Unknowns
+
+| ID      | Port/Area         | Unknown                                                                                                    | Risk if Wrong | Decision Needed By                        | Owner    | Notes                                                                 |
+| ------- | ----------------- | ---------------------------------------------------------------------------------------------------------- | ------------- | ----------------------------------------- | -------- | --------------------------------------------------------------------- |
+| PRM-U01 | promote receipt   | Whether the real platform returns only a promotion identifier or richer metadata (release URL, timestamps) | Medium        | Before replacing the stub adapter         | platform | Keep stub receipt minimal but extendable                              |
+| PRM-U02 | target mapping    | Whether future promotion targets will use friendly names (`production`) or provider-specific labels        | Medium        | Before real promote contract is finalized | platform | Normalize to CLI-facing names in spike; map later if provider differs |
+| PRM-U03 | failure semantics | Which provider failure classes should become typed errors beyond `PromotionError`                          | Medium        | Before production adapter implementation  | platform | Spike keeps one typed promote failure to avoid speculative taxonomy   |
+
+#### Required adapter/provider capabilities
+
+| ID      | Port/Area                 | Required capability (CLI-owned contract)                                                    | Source command behavior            | Priority    | Notes                                                            |
+| ------- | ------------------------- | ------------------------------------------------------------------------------------------- | ---------------------------------- | ----------- | ---------------------------------------------------------------- |
+| PRM-C01 | promote client            | `promote(input) -> receipt` with normalized `PromotionError` failures                       | `universe promote` success path    | must-have   | Input should include manifest and target environment             |
+| PRM-C02 | project reader            | `readFile(filePath) -> manifestYaml`                                                        | Manifest lookup for promote        | must-have   | Reuses existing `ProjectReaderPort` capability from `register`   |
+| PRM-C03 | platform manifest service | `validateManifest(yaml) -> PlatformManifest`                                                | Manifest validation before promote | must-have   | Reuses existing validation path                                  |
+| PRM-C04 | observability client      | `track()` and `error()` remain non-blocking when promote emits start/success/failure events | Promote telemetry                  | should-have | Must preserve safe wrapper behavior already used by the CLI flow |
+
+#### New assumptions discovered during implementation
+
+| ID  | Port/Area | New assumption | Trigger/Context | Validation Plan | Status | Notes |
+| --- | --------- | -------------- | --------------- | --------------- | ------ | ----- |
+
+#### Validation evidence and outcomes
+
+- Evidence links / artifacts:
+  - [ ] Test(s):
+  - [ ] Notes/docs:
+  - [ ] Decision updates:
+- ## Outcome summary:
+
+#### Impact if assumptions changed
+
+- Affected command behavior: `universe promote` argument model, success output, and failure mapping
+- Affected ports/adapters: `PromoteClient`, stub promote adapter, manifest validation reuse, observability wrappers
+- Required TODO/PRD changes: promote TODO phase ordering, promote error taxonomy, and migration notes for real adapter parity
+
+---
+
 ## Command Template
 
 ### Command — `<name>`
