@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.7.0] - 2026-04-09
+
+### Phase 3 — `StubRegistrationClient` Adapter
+
+- **`StubRegistrationClient`** (`src/adapters/stub-registration-client.ts`): implements `RegistrationClient`; tracks registered project names in memory; returns a deterministic receipt (`registrationId: stub-<name>`); rejects with `RegistrationError` on a second registration for the same name; state resets on construction.
+- **Adapter tests** (`src/adapters/stub-registration-client.test.ts`): covers first registration receipt, static manifest success, duplicate-registration error, and per-instance state isolation.
+- **Container wiring** (`src/container.ts`): `StubRegistrationClient` added as the `registrationClient` export; container guard test updated to assert the correct instance type.
+
 ## [2.6.0] - 2026-04-09
 
 ### Phase 2 — `ProjectReader` Adapter

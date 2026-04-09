@@ -46,7 +46,7 @@ command code is written until the contracts for `ProjectReaderPort` and
 
 ## Phase 3: `RegistrationClient` stub adapter
 
-- [ ] CODE: `StubRegistrationClient` adapter
+- [x] CODE: `StubRegistrationClient` adapter
   - Feature: A stub adapter that simulates realistic registration behaviour, fulfilling `RegistrationClient` until the real platform service exists.
   - Files: `src/adapters/stub-registration-client.ts`, `src/adapters/stub-registration-client.test.ts`
   - Acceptance:
