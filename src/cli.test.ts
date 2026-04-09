@@ -1,9 +1,7 @@
-import type { CreateInputValidator } from "./ports/create-input-validator.js";
 import type { FilesystemWriter } from "./ports/filesystem-writer.js";
-import type { LayerResolver } from "./ports/layer-resolver.js";
 import type { ObservabilityClient } from "./ports/observability-client.js";
-import type { PlatformManifestGenerator } from "./ports/platform-manifest-generator.js";
 import type { CreateSelections, PromptPort } from "./ports/prompt-port.js";
+import type { ResolvedLayerSet } from "./services/layer-composition-service.js";
 import { runCli } from "./cli.js";
 import { InvalidNameError, ScaffoldWriteError } from "./errors/cli-errors.js";
 
@@ -44,8 +42,8 @@ const cancelledCreatePrompt: PromptPort = {
   },
 };
 
-const passThroughValidator: CreateInputValidator = {
-  validateCreateInput(input) {
+const passThroughValidator = {
+  validateCreateInput(input: CreateSelections) {
     return input;
   },
 };
@@ -60,8 +58,8 @@ const resolvedLayerFiles = {
   "tsconfig.json": '{"compilerOptions":{}}',
 };
 
-const passThroughLayerResolver: LayerResolver = {
-  resolveLayers() {
+const passThroughLayerResolver = {
+  resolveLayers(_input: CreateSelections): ResolvedLayerSet {
     return {
       files: resolvedLayerFiles,
       layers: [],
@@ -69,8 +67,8 @@ const passThroughLayerResolver: LayerResolver = {
   },
 };
 
-const manifestGenerator: PlatformManifestGenerator = {
-  generatePlatformManifest() {
+const manifestGenerator = {
+  generatePlatformManifest(_input: CreateSelections) {
     return "name: hello-universe\n";
   },
 };
@@ -91,15 +89,15 @@ const failingWriter: FilesystemWriter = {
   },
 };
 
-const invalidNameValidator: CreateInputValidator = {
-  validateCreateInput() {
+const invalidNameValidator = {
+  validateCreateInput(_input: CreateSelections): CreateSelections {
     throw new InvalidNameError("InvalidName");
   },
 };
 
 const createDeps = (
   promptPort: PromptPort,
-  validator: CreateInputValidator,
+  validator: { validateCreateInput(input: CreateSelections): CreateSelections },
   filesystemWriter: FilesystemWriter = recordingWriter,
 ) => ({
   cwd: "/workspace",

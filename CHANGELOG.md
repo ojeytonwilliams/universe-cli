@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.0.0] - 2026-04-09
+
+### Refactor Phase 5 — Simplify Composition and Contracts
+
+- **Updated `CliDependencies` to use inline structural types for services** ([src/cli.ts](src/cli.ts)): replaced port interface imports (`CreateInputValidator`, `LayerResolver`, `PlatformManifestGenerator`) with minimal inline types that express only what the CLI needs from each service; `PromptPort`, `FilesystemWriter`, and `ObservabilityClient` remain as explicit port imports.
+- **Removed port interface type annotations from CLI tests** ([src/cli.test.ts](src/cli.test.ts)): test doubles now carry explicit parameter types without referencing the deleted port interfaces; `ResolvedLayerSet` is imported from the service that owns it.
+- **Deleted the three obsolete port interfaces** (`src/ports/create-input-validator.ts`, `src/ports/layer-resolver.ts`, `src/ports/platform-manifest-generator.ts`): only true external-boundary ports remain in `src/ports/`.
+
 ## [1.9.0] - 2026-04-09
 
 ### Refactor Phase 4 — Move `LocalPlatformManifestGenerator` into `src/services`

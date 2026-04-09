@@ -62,7 +62,7 @@
 
 ## Phase 5 — Simplify Composition and Contracts
 
-- [ ] CODE: Update create-flow composition to distinguish real ports from internal services
+- [x] CODE: Update create-flow composition to distinguish real ports from internal services
   - Feature: Refactor composition and type boundaries so `runCli()` and `bin.ts` reflect the new service-vs-port split
   - Acceptance:
     - External boundaries remain represented by ports for prompting, filesystem writes, and observability.
@@ -70,7 +70,7 @@
     - Type names and constructor wiring clearly separate infrastructure dependencies from internal create-flow logic.
     - All affected tests pass with the new wiring.
 
-- [ ] TASK: Delete the three port interfaces that no longer represent external boundaries
+- [x] TASK: Delete the three port interfaces that no longer represent external boundaries
   - Acceptance:
     - `CreateInputValidator`, `LayerResolver`, and `PlatformManifestGenerator` port interfaces are deleted from `src/ports/`.
     - No remaining file or design note describes these abstractions as ports.

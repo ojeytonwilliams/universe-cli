@@ -1,12 +1,10 @@
 import { join } from "node:path";
 import { CliError, DeferredCommandError } from "./errors/cli-errors.js";
-import type { CreateInputValidator } from "./ports/create-input-validator.js";
 import type { FilesystemWriter } from "./ports/filesystem-writer.js";
-import type { LayerResolver } from "./ports/layer-resolver.js";
 import type { ObservabilityClient } from "./ports/observability-client.js";
-import type { PlatformManifestGenerator } from "./ports/platform-manifest-generator.js";
-import type { PromptPort } from "./ports/prompt-port.js";
 import { safeError } from "./ports/observability-client.js";
+import type { CreateSelections, PromptPort } from "./ports/prompt-port.js";
+import type { ResolvedLayerSet } from "./services/layer-composition-service.js";
 
 const HELP_TEXT = `
 Usage: universe <command>
@@ -34,11 +32,11 @@ interface CliResult {
 interface CliDependencies {
   cwd: string;
   filesystemWriter: FilesystemWriter;
-  layerResolver: LayerResolver;
+  layerResolver: { resolveLayers(input: CreateSelections): ResolvedLayerSet };
   observability: ObservabilityClient;
-  platformManifestGenerator: PlatformManifestGenerator;
+  platformManifestGenerator: { generatePlatformManifest(input: CreateSelections): string };
   promptPort: PromptPort;
-  validator: CreateInputValidator;
+  validator: { validateCreateInput(input: CreateSelections): CreateSelections };
 }
 
 const DEFERRED_COMMANDS = new Set([
