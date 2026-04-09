@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.14.0] - 2026-04-09
+
+### Phase 3 — Promote Test Coverage, Guardrails, and Documentation
+
+- **`StubPromoteClient` unit tests** (`src/adapters/stub-promote-client.test.ts`): verify deterministic promotion ID format (`stub-promote-<name>-<target>-N`), incrementing sequence per project/target, independent counters across targets, sentinel failure raises `PromotionError`, and state isolation between instances.
+- **CLI integration tests** (`src/cli.test.ts`): promote describe block with 11 tests covering exit 0, success output fields, cwd/directory reads, missing/invalid manifest exit codes 11/12, promotion error exit 15, excess args exit 1, invalid target environment exit 6, observability tracking for start/success/failure without masking exit codes.
+- **E2E tests** (`src/promote.e2e.test.ts`): create-then-promote flow exits 0 with expected output; repeated promotes return incrementing promotion IDs; sentinel failure project exits 15.
+- **Container guard** (`src/container.test.ts`): asserts `promoteClient` is an instance of `StubPromoteClient`.
+- **Design docs**: `design/future-command-expansion.md` updated with `promote` in "Implemented Commands (Spike Mode)" table (v2.12.0); `design/assumptions-register.md` promote assumptions PRM-001–PRM-005 marked `validated`.
+
 ## [2.13.0] - 2026-04-09
 
 ### Phase 2 — Promote Behaviour Hardening

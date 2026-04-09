@@ -8,7 +8,6 @@ Document how the remaining deferred commands evolve from the shared non-implemen
 
 The deferred commands are:
 
-- `promote`
 - `rollback`
 - `logs`
 - `status`
@@ -31,6 +30,7 @@ The following commands have been promoted from deferred to fully implemented aga
 | ---------- | -------------------- | ------------------------ | ----------- |
 | `register` | `RegistrationClient` | `StubRegistrationClient` | v2.8.0      |
 | `deploy`   | `DeployClient`       | `StubDeployClient`       | v2.10.0     |
+| `promote`  | `PromoteClient`      | `StubPromoteClient`      | v2.12.0     |
 
 Each implemented command:
 

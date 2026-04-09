@@ -57,14 +57,14 @@
 
 ## Phase 3 — Test Coverage, Guardrails, and Documentation
 
-- [ ] CODE: Add unit tests for promote stub adapter and port contract behavior
+- [x] CODE: Add unit tests for promote stub adapter and port contract behavior
   - Feature: Create `StubPromoteClient` tests covering success, sequencing, and simulated failures.
   - Acceptance:
     - Tests verify deterministic promotion ID format and incrementing behavior.
     - Tests verify failure path raises `PromotionError`.
     - Tests verify state isolation between adapter instances.
 
-- [ ] CODE: Add CLI integration tests for promote success and error paths
+- [x] CODE: Add CLI integration tests for promote success and error paths
   - Feature: Extend `src/cli.test.ts` promote coverage for implemented behavior.
   - Acceptance:
     - Success path validates output and exit code `0`.
@@ -73,14 +73,14 @@
     - Promote-client failure path validates typed promotion error exit code.
     - Deferred-command test set excludes `promote` and still validates remaining deferred commands.
 
-- [ ] CODE: Add E2E flow for create-then-promote and container guard
+- [x] CODE: Add E2E flow for create-then-promote and container guard
   - Feature: Add `promote.e2e` coverage and spike container guard for promote wiring.
   - Acceptance:
     - E2E test scaffolds with `create`, then successfully runs `promote` against generated `platform.yaml`.
     - E2E test covers at least one promote failure fixture with deterministic assertion.
     - Container guard test asserts `promoteClient` is an instance of `StubPromoteClient`.
 
-- [ ] TASK: Update design docs and migration notes for promote promotion
+- [x] TASK: Update design docs and migration notes for promote promotion
   - Acceptance:
     - `design/future-command-expansion.md` marks `promote` as implemented in spike mode.
     - `design/assumptions-register.md` records promote-specific assumptions and validation outcomes.
