@@ -2,7 +2,7 @@
 
 ## Phase 1 — Trivial Prototype (first working `universe deploy`)
 
-- [ ] CODE: Define deploy port contract and typed deploy error
+- [x] CODE: Define deploy port contract and typed deploy error
   - Feature: Add `DeployClient` port (request/receipt types) and `DeploymentError` in the CLI error taxonomy.
   - Acceptance:
     - `src/ports/deploy-client.ts` exports a documented interface with a single deploy method.
@@ -10,7 +10,7 @@
     - Deploy receipt includes deterministic `deploymentId`, project `name`, and `environment`.
     - `DeploymentError` has one stable user-facing message style and one stable exit code.
 
-- [ ] CODE: Implement stub deploy adapter with deterministic behavior
+- [x] CODE: Implement stub deploy adapter with deterministic behavior
   - Feature: Add `StubDeployClient` adapter that simulates a successful deployment without network access.
   - Acceptance:
     - First deploy for a project/environment returns `deploymentId` `stub-<name>-<environment>-1`.
@@ -18,7 +18,7 @@
     - Adapter can simulate failure for explicit test fixtures (e.g., known sentinel project name).
     - Adapter performs no external network calls.
 
-- [ ] CODE: Promote `deploy` from deferred to implemented CLI handler
+- [x] CODE: Promote `deploy` from deferred to implemented CLI handler
   - Feature: Implement `universe deploy [directory] [environment]` in `runCli` and remove `deploy` from deferred command set.
   - Acceptance:
     - `deploy` reads `platform.yaml` from `[directory]` or `cwd` when omitted.
@@ -27,7 +27,7 @@
     - Valid manifest is passed to `DeployClient` and successful result exits `0`.
     - Success output includes project name, environment, and deployment ID.
 
-- [ ] TASK: Wire container and dependency graph for deploy
+- [x] TASK: Wire container and dependency graph for deploy
   - Acceptance:
     - `src/container.ts` exports `deployClient` wired to `StubDeployClient` in spike mode.
     - CLI dependency composition includes `deployClient` without breaking existing commands.

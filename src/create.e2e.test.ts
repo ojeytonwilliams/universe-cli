@@ -10,15 +10,7 @@ import { PlatformManifestService } from "./services/platform-manifest-service.js
 import { runCli } from "./cli.js";
 import type { CreateSelections, PromptPort } from "./ports/prompt-port.js";
 
-const DEFERRED_COMMANDS = [
-  "deploy",
-  "list",
-  "logs",
-  "promote",
-  "rollback",
-  "status",
-  "teardown",
-] as const;
+const DEFERRED_COMMANDS = ["list", "logs", "promote", "rollback", "status", "teardown"] as const;
 
 const createPromptPort = (selection: CreateSelections | null): PromptPort => ({
   promptForCreateInputs() {
@@ -86,6 +78,11 @@ const createDependencies = (
   layerRegistry?: LayerRegistry,
 ) => ({
   cwd,
+  deployClient: {
+    deploy(_request: never): Promise<{ deploymentId: string; environment: string; name: string }> {
+      return Promise.reject(new Error("deployClient not exercised in create tests"));
+    },
+  },
   filesystemWriter: new LocalFilesystemWriter(),
   layerResolver: new LayerCompositionService(layerRegistry),
   observability: new StubObservabilityClient(),

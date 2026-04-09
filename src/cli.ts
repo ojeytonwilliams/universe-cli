@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import { CliError, DeferredCommandError, ManifestInvalidError } from "./errors/cli-errors.js";
+import type { DeployReceipt, DeployRequest } from "./ports/deploy-client.js";
 import type { FilesystemWriter } from "./ports/filesystem-writer.js";
 import type { ObservabilityClient } from "./ports/observability-client.js";
 import { safeError } from "./ports/observability-client.js";
@@ -32,6 +33,7 @@ interface CliResult {
 
 interface CliDependencies {
   cwd: string;
+  deployClient: { deploy(request: DeployRequest): Promise<DeployReceipt> };
   filesystemWriter: FilesystemWriter;
   layerResolver: { resolveLayers(input: CreateSelections): ResolvedLayerSet };
   observability: ObservabilityClient;
@@ -47,19 +49,12 @@ interface CliDependencies {
   validator: { validateCreateInput(input: CreateSelections): CreateSelections };
 }
 
-const DEFERRED_COMMANDS = new Set([
-  "deploy",
-  "list",
-  "logs",
-  "promote",
-  "rollback",
-  "status",
-  "teardown",
-]);
+const DEFERRED_COMMANDS = new Set(["list", "logs", "promote", "rollback", "status", "teardown"]);
 
 const runCli = async (argv: string[], deps: CliDependencies): Promise<CliResult> => {
   const {
     cwd,
+    deployClient,
     filesystemWriter,
     layerResolver,
     observability,
@@ -152,6 +147,42 @@ const runCli = async (argv: string[], deps: CliDependencies): Promise<CliResult>
       return {
         exitCode: 0,
         output: `Registered project "${receipt.name}". Registration ID: ${receipt.registrationId}`,
+      };
+    } catch (error) {
+      if (error instanceof CliError) {
+        safeError(observability, error);
+        return { exitCode: error.exitCode, output: error.message };
+      }
+
+      throw error;
+    }
+  }
+
+  if (command === "deploy") {
+    const platformYamlDir = argv[1] ?? cwd;
+    const environment = argv[2] ?? "preview";
+    const platformYamlPath = join(platformYamlDir, "platform.yaml");
+
+    try {
+      const yaml = await projectReader.readFile(platformYamlPath);
+
+      let manifest: PlatformManifest;
+      try {
+        manifest = platformManifestGenerator.validateManifest(yaml);
+      } catch (validationError) {
+        const invalidError = new ManifestInvalidError(
+          platformYamlPath,
+          validationError instanceof Error ? validationError.message : String(validationError),
+        );
+        safeError(observability, invalidError);
+        return { exitCode: invalidError.exitCode, output: invalidError.message };
+      }
+
+      const receipt = await deployClient.deploy({ environment, manifest });
+
+      return {
+        exitCode: 0,
+        output: `Deployed project "${receipt.name}" to ${receipt.environment}. Deployment ID: ${receipt.deploymentId}`,
       };
     } catch (error) {
       if (error instanceof CliError) {

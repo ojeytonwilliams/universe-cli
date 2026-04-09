@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { LocalFilesystemWriter } from "./adapters/local-filesystem-writer.js";
 import { LocalProjectReader } from "./adapters/local-project-reader.js";
+import { StubDeployClient } from "./adapters/stub-deploy-client.js";
 import { StubObservabilityClient } from "./adapters/stub-observability-client.js";
 import { StubRegistrationClient } from "./adapters/stub-registration-client.js";
 import { CreateInputValidationService } from "./services/create-input-validation-service.js";
@@ -33,6 +34,7 @@ const createDependencies = (
   registrationClient: StubRegistrationClient,
 ) => ({
   cwd,
+  deployClient: new StubDeployClient(),
   filesystemWriter: new LocalFilesystemWriter(),
   layerResolver: new LayerCompositionService(),
   observability: new StubObservabilityClient(),

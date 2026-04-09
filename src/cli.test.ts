@@ -8,6 +8,7 @@ import type {
 } from "./services/platform-manifest-service.js";
 import { runCli } from "./cli.js";
 import {
+  DeploymentError,
   InvalidNameError,
   ManifestNotFoundError,
   RegistrationError,
@@ -19,15 +20,7 @@ const client: ObservabilityClient = {
   track() {},
 };
 
-const DEFERRED_COMMANDS = [
-  "deploy",
-  "list",
-  "logs",
-  "promote",
-  "rollback",
-  "status",
-  "teardown",
-] as const;
+const DEFERRED_COMMANDS = ["list", "logs", "promote", "rollback", "status", "teardown"] as const;
 
 const createPromptResult: CreateSelections = {
   confirmed: true,
@@ -120,12 +113,22 @@ const defaultRegistrationClient = {
   },
 };
 
+const defaultDeployClient = {
+  deploy(_request: {
+    environment: string;
+    manifest: PlatformManifest;
+  }): Promise<{ deploymentId: string; environment: string; name: string }> {
+    return Promise.reject(new Error("deployClient.deploy should not be called in this test"));
+  },
+};
+
 const createDeps = (
   promptPort: PromptPort,
   validator: { validateCreateInput(input: CreateSelections): CreateSelections },
   filesystemWriter: FilesystemWriter = recordingWriter,
 ) => ({
   cwd: "/workspace",
+  deployClient: defaultDeployClient,
   filesystemWriter,
   layerResolver: passThroughLayerResolver,
   observability: client,
@@ -354,6 +357,115 @@ describe(runCli, () => {
       const result = await runCli(["register", "dir1", "dir2"], registerDeps());
 
       expect(result.exitCode).toBe(1);
+    });
+  });
+
+  describe("deploy", () => {
+    const deployManifest: AppPlatformManifest = {
+      domain: { preview: "my-app.preview.example.com", production: "my-app.example.com" },
+      environments: { preview: { branch: "preview" }, production: { branch: "main" } },
+      name: "my-app",
+      owner: "platform-engineering",
+      resources: [],
+      schemaVersion: "1",
+      services: [],
+      stack: "app",
+    };
+
+    const successReader = {
+      readFile(_filePath: string) {
+        return Promise.resolve("stack: app\n");
+      },
+    };
+    const successValidator = (_yaml: string): PlatformManifest => deployManifest;
+    const successDeployClient = {
+      deploy(_request: { environment: string; manifest: PlatformManifest }) {
+        return Promise.resolve({
+          deploymentId: "stub-my-app-preview-1",
+          environment: "preview",
+          name: "my-app",
+        });
+      },
+    };
+
+    const deployDeps = (
+      reader = successReader,
+      validator = successValidator,
+      deployClient = successDeployClient,
+    ) => ({
+      ...createDeps(createPrompt, passThroughValidator),
+      deployClient,
+      platformManifestGenerator: { ...manifestGenerator, validateManifest: validator },
+      projectReader: reader,
+    });
+
+    it("exits 0 on successful deployment", async () => {
+      const result = await runCli(["deploy"], deployDeps());
+
+      expect(result.exitCode).toBe(0);
+    });
+
+    it("output contains the project name, environment, and deployment ID", async () => {
+      const { output } = await runCli(["deploy"], deployDeps());
+
+      expect(output).toContain("my-app");
+      expect(output).toContain("preview");
+      expect(output).toContain("stub-my-app-preview-1");
+    });
+
+    it("defaults to the preview environment when no environment argument is given", async () => {
+      const requests: { environment: string }[] = [];
+      const trackingClient = {
+        deploy(request: { environment: string; manifest: PlatformManifest }) {
+          requests.push(request);
+          return Promise.resolve({
+            deploymentId: "stub-my-app-preview-1",
+            environment: request.environment,
+            name: "my-app",
+          });
+        },
+      };
+
+      await runCli(["deploy"], deployDeps(successReader, successValidator, trackingClient));
+
+      expect(requests[0]?.environment).toBe("preview");
+    });
+
+    it("exits 11 when platform.yaml is missing", async () => {
+      const missingReader = {
+        readFile(filePath: string) {
+          return Promise.reject(new ManifestNotFoundError(filePath));
+        },
+      };
+
+      const result = await runCli(["deploy"], deployDeps(missingReader));
+
+      expect(result.exitCode).toBe(11);
+    });
+
+    it("exits 12 when platform.yaml fails validation", async () => {
+      const failingValidator = (_yaml: string): PlatformManifest => {
+        throw new Error("invalid schema");
+      };
+
+      const result = await runCli(["deploy"], deployDeps(successReader, failingValidator));
+
+      expect(result.exitCode).toBe(12);
+    });
+
+    it("exits 14 when deployment fails", async () => {
+      const failingClient = {
+        deploy(request: { environment: string; manifest: PlatformManifest }) {
+          return Promise.reject(new DeploymentError(request.manifest.name, "timeout"));
+        },
+      };
+
+      const result = await runCli(
+        ["deploy"],
+        deployDeps(successReader, successValidator, failingClient),
+      );
+
+      expect(result.exitCode).toBe(14);
     });
   });
 });

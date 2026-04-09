@@ -1,6 +1,7 @@
 import {
   CliError,
   DeferredCommandError,
+  DeploymentError,
   InvalidMultiSelectError,
   InvalidNameError,
   LayerConflictError,
@@ -19,6 +20,7 @@ describe("error exit codes", () => {
   it("assigns a unique exit code to each error type", () => {
     const errors = [
       new DeferredCommandError("deploy"),
+      new DeploymentError("my-app", "timeout"),
       new InvalidMultiSelectError("databases"),
       new InvalidNameError("x"),
       new LayerConflictError("src/index.ts", "base/nodejs", "frameworks/express"),
@@ -176,5 +178,13 @@ describe(DeferredCommandError, () => {
     expect(error.message).toMatchInlineSnapshot(
       `"The 'deploy' command is not yet implemented in this spike. It will be available in a future release."`,
     );
+  });
+});
+
+describe(DeploymentError, () => {
+  it("includes the project name and reason in the message", () => {
+    const error = new DeploymentError("my-app", "timeout");
+
+    expect(error.message).toMatchInlineSnapshot(`"Failed to deploy project "my-app": timeout"`);
   });
 });

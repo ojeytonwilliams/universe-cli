@@ -1,5 +1,6 @@
 const EXIT_CODES = {
   DEFERRED_COMMAND: 1,
+  DEPLOYMENT: 14,
   INVALID_MULTI_SELECT: 7,
   INVALID_NAME: 2,
   LAYER_CONFLICT: 9,
@@ -136,6 +137,13 @@ class RegistrationError extends CliError {
   }
 }
 
+class DeploymentError extends CliError {
+  constructor(name: string, reason: string) {
+    super(`Failed to deploy project "${name}": ${reason}`, EXIT_CODES.DEPLOYMENT);
+    this.name = "DeploymentError";
+  }
+}
+
 class DeferredCommandError extends CliError {
   constructor(command: string) {
     super(
@@ -149,6 +157,7 @@ class DeferredCommandError extends CliError {
 export {
   CliError,
   DeferredCommandError,
+  DeploymentError,
   InvalidMultiSelectError,
   InvalidNameError,
   LayerConflictError,

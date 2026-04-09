@@ -7,7 +7,7 @@ import { LocalProjectReader } from "./adapters/local-project-reader.js";
 import { CreateInputValidationService } from "./services/create-input-validation-service.js";
 import { LayerCompositionService } from "./services/layer-composition-service.js";
 import { PlatformManifestService } from "./services/platform-manifest-service.js";
-import { observabilityClient, registrationClient } from "./container.js";
+import { deployClient, observabilityClient, registrationClient } from "./container.js";
 import { runCli } from "./cli.js";
 
 const filesystemWriter = new LocalFilesystemWriter();
@@ -18,6 +18,7 @@ const promptPort = new ClackPromptAdapter();
 const inputValidator = new CreateInputValidationService((path) => existsSync(path));
 const { exitCode, output } = await runCli(process.argv.slice(2), {
   cwd: process.cwd(),
+  deployClient,
   filesystemWriter,
   layerResolver,
   observability: observabilityClient,

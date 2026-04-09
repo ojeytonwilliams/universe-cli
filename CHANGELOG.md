@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.9.0] - 2026-04-09
+
+### Phase 1 — Deploy Trivial Prototype
+
+- **`DeployClient` port** (`src/ports/deploy-client.ts`): interface declaring `deploy(request: DeployRequest): Promise<DeployReceipt>`; `DeployRequest` carries `manifest` and `environment`; `DeployReceipt` carries `name`, `environment`, and `deploymentId`.
+- **`DeploymentError`** (`src/errors/cli-errors.ts`): exit code 14; message includes project name and reason.
+- **`StubDeployClient`** (`src/adapters/stub-deploy-client.ts`): tracks per-project/environment deploy counts; returns `stub-<name>-<env>-N` receipts; rejects with `DeploymentError` for the sentinel name `deploy-failure`; state resets on construction.
+- **`deploy` command** (`src/cli.ts`): removed from `DEFERRED_COMMANDS`; reads `platform.yaml` from `cwd` or an optional directory argument; environment defaults to `preview`; exits 0 with name/environment/deploymentId on success; exits 11/12/14 on error paths.
+- **Container wiring** (`src/container.ts`, `src/bin.ts`): `StubDeployClient` exported as `deployClient` and wired into `runCli`.
+
 ## [2.8.0] - 2026-04-09
 
 ### Phase 4 — `register` Command
