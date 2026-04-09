@@ -35,7 +35,7 @@
 
 ## Phase 2 — Behavior Hardening and UX Consistency
 
-- [ ] CODE: Add promote argument validation and usage guards
+- [x] CODE: Add promote argument validation and usage guards
   - Feature: Enforce bounded promote arguments and deterministic defaults.
   - Acceptance:
     - Command accepts `universe promote`, `universe promote [directory]`, and `universe promote [directory] [target-environment]`.
@@ -43,14 +43,14 @@
     - Unsupported target environment returns typed unsupported-combination style error.
     - Target environment defaults to `production` when omitted.
 
-- [ ] CODE: Add non-blocking observability calls for promote flow
+- [x] CODE: Add non-blocking observability calls for promote flow
   - Feature: Emit promote lifecycle telemetry through `ObservabilityClient` using safe wrappers.
   - Acceptance:
     - Promote start, success, and failure are tracked with non-sensitive fields only.
     - Observability failures do not change promote result or exit code.
     - No tokens, credentials, or raw environment values are emitted in telemetry payloads.
 
-- [ ] TASK: Align promote UX copy with existing command output style
+- [x] TASK: Align promote UX copy with existing command output style
   - Acceptance:
     - Error and success copy follows existing imperative/actionable tone.
     - Promote output remains deterministic for snapshot-friendly testing.

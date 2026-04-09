@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.13.0] - 2026-04-09
+
+### Phase 2 — Promote Behaviour Hardening
+
+- **Argument validation** (`src/cli.ts`): `universe promote [directory] [target-environment]` — too many args returns exit 1 with usage guidance; unsupported target environment value (not `preview`/`production`) returns `UnsupportedCombinationError` (exit 6).
+- **Observability** (`src/cli.ts`): `safeTrack` calls added for `promote.start`, `promote.success`, and `promote.failure`; tracking failures are swallowed and do not affect exit code or output.
+
 ## [2.12.0] - 2026-04-09
 
 ### Phase 1 — Promote Trivial Prototype

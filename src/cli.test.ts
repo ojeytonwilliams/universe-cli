@@ -666,5 +666,92 @@ describe(runCli, () => {
 
       expect(result.exitCode).toBe(15);
     });
+
+    it("exits 1 when more than two arguments are provided", async () => {
+      const result = await runCli(["promote", "/dir", "production", "extra"], promoteDeps());
+
+      expect(result.exitCode).toBe(1);
+    });
+
+    it("exits 6 when target environment is not preview or production", async () => {
+      const result = await runCli(["promote", "/dir", "staging"], promoteDeps());
+
+      expect(result.exitCode).toBe(6);
+    });
+
+    it("defaults to the production target environment when no target argument is given", async () => {
+      const requests: { targetEnvironment: string }[] = [];
+      const trackingClient = {
+        promote(request: { manifest: PlatformManifest; targetEnvironment: string }) {
+          requests.push(request);
+          return Promise.resolve({
+            name: "my-app",
+            promotionId: "stub-promote-my-app-production-1",
+            targetEnvironment: request.targetEnvironment,
+          });
+        },
+      };
+
+      await runCli(["promote"], promoteDeps(successReader, successValidator, trackingClient));
+
+      expect(requests[0]?.targetEnvironment).toBe("production");
+    });
+
+    it("tracks promote.start and promote.success on a successful promotion", async () => {
+      const trackedEvents: string[] = [];
+      const trackingObservability = {
+        error() {},
+        track(event: string) {
+          trackedEvents.push(event);
+        },
+      };
+
+      await runCli(["promote"], {
+        ...promoteDeps(),
+        observability: trackingObservability,
+      });
+
+      expect(trackedEvents).toContain("promote.start");
+      expect(trackedEvents).toContain("promote.success");
+    });
+
+    it("tracks promote.start and promote.failure on a failed promotion", async () => {
+      const trackedEvents: string[] = [];
+      const trackingObservability = {
+        error() {},
+        track(event: string) {
+          trackedEvents.push(event);
+        },
+      };
+      const failingClient = {
+        promote(request: { manifest: PlatformManifest; targetEnvironment: string }) {
+          return Promise.reject(new PromotionError(request.manifest.name, "timeout"));
+        },
+      };
+
+      await runCli(["promote"], {
+        ...promoteDeps(successReader, successValidator, failingClient),
+        observability: trackingObservability,
+      });
+
+      expect(trackedEvents).toContain("promote.start");
+      expect(trackedEvents).toContain("promote.failure");
+    });
+
+    it("does not change exit code when observability.track throws", async () => {
+      const throwingObservability = {
+        error() {},
+        track() {
+          throw new Error("o11y down");
+        },
+      };
+
+      const result = await runCli(["promote"], {
+        ...promoteDeps(),
+        observability: throwingObservability,
+      });
+
+      expect(result.exitCode).toBe(0);
+    });
   });
 });

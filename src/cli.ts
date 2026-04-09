@@ -222,9 +222,25 @@ const runCli = async (argv: string[], deps: CliDependencies): Promise<CliResult>
   }
 
   if (command === "promote") {
+    if (argv.length > 3) {
+      return {
+        exitCode: 1,
+        output: "Too many arguments. Usage: universe promote [directory] [target-environment]",
+      };
+    }
+
     const platformYamlDir = argv[1] ?? cwd;
     const targetEnvironment = argv[2] ?? "production";
     const platformYamlPath = join(platformYamlDir, "platform.yaml");
+
+    if (targetEnvironment !== "preview" && targetEnvironment !== "production") {
+      const envError = new UnsupportedCombinationError(
+        `target-environment "${targetEnvironment}" — valid values are: preview, production`,
+      );
+      return { exitCode: envError.exitCode, output: envError.message };
+    }
+
+    safeTrack(observability, "promote.start", { targetEnvironment });
 
     try {
       const yaml = await projectReader.readFile(platformYamlPath);
@@ -243,6 +259,8 @@ const runCli = async (argv: string[], deps: CliDependencies): Promise<CliResult>
 
       const receipt = await promoteClient.promote({ manifest, targetEnvironment });
 
+      safeTrack(observability, "promote.success", { name: receipt.name, targetEnvironment });
+
       return {
         exitCode: 0,
         output: `Promoted project "${receipt.name}" to ${receipt.targetEnvironment}. Promotion ID: ${receipt.promotionId}`,
@@ -250,6 +268,7 @@ const runCli = async (argv: string[], deps: CliDependencies): Promise<CliResult>
     } catch (error) {
       if (error instanceof CliError) {
         safeError(observability, error);
+        safeTrack(observability, "promote.failure", { targetEnvironment });
         return { exitCode: error.exitCode, output: error.message };
       }
 
