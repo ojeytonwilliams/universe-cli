@@ -59,7 +59,7 @@ command code is written until the contracts for `ProjectReaderPort` and
 
 ## Phase 4: `register` command
 
-- [ ] CODE: `register` command implementation
+- [x] CODE: `register` command implementation
   - Feature: Implement `universe register [directory]` — reads `platform.yaml`, validates it, submits to `RegistrationClient`, and exits 0 with the project name and registration ID on success.
   - Files: `src/cli.ts`, `src/bin.ts`
   - Acceptance:
@@ -74,7 +74,7 @@ command code is written until the contracts for `ProjectReaderPort` and
     - On success, exits 0 and output contains the project name and registration ID.
     - `src/bin.ts` wires `LocalProjectReader` and `StubRegistrationClient`.
 
-- [ ] CODE: CLI unit tests for `register`
+- [x] CODE: CLI unit tests for `register`
   - Feature: Unit test coverage for all `register` command paths via `runCli`.
   - Files: `src/cli.test.ts`
   - Acceptance:
@@ -85,7 +85,7 @@ command code is written until the contracts for `ProjectReaderPort` and
     - Registration client throws `RegistrationError`: exits 13.
     - Extra arguments beyond one directory: exits 1.
 
-- [ ] CODE: E2E test for `create` → `register` flow
+- [x] CODE: E2E test for `create` → `register` flow
   - Feature: End-to-end test that scaffolds a project with `create` then registers it with `register`, verifying both commands succeed in sequence.
   - Files: `src/register.e2e.test.ts`
   - Acceptance:

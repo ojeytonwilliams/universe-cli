@@ -2,8 +2,17 @@ import type { FilesystemWriter } from "./ports/filesystem-writer.js";
 import type { ObservabilityClient } from "./ports/observability-client.js";
 import type { CreateSelections, PromptPort } from "./ports/prompt-port.js";
 import type { ResolvedLayerSet } from "./services/layer-composition-service.js";
+import type {
+  AppPlatformManifest,
+  PlatformManifest,
+} from "./services/platform-manifest-service.js";
 import { runCli } from "./cli.js";
-import { InvalidNameError, ScaffoldWriteError } from "./errors/cli-errors.js";
+import {
+  InvalidNameError,
+  ManifestNotFoundError,
+  RegistrationError,
+  ScaffoldWriteError,
+} from "./errors/cli-errors.js";
 
 const client: ObservabilityClient = {
   error() {},
@@ -15,7 +24,6 @@ const DEFERRED_COMMANDS = [
   "list",
   "logs",
   "promote",
-  "register",
   "rollback",
   "status",
   "teardown",
@@ -71,6 +79,9 @@ const manifestGenerator = {
   generatePlatformManifest(_input: CreateSelections) {
     return "name: hello-universe\n";
   },
+  validateManifest(_yaml: string): PlatformManifest {
+    throw new Error("validateManifest called unexpectedly in a create test");
+  },
 };
 
 const writerCalls: { files: Record<string, string>; targetDirectory: string }[] = [];
@@ -95,6 +106,20 @@ const invalidNameValidator = {
   },
 };
 
+const defaultProjectReader = {
+  readFile(_filePath: string): Promise<string> {
+    return Promise.reject(new Error("projectReader.readFile should not be called in this test"));
+  },
+};
+
+const defaultRegistrationClient = {
+  register(_manifest: PlatformManifest): Promise<{ name: string; registrationId: string }> {
+    return Promise.reject(
+      new Error("registrationClient.register should not be called in this test"),
+    );
+  },
+};
+
 const createDeps = (
   promptPort: PromptPort,
   validator: { validateCreateInput(input: CreateSelections): CreateSelections },
@@ -105,7 +130,9 @@ const createDeps = (
   layerResolver: passThroughLayerResolver,
   observability: client,
   platformManifestGenerator: manifestGenerator,
+  projectReader: defaultProjectReader,
   promptPort,
+  registrationClient: defaultRegistrationClient,
   validator,
 });
 
@@ -155,14 +182,6 @@ describe(runCli, () => {
       const { output } = await runCli([cmd], createDeps(createPrompt, passThroughValidator));
 
       expect(output).toContain(cmd);
-    });
-
-    it("emits the standardized not-implemented message", async () => {
-      const { output } = await runCli(["register"], createDeps(createPrompt, passThroughValidator));
-
-      expect(output).toMatchInlineSnapshot(
-        `"The 'register' command is not yet implemented in this spike. It will be available in a future release."`,
-      );
     });
   });
 
@@ -215,6 +234,126 @@ describe(runCli, () => {
       );
 
       expect(result.output).toContain("Failed to write scaffold");
+    });
+  });
+
+  describe("register", () => {
+    const registerManifest: AppPlatformManifest = {
+      domain: { preview: "my-app.preview.example.com", production: "my-app.example.com" },
+      environments: { preview: { branch: "preview" }, production: { branch: "main" } },
+      name: "my-app",
+      owner: "platform-engineering",
+      resources: [],
+      schemaVersion: "1",
+      services: [],
+      stack: "app",
+    };
+
+    const successReader = {
+      readFile(_filePath: string) {
+        return Promise.resolve("stack: app\n");
+      },
+    };
+    const successValidator = (_yaml: string): PlatformManifest => registerManifest;
+    const successClient = {
+      register(_manifest: PlatformManifest) {
+        return Promise.resolve({ name: "my-app", registrationId: "stub-my-app" });
+      },
+    };
+
+    const registerDeps = (
+      reader = successReader,
+      validator = successValidator,
+      registrationClient = successClient,
+    ) => ({
+      ...createDeps(createPrompt, passThroughValidator),
+      platformManifestGenerator: { ...manifestGenerator, validateManifest: validator },
+      projectReader: reader,
+      registrationClient,
+    });
+
+    it("exits 0 on successful registration", async () => {
+      const result = await runCli(["register"], registerDeps());
+
+      expect(result.exitCode).toBe(0);
+    });
+
+    it("output contains the project name and registration ID", async () => {
+      const { output } = await runCli(["register"], registerDeps());
+
+      expect(output).toContain("my-app");
+      expect(output).toContain("stub-my-app");
+    });
+
+    it("reads platform.yaml from cwd when no directory argument is given", async () => {
+      const paths: string[] = [];
+      const trackingReader = {
+        readFile(filePath: string) {
+          paths.push(filePath);
+          return Promise.resolve("stack: app\n");
+        },
+      };
+
+      await runCli(["register"], registerDeps(trackingReader));
+
+      expect(paths[0]).toBe("/workspace/platform.yaml");
+    });
+
+    it("reads platform.yaml from the given directory argument", async () => {
+      const paths: string[] = [];
+      const trackingReader = {
+        readFile(filePath: string) {
+          paths.push(filePath);
+          return Promise.resolve("stack: app\n");
+        },
+      };
+
+      await runCli(["register", "/some/project"], registerDeps(trackingReader));
+
+      expect(paths[0]).toBe("/some/project/platform.yaml");
+    });
+
+    it("exits 11 when platform.yaml is missing", async () => {
+      const missingReader = {
+        readFile(filePath: string) {
+          return Promise.reject(new ManifestNotFoundError(filePath));
+        },
+      };
+
+      const result = await runCli(["register"], registerDeps(missingReader));
+
+      expect(result.exitCode).toBe(11);
+    });
+
+    it("exits 12 when platform.yaml fails validation", async () => {
+      const failingValidator = (_yaml: string): PlatformManifest => {
+        throw new Error("invalid schema");
+      };
+
+      const result = await runCli(["register"], registerDeps(successReader, failingValidator));
+
+      expect(result.exitCode).toBe(12);
+    });
+
+    it("exits 13 when registration fails", async () => {
+      const failingClient = {
+        register(manifest: PlatformManifest) {
+          return Promise.reject(new RegistrationError(manifest.name, "already registered"));
+        },
+      };
+
+      const result = await runCli(
+        ["register"],
+        registerDeps(successReader, successValidator, failingClient),
+      );
+
+      expect(result.exitCode).toBe(13);
+    });
+
+    it("exits 1 when more than one argument is provided", async () => {
+      const result = await runCli(["register", "dir1", "dir2"], registerDeps());
+
+      expect(result.exitCode).toBe(1);
     });
   });
 });

@@ -2,11 +2,11 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { LocalFilesystemWriter } from "./adapters/local-filesystem-writer.js";
+import { StubObservabilityClient } from "./adapters/stub-observability-client.js";
+import { CreateInputValidationService } from "./services/create-input-validation-service.js";
 import { LayerCompositionService } from "./services/layer-composition-service.js";
 import type { LayerRegistry } from "./services/layer-composition-service.js";
 import { PlatformManifestService } from "./services/platform-manifest-service.js";
-import { StubObservabilityClient } from "./adapters/stub-observability-client.js";
-import { CreateInputValidationService } from "./services/create-input-validation-service.js";
 import { runCli } from "./cli.js";
 import type { CreateSelections, PromptPort } from "./ports/prompt-port.js";
 
@@ -15,7 +15,6 @@ const DEFERRED_COMMANDS = [
   "list",
   "logs",
   "promote",
-  "register",
   "rollback",
   "status",
   "teardown",
@@ -91,7 +90,17 @@ const createDependencies = (
   layerResolver: new LayerCompositionService(layerRegistry),
   observability: new StubObservabilityClient(),
   platformManifestGenerator: new PlatformManifestService(),
+  projectReader: {
+    readFile(_filePath: string): Promise<string> {
+      return Promise.reject(new Error("projectReader not exercised in create tests"));
+    },
+  },
   promptPort,
+  registrationClient: {
+    register(_manifest: never): Promise<{ name: string; registrationId: string }> {
+      return Promise.reject(new Error("registrationClient not exercised in create tests"));
+    },
+  },
   validator: new CreateInputValidationService((path) => existsSync(join(cwd, path))),
 });
 

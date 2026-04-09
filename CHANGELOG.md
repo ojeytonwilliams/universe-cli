@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.8.0] - 2026-04-09
+
+### Phase 4 — `register` Command
+
+- **`register` command** (`src/cli.ts`): removed from `DEFERRED_COMMANDS`; reads `platform.yaml` from `cwd` or an optional directory argument; validates via `PlatformManifestService.validateManifest`; submits to `RegistrationClient`; exits 0 with project name and registration ID on success; exits 11 for a missing manifest, 12 for an invalid manifest, 13 for a registration failure, and 1 for excess arguments.
+- **`CliDependencies` extended** (`src/cli.ts`): added `projectReader` and `registrationClient` inline structural deps; extended `platformManifestGenerator` with `validateManifest`.
+- **`bin.ts` wired** (`src/bin.ts`): `LocalProjectReader` and `StubRegistrationClient` (from container) passed as `projectReader` and `registrationClient`.
+- **CLI unit tests** (`src/cli.test.ts`): added 8 register tests covering success, path resolution (cwd and directory arg), exit 11/12/13/1 failure paths; removed register from deferred-command tests.
+- **E2E test** (`src/register.e2e.test.ts`): covers `create` → `register` happy path and duplicate-registration exit 13.
+
 ## [2.7.0] - 2026-04-09
 
 ### Phase 3 — `StubRegistrationClient` Adapter

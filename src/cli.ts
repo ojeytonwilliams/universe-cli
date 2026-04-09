@@ -1,10 +1,11 @@
 import { join } from "node:path";
-import { CliError, DeferredCommandError } from "./errors/cli-errors.js";
+import { CliError, DeferredCommandError, ManifestInvalidError } from "./errors/cli-errors.js";
 import type { FilesystemWriter } from "./ports/filesystem-writer.js";
 import type { ObservabilityClient } from "./ports/observability-client.js";
 import { safeError } from "./ports/observability-client.js";
 import type { CreateSelections, PromptPort } from "./ports/prompt-port.js";
 import type { ResolvedLayerSet } from "./services/layer-composition-service.js";
+import type { PlatformManifest } from "./services/platform-manifest-service.js";
 
 const HELP_TEXT = `
 Usage: universe <command>
@@ -34,8 +35,15 @@ interface CliDependencies {
   filesystemWriter: FilesystemWriter;
   layerResolver: { resolveLayers(input: CreateSelections): ResolvedLayerSet };
   observability: ObservabilityClient;
-  platformManifestGenerator: { generatePlatformManifest(input: CreateSelections): string };
+  platformManifestGenerator: {
+    generatePlatformManifest(input: CreateSelections): string;
+    validateManifest(yaml: string): PlatformManifest;
+  };
+  projectReader: { readFile(filePath: string): Promise<string> };
   promptPort: PromptPort;
+  registrationClient: {
+    register(manifest: PlatformManifest): Promise<{ name: string; registrationId: string }>;
+  };
   validator: { validateCreateInput(input: CreateSelections): CreateSelections };
 }
 
@@ -44,7 +52,6 @@ const DEFERRED_COMMANDS = new Set([
   "list",
   "logs",
   "promote",
-  "register",
   "rollback",
   "status",
   "teardown",
@@ -57,7 +64,9 @@ const runCli = async (argv: string[], deps: CliDependencies): Promise<CliResult>
     layerResolver,
     observability,
     platformManifestGenerator,
+    projectReader,
     promptPort,
+    registrationClient,
     validator,
   } = deps;
   const [command] = argv;
@@ -101,6 +110,48 @@ const runCli = async (argv: string[], deps: CliDependencies): Promise<CliResult>
       return {
         exitCode: 0,
         output: `Scaffolded project at ${targetDirectory}`,
+      };
+    } catch (error) {
+      if (error instanceof CliError) {
+        safeError(observability, error);
+        return { exitCode: error.exitCode, output: error.message };
+      }
+
+      throw error;
+    }
+  }
+
+  if (command === "register") {
+    if (argv.length > 2) {
+      return {
+        exitCode: 1,
+        output: "Too many arguments. Usage: universe register [directory]",
+      };
+    }
+
+    const platformYamlDir = argv[1] ?? cwd;
+    const platformYamlPath = join(platformYamlDir, "platform.yaml");
+
+    try {
+      const yaml = await projectReader.readFile(platformYamlPath);
+
+      let manifest: PlatformManifest;
+      try {
+        manifest = platformManifestGenerator.validateManifest(yaml);
+      } catch (validationError) {
+        const invalidError = new ManifestInvalidError(
+          platformYamlPath,
+          validationError instanceof Error ? validationError.message : String(validationError),
+        );
+        safeError(observability, invalidError);
+        return { exitCode: invalidError.exitCode, output: invalidError.message };
+      }
+
+      const receipt = await registrationClient.register(manifest);
+
+      return {
+        exitCode: 0,
+        output: `Registered project "${receipt.name}". Registration ID: ${receipt.registrationId}`,
       };
     } catch (error) {
       if (error instanceof CliError) {
