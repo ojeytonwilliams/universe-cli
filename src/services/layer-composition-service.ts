@@ -1,13 +1,23 @@
 import { LayerConflictError, MissingLayerError } from "../errors/cli-errors.js";
 import type { CreateSelections } from "../ports/prompt-port.js";
-import type { LayerResolver, ResolvedLayer, ResolvedLayerSet } from "../ports/layer-resolver.js";
 
 type LayerRegistry = Record<string, Record<string, string> | undefined>;
-type LayerStage = ResolvedLayer["stage"];
+type LayerStage = "always" | "base" | "frameworks" | "services";
 type JsonValue = boolean | JsonObject | JsonValue[] | null | number | string;
 
 interface JsonObject {
   [key: string]: JsonValue;
+}
+
+interface ResolvedLayer {
+  files: Record<string, string>;
+  name: string;
+  stage: LayerStage;
+}
+
+interface ResolvedLayerSet {
+  files: Record<string, string>;
+  layers: ResolvedLayer[];
 }
 
 interface FileOwner {
@@ -187,7 +197,7 @@ const defaultLayerRegistry: LayerRegistry = {
   },
 };
 
-class LocalLayerResolver implements LayerResolver {
+class LayerCompositionService {
   private readonly layers: LayerRegistry;
 
   constructor(layers: LayerRegistry = defaultLayerRegistry) {
@@ -357,5 +367,5 @@ class LocalLayerResolver implements LayerResolver {
   }
 }
 
-export { defaultLayerRegistry, LocalLayerResolver };
-export type { LayerRegistry };
+export { defaultLayerRegistry, LayerCompositionService };
+export type { LayerRegistry, ResolvedLayer, ResolvedLayerSet };

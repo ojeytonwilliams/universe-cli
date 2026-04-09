@@ -2,8 +2,8 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { LocalFilesystemWriter } from "./adapters/local-filesystem-writer.js";
-import { LocalLayerResolver } from "./adapters/local-layer-resolver.js";
-import type { LayerRegistry } from "./adapters/local-layer-resolver.js";
+import { LayerCompositionService } from "./services/layer-composition-service.js";
+import type { LayerRegistry } from "./services/layer-composition-service.js";
 import { LocalPlatformManifestGenerator } from "./adapters/local-platform-manifest-generator.js";
 import { StubObservabilityClient } from "./adapters/stub-observability-client.js";
 import { CreateInputValidationService } from "./services/create-input-validation-service.js";
@@ -108,7 +108,7 @@ const createDependencies = (
 ) => ({
   cwd,
   filesystemWriter: new LocalFilesystemWriter(),
-  layerResolver: new LocalLayerResolver(layerRegistry),
+  layerResolver: new LayerCompositionService(layerRegistry),
   observability: new StubObservabilityClient(),
   platformManifestGenerator: new LocalPlatformManifestGenerator(),
   promptPort,

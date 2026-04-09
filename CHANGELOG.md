@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.8.0] - 2026-04-09
+
+### Refactor Phase 3 — Move `LocalLayerResolver` into `src/services`
+
+- **Created `LayerCompositionService`** ([src/services/layer-composition-service.ts](src/services/layer-composition-service.ts)): moved layer ordering, conflict detection, config merging, and the default layer registry out of `src/adapters/` into `src/services/`; `ResolvedLayer` and `ResolvedLayerSet` types are now owned by this service.
+- **Deleted `LocalLayerResolver`** (`src/adapters/local-layer-resolver.ts`): removed the misclassified adapter and its test; all coverage now lives alongside the service.
+- **Updated entry point, E2E wiring** ([src/bin.ts](src/bin.ts), [src/create.e2e.test.ts](src/create.e2e.test.ts)): replaced adapter import with service import at all call sites; `LayerRegistry` type also imported from the service.
+- **Recorded layer registry as internal data** ([design/summary.md](design/summary.md), [design/prd.md](design/prd.md)): `LayerResolver` removed from port lists; `LayerCompositionService` recorded as an internal service that owns the registry; future template/serialisation work noted as extending the service, not adding a new adapter boundary.
+
 ## [1.7.0] - 2026-04-09
 
 ### Refactor Phase 2 — Move `DefaultCreateInputValidator` into `src/services`

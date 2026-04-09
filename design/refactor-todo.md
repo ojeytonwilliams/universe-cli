@@ -32,7 +32,7 @@
 
 ## Phase 3 — Move `LocalLayerResolver` into `src/services`
 
-- [ ] CODE: Move layer composition and merge policy into an internal service
+- [x] CODE: Move layer composition and merge policy into an internal service
   - Feature: Convert `LocalLayerResolver` into `LayerCompositionService` under `src/services/`
   - Acceptance:
     - A new `LayerCompositionService` implementation lives under `src/services/` and owns layer ordering, conflict detection, and config merge behavior.
@@ -40,7 +40,7 @@
     - Existing behavior for deterministic ordering, config merging, and conflict errors is preserved.
     - Existing resolver tests are updated or replaced to target the new service location.
 
-- [ ] TASK: Record the layer registry as internal scaffolding data rather than adapter configuration
+- [x] TASK: Record the layer registry as internal scaffolding data rather than adapter configuration
   - Acceptance:
     - Design notes describe the registry as create-flow-owned data.
     - The plan makes clear that future templating or serialisation work extends an internal service, not a new adapter boundary.
