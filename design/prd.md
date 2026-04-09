@@ -2,7 +2,9 @@
 
 ## 1) Overview
 
-Build a stub-first prototype of the `universe` CLI that preserves the 9-command ADR-007 surface while fully implementing only `universe create`. The spike validates the most important local workflow first: interactive scaffolding, deterministic template composition, generated project artifacts, and a clean contract for future command expansion.
+Build a prototype of the `universe` CLI that preserves the 9-command ADR-007 surface using a contract-first, stub-backed methodology: for each command, define the port contracts for the platform services it requires, implement stub adapters that simulate those services' behaviour, then implement the command against those contracts. This decouples CLI architecture from the details of platform services that do not yet exist.
+
+`create` is the first command delivered through this cycle. Commands whose port contracts have not yet been defined emit a standardized `DeferredCommandError`; `register` is the next command to go through the full cycle, with contract definition as the implementation gate.
 
 ## 2) Users
 
@@ -11,13 +13,15 @@ Build a stub-first prototype of the `universe` CLI that preserves the 9-command 
 
 ## 3) User Stories
 
-| As a…              | I want to…                                                  | So that…                                                                 |
-| ------------------ | ----------------------------------------------------------- | ------------------------------------------------------------------------ |
-| platform engineer  | expose all CLI commands locally against deterministic stubs | I can validate the public command surface before platform services exist |
-| platform engineer  | implement `universe create` first with tests and contracts  | I can reduce risk and validate the highest-value workflow early          |
-| platform engineer  | swap stubbed infrastructure for real adapters later         | I can migrate with minimal command-layer rewrites                        |
-| internal developer | use `universe create` to scaffold a constellation locally   | I can experience intended onboarding UX early                            |
-| platform engineer  | reject unsupported combinations clearly                     | I can keep the spike small without confusing users                       |
+| As a…              | I want to…                                                       | So that…                                                                   |
+| ------------------ | ---------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| platform engineer  | expose all CLI commands locally against deterministic stubs      | I can validate the public command surface before platform services exist   |
+| platform engineer  | define port contracts before implementing each command           | I can prove the CLI architecture without depending on real service details |
+| platform engineer  | implement commands against stub adapters that simulate behaviour | I can test the full command flow end-to-end before real services exist     |
+| platform engineer  | implement `universe create` first with tests and contracts       | I can reduce risk and validate the highest-value workflow early            |
+| platform engineer  | swap stubbed infrastructure for real adapters later              | I can migrate with minimal command-layer rewrites                          |
+| internal developer | use `universe create` to scaffold a constellation locally        | I can experience intended onboarding UX early                              |
+| platform engineer  | reject unsupported combinations clearly                          | I can keep the spike small without confusing users                         |
 
 ## 4) Functional Requirements
 
@@ -30,8 +34,9 @@ Expose all commands defined in ADR-007:
 **Acceptance Criteria**
 
 - Running `universe --help` shows all 9 commands.
-- Each non-`create` command is invocable and returns the same standardized “not implemented in spike” error contract.
-- The standardized non-implemented contract defines one exact message template and one exact exit code shared by all 8 deferred commands.
+- Commands whose port contracts have been defined and whose stub adapters have been implemented are fully implemented.
+- Commands whose port contracts have not yet been defined emit a standardized `DeferredCommandError`.
+- The standardized non-implemented contract defines one exact message template and one exact exit code, shared by all commands still in the deferred state.
 
 ### FR-2 `create` Local Scaffolding Flow
 
@@ -213,15 +218,16 @@ Layer resolution order is:
 - Conflicts introduced within the same layer stage (for example, incompatible definitions from multiple selections in that stage) abort generation with a typed conflict error.
 - Missing required layers abort generation with a typed error.
 
-### FR-8 Stub-Only Architecture
+### FR-8 Contract-First, Stub-Backed Architecture
 
-All external concerns must remain behind interfaces fulfilled by stubs or local adapters.
+All platform service concerns must remain behind port interfaces. Where a real service does not yet exist, a stub adapter that simulates the service's intended behaviour fulfils the port.
 
 **Acceptance Criteria**
 
-- No command/test performs external network calls.
-- Static analysis/test guard fails if non-stub adapter is used in spike mode.
-- Non-`create` commands do not simulate deeper platform workflows in this spike.
+- No command or test performs real external network calls.
+- Stub adapters simulate realistic behaviour for their port contract — they are not no-ops unless the service genuinely has no meaningful response shape yet.
+- A spike-mode guard test fails if a non-stub adapter is wired for any port that lacks a real service.
+- Commands are promoted from `DeferredCommandError` to a full implementation only after their port contracts are defined and stub adapters are in place.
 
 ### FR-9 Error Taxonomy and UX
 
@@ -250,8 +256,8 @@ Common errors must be normalized and user-friendly.
 
 - Each error category maps to one consistent user-facing message style.
 - Each error category maps to one consistent exit behavior.
-- All 8 deferred commands use `DeferredCommandError`.
-- `DeferredCommandError` uses one exact message template and one exact exit code across all 8 deferred commands.
+- Commands still awaiting port contract definition use `DeferredCommandError`.
+- `DeferredCommandError` uses one exact message template and one exact exit code, consistent across all commands in the deferred state.
 - Validation failures are actionable and identify the rejected input.
 
 **Configuration merge scope (Spike)**
@@ -260,31 +266,58 @@ Configuration merging applies only to files with these extensions: `.json`, `.ya
 
 ### FR-10 Contract-Driven Adapter Design
 
-Define explicit ports for the boundaries needed by this spike, with contract tests that each stub/local adapter must satisfy.
+Port contracts are the implementation gate for each command. A command may not be promoted from `DeferredCommandError` until its port contracts are defined, documented, and fulfilled by stub adapters.
 
-**Acceptance Criteria**
+**Contract definition deliverables (per port)**
 
-- Template/layer resolution and filesystem writing ports have interface docs + behavior expectations.
-- Contract test suite passes for all spike adapters.
+- TypeScript interface with documented method signatures and error types.
+- Stub adapter that simulates realistic behaviour.
+- Unit tests for the stub adapter.
+- Wiring in `src/container.ts`; spike-guard test updated to include the new adapter.
 
-**Required spike ports**
+**Ports defined for `create` (current)**
 
-- `PromptPort`
-- `FilesystemWriter`
-- `ObservabilityClient`
+- `PromptPort` — interactive terminal input
+- `FilesystemWriter` — project-folder writes with rollback-on-failure
+- `ObservabilityClient` — non-blocking stub telemetry
+
+**Ports to be defined for `register` (next)**
+
+- `ProjectReaderPort` — reads files from an existing project directory
+- `RegistrationClient` — submits a validated `PlatformManifest` to the platform; contract definition is the gate before `register` implementation begins
 
 **Required spike internal services**
 
 - `CreateInputValidationService` — create-name rules and compatibility checks (application logic, not a port)
-- `LayerCompositionService` — layer ordering, conflict detection, and config merging; owns the default layer registry as create-flow-internal scaffolding data; future templating or serialisation work extends this service, not a new adapter boundary
-- `PlatformManifestService` — runtime-specific manifest construction; schema validation and serialisation for `platform.yaml` extend this service, not a new adapter boundary
+- `LayerCompositionService` — layer ordering, conflict detection, and config merging; owns the default layer registry as create-flow-internal scaffolding data
+- `PlatformManifestService` — runtime-specific manifest construction and schema validation for `platform.yaml`
 
 **Acceptance Criteria**
 
-- Each port has documented inputs, outputs, and normalized error behavior.
-- Contract tests exist for `PromptPort`, `FilesystemWriter`, and `ObservabilityClient`.
-- `CreateInputValidationService` is tested as internal application logic, not as a port/adapter.
-- Deferred commands do not introduce extra platform lifecycle ports in this spike.
+- Each port has a documented interface with inputs, outputs, and normalized error behaviour.
+- Each stub adapter has unit tests that verify its simulated behaviour.
+- Contract tests pass for all adapters currently wired in spike mode.
+- `CreateInputValidationService`, `LayerCompositionService`, and `PlatformManifestService` are tested as internal application logic, not as ports.
+
+### FR-12 `register` — First Post-`create` Command
+
+`register` is the first command to go through the full contract-first cycle after `create`. It remains a `DeferredCommandError` until its port contracts (`ProjectReaderPort` and `RegistrationClient`) are defined.
+
+**Implementation gate**
+
+- `ProjectReaderPort` and `RegistrationClient` interfaces are documented and agreed.
+- Stub adapters are implemented and tested.
+- Only then is `register` removed from `DEFERRED_COMMANDS` and implemented as a full command handler.
+
+**Acceptance Criteria (once gate is passed)**
+
+- `universe register [directory]` reads `platform.yaml` from the given directory, or from `cwd` if none is provided.
+- The command is non-interactive: all inputs come from `platform.yaml`.
+- A missing `platform.yaml` produces a typed error with the attempted path.
+- A malformed or schema-invalid `platform.yaml` produces a typed error with the reason.
+- A valid manifest is passed to `RegistrationClient`; the stub resolves successfully.
+- On success, exits 0 and output identifies the registered project by name.
+- CLI unit tests cover all error paths; an E2E test runs `create` then `register` in sequence.
 
 ### FR-11 Migration Path Readiness
 
@@ -314,11 +347,10 @@ Maintain assumptions-first migration notes from the `create` spike to later comm
 
 ## 6) Out of Scope
 
-- Real GitHub org/repo automation.
-- Real DNS, OIDC, SES, or database provisioning.
-- Real CI/CD integration with Woodpecker/ArgoCD/Windmill.
-- Real observability backend integration (shipping to ClickHouse/HyperDX/GlitchTip/VictoriaMetrics).
-- Full implementation of `register`, `deploy`, `promote`, `rollback`, `logs`, `status`, `list`, or `teardown`.
+- Real platform service implementations (GitHub org automation, DNS, OIDC, SES, database provisioning, CI/CD, observability backends).
+- Real platform service implementations (GitHub org automation, DNS, OIDC, SES, database provisioning, CI/CD).
+- Full implementation of `deploy`, `promote`, `rollback`, `logs`, `status`, `list`, or `teardown` (port contracts not yet defined).
+- Stub-backed implementation of `register` until its port contracts are defined (see FR-12).
 - Non-interactive `create` mode.
 - Full ADR-007 runtime/framework/database matrix.
 - Production SLAs, full RBAC/SSO implementation.
@@ -335,6 +367,7 @@ Maintain assumptions-first migration notes from the `create` spike to later comm
 - **M2:** `create` prompt flow + validation + supported matrix
 - **M3:** Layer composition + artifact generation + `platform.yaml`
 - **M4:** Tests, docs, and migration notes for future command expansion
+- **M5:** `register` port contracts defined + stub adapters implemented + command handler delivered
 
 ## 9) Risks and Mitigations
 

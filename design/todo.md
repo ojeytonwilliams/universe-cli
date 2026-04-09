@@ -1,89 +1,107 @@
-# Universe CLI — `create` Further Work TODO Plan
+# TODO — `universe register`
 
-## Phase 1 — E2E Test Strategy Refactor
+`register` is the first command to go through the contract-first, stub-backed cycle after
+`create`. Port contract definition is the implementation gate (FR-12): no adapter or
+command code is written until the contracts for `ProjectReaderPort` and
+`RegistrationClient` are agreed.
 
-- [x] CODE: Add combination-coverage unit tests to `LayerCompositionService` for every allowed runtime/framework/services combination
+## Phase 1: Contract definition (implementation gate)
+
+- [x] TASK: Define `ProjectReaderPort` contract
+  - Files: `src/ports/project-reader.ts`
   - Acceptance:
-    - Each allowed matrix entry is exercised as a `resolveLayers` call.
-    - Tests assert the resolved layer names (not file content) for each combination.
-    - No filesystem writes occur.
+    - Interface declares `readFile(filePath: string): Promise<string>`.
+    - Throws `ManifestNotFoundError` when the file does not exist; any other filesystem error propagates as-is.
+    - File contains no implementation code.
+    - Exported and importable via `import type`.
 
-- [x] CODE: Replace the exhaustive combination loop in `create.e2e.test.ts` with a small set of smoke tests
+- [x] TASK: Define `RegistrationClient` contract
+  - Files: `src/ports/registration-client.ts`
   - Acceptance:
-    - 3 representative paths are tested: Node.js + Express + all services, Node.js + None + no services, Static.
-    - The power-set loop is removed.
-    - Existing snapshot, conflict, and deferred-command e2e tests are preserved unchanged.
+    - Interface declares `register(manifest: PlatformManifest): Promise<RegistrationReceipt>`.
+    - `RegistrationReceipt` type is defined in the same file and captures the fields the real platform service will return (at minimum: `registrationId: string`, `name: string`).
+    - Throws `RegistrationError` on failure.
+    - File contains no implementation code.
+    - Imports `PlatformManifest` type from `src/services/platform-manifest-service.ts`.
 
-## Phase 2 — YAML Config Serialisation
-
-> ⚠️ **Dependency gate:** a YAML library must be installed before implementation. Ask for `pnpm add --save-exact yaml` before starting.
-
-- [x] CODE: Implement correct YAML parse and serialise in `LayerCompositionService`'s `parseConfig`/`stringifyConfig` methods
+- [x] TASK: Extend error taxonomy with `register`-specific errors
+  - Files: `src/errors/cli-errors.ts`, `src/errors/cli-errors.test.ts`
   - Acceptance:
-    - `.yaml`/`.yml` files are parsed with a YAML parser, not `JSON.parse`.
-    - `stringifyConfig` emits valid YAML (not JSON) for `.yaml`/`.yml` paths.
-    - Merged YAML config files produce human-readable, valid YAML output.
-    - Existing JSON round-trip behavior is unchanged.
-    - Unit tests cover: YAML-only merge, JSON-only merge, and combined JSON+YAML resolution.
+    - `ManifestNotFoundError` (exit 11): message includes the attempted file path.
+    - `ManifestInvalidError` (exit 12): message includes the file path and the validation reason.
+    - `RegistrationError` (exit 13): message includes the project name and the failure reason.
+    - Exit codes 11–13 added to `EXIT_CODES`; the existing uniqueness test continues to pass.
+    - All three classes are snapshot-tested in `cli-errors.test.ts`.
 
-## Phase 3 — Layer Templating
+## Phase 2: `ProjectReader` adapter
 
-- [x] TASK: Define the template variable set and delimiter syntax for this phase
+- [ ] CODE: `LocalProjectReader` adapter
+  - Feature: Read the content of an existing file from the local filesystem, mapping `ENOENT` to `ManifestNotFoundError`.
+  - Files: `src/adapters/local-project-reader.ts`, `src/adapters/local-project-reader.test.ts`
   - Acceptance:
-    - Variables in scope are documented: project name, runtime, framework.
-    - Chosen delimiter syntax (e.g. `{{name}}` vs `__NAME__`) is recorded in this file.
-    - No engine dependency is required — simple string interpolation only.
-  - Decision:
-    - Delimiter syntax: `{{name}}`, `{{runtime}}`, `{{framework}}` (double-brace, lowercase).
-    - Simple `String.replaceAll` — no engine dependency.
-    - Unknown placeholders pass through unchanged.
+    - `readFile(filePath)` resolves with the UTF-8 string content of the file when it exists.
+    - `readFile(filePath)` throws `ManifestNotFoundError` (with the path) when the file does not exist.
+    - Any other filesystem error propagates as-is without wrapping.
+    - Unit tests cover the success and `ENOENT` paths using a real temp directory (no mocks).
 
-- [x] CODE: Implement a `LayerTemplateRenderer` internal service in `src/services/`
+## Phase 3: `RegistrationClient` stub adapter
+
+- [ ] CODE: `StubRegistrationClient` adapter
+  - Feature: A stub adapter that simulates realistic registration behaviour, fulfilling `RegistrationClient` until the real platform service exists.
+  - Files: `src/adapters/stub-registration-client.ts`, `src/adapters/stub-registration-client.test.ts`
   - Acceptance:
-    - The service accepts a template string and a typed context object; returns the rendered string.
-    - Unit tests verify: all defined variables are substituted, unknown placeholders pass through unchanged, empty context is safe.
+    - `register(manifest)` returns a `RegistrationReceipt` with a deterministic fabricated `registrationId` derived from the project name (e.g. `stub-<name>`) and the manifest `name`.
+    - Simulates an already-registered failure: a second call with the same project name throws `RegistrationError`.
+    - In-memory state is reset on construction; each test creates a fresh instance.
+    - Unit tests cover: first registration succeeds and returns a receipt, second registration for the same name throws `RegistrationError`, app and static manifests both succeed.
+    - `src/container.ts` is updated to wire `StubRegistrationClient`.
+    - The spike-guard test in `src/container.test.ts` is updated to include `StubRegistrationClient`.
 
-- [x] CODE: Wire `LayerTemplateRenderer` into `LayerCompositionService` and remove post-hoc substitution from `cli.ts`
+## Phase 4: `register` command
+
+- [ ] CODE: `register` command implementation
+  - Feature: Implement `universe register [directory]` — reads `platform.yaml`, validates it, submits to `RegistrationClient`, and exits 0 with the project name and registration ID on success.
+  - Files: `src/cli.ts`, `src/bin.ts`
   - Acceptance:
-    - Layer file content is rendered by `LayerTemplateRenderer` before being added to the composed file set.
-    - `__PROJECT_NAME__` occurrences in the layer registry are replaced with the new delimiter syntax.
-    - Post-hoc substitution code in `cli.ts` is removed.
-    - E2E snapshot tests continue to pass after snapshot update.
+    - `register` is removed from `DEFERRED_COMMANDS` in `src/cli.ts`.
+    - `CliDependencies` gains `projectReader` and `registrationClient` as inline structural types.
+    - `universe register` (no args) resolves `platform.yaml` relative to `cwd`.
+    - `universe register <dir>` resolves `platform.yaml` relative to the given directory.
+    - Arguments beyond one optional directory return exit 1 with an actionable message.
+    - A missing `platform.yaml` throws `ManifestNotFoundError` (exit 11).
+    - A malformed or schema-invalid `platform.yaml` throws `ManifestInvalidError` (exit 12); both YAML parse errors and `ZodError` are caught and wrapped.
+    - A `RegistrationError` from the client returns exit 13.
+    - On success, exits 0 and output contains the project name and registration ID.
+    - `src/bin.ts` wires `LocalProjectReader` and `StubRegistrationClient`.
 
-## Phase 4 — `platform.yaml` Schema
-
-> ⚠️ **Dependency gate:** Phase 2 must be complete (YAML serialiser needed).
-
-- [x] TASK: Lock validation strategy with migration guardrails
+- [ ] CODE: CLI unit tests for `register`
+  - Feature: Unit test coverage for all `register` command paths via `runCli`.
+  - Files: `src/cli.test.ts`
   - Acceptance:
-    - Validation flow is defined as: parse `platform.yaml` with `yaml` into an in-memory object, then validate that object against a `zod` schema.
-    - The chosen `zod` schema design avoids `zod`-only features that cannot be represented in JSON Schema.
-    - A JSON Schema export path from the `zod` schema is documented and exercised by a unit test.
-    - Failure behavior is defined for both invalid YAML parse and schema validation errors.
-  - Decisions:
-    - Flow: `yaml.parse(string)` → in-memory object → `PlatformManifestSchema.parse(object)`.
-    - Schema uses only `z.object`, `z.string`, `z.literal`, `z.discriminatedUnion`, `z.array`, `z.tuple` — all JSON Schema representable; no `z.transform` or `z.refine`.
-    - JSON Schema export: `z.toJSONSchema(PlatformManifestSchema)` from zod v4, exercised by a unit test.
-    - Invalid YAML parse: the `yaml` library throws — propagated as-is; callers handle it.
-    - Schema validation failure: zod throws `ZodError` — propagated as-is; callers handle it.
+    - Happy path: exits 0, output contains the project name and registration ID.
+    - Missing `platform.yaml`: exits 11.
+    - Invalid `platform.yaml` (bad YAML): exits 12.
+    - Invalid `platform.yaml` (fails schema): exits 12.
+    - Registration client throws `RegistrationError`: exits 13.
+    - Extra arguments beyond one directory: exits 1.
 
-- [x] TASK: Define a versioned `PlatformManifest` TypeScript type covering both app and static shapes
+- [ ] CODE: E2E test for `create` → `register` flow
+  - Feature: End-to-end test that scaffolds a project with `create` then registers it with `register`, verifying both commands succeed in sequence.
+  - Files: `src/register.e2e.test.ts`
   - Acceptance:
-    - Type is defined in `src/services/` and includes a `schemaVersion` field.
-    - App and static shapes are captured as a discriminated union.
-    - Type documents the invariants from PRD FR-6.
+    - `create` is run (via `runCli`) to scaffold a Node.js project in a temp directory.
+    - `register` is run (via `runCli`) against the scaffolded directory.
+    - `register` exits 0 and output contains the project name and registration ID.
+    - A second `register` call against the same directory exits 13 (already registered).
+    - Temp directory is cleaned up after the test.
 
-- [x] CODE: Refactor `PlatformManifestService` to build a typed `PlatformManifest` object and serialise to YAML via the Phase 2 implementation
-  - Acceptance:
-    - String template concatenation is removed from `PlatformManifestService`.
-    - The service builds a typed object first, then emits YAML.
-    - `schemaVersion` field appears in all generated `platform.yaml` files.
-    - Existing E2E snapshot tests are updated to reflect the new field.
+## Traceability Matrix
 
-- [x] CODE: Add manifest validation logic to `PlatformManifestService`
-  - Acceptance:
-    - Validation parses YAML into an object first, then validates the object against the `zod` schema.
-    - Validation rejects manifests missing required fields.
-    - Validation rejects manifests with an invalid or missing `schemaVersion`.
-    - Validation schema can be exported to JSON Schema, and a unit test fails if export cannot be produced.
-    - Unit tests cover: valid app manifest, valid static manifest, missing required field, unknown `schemaVersion`.
+| PRD Requirement ID | TODO Item                                                                         | Status       |
+| ------------------ | --------------------------------------------------------------------------------- | ------------ |
+| FR-1               | Phase 4 / CODE: `register` command implementation (remove from DEFERRED_COMMANDS) | not started  |
+| FR-8               | Phase 3 / CODE: `StubRegistrationClient` (simulates realistic behaviour)          | not started  |
+| FR-10              | Phase 1 / TASK: Define `ProjectReaderPort` and `RegistrationClient` contracts     | not started  |
+| FR-11              | (existing — migration notes in `design/future-command-expansion.md`)              | pre-existing |
+| FR-12              | Phase 1 / TASK: Contract definition gate                                          | not started  |
+| FR-12              | Phase 4 / CODE: `register` command implementation + E2E test                      | not started  |

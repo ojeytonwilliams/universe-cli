@@ -4,7 +4,10 @@ import {
   InvalidMultiSelectError,
   InvalidNameError,
   LayerConflictError,
+  ManifestInvalidError,
+  ManifestNotFoundError,
   MissingLayerError,
+  RegistrationError,
   ScaffoldWriteError,
   TargetDirectoryExistsError,
   UnsupportedCombinationError,
@@ -15,11 +18,14 @@ import {
 describe("error exit codes", () => {
   it("assigns a unique exit code to each error type", () => {
     const errors = [
-      new DeferredCommandError("register"),
+      new DeferredCommandError("deploy"),
       new InvalidMultiSelectError("databases"),
       new InvalidNameError("x"),
       new LayerConflictError("src/index.ts", "base/nodejs", "frameworks/express"),
+      new ManifestInvalidError("/projects/my-app/platform.yaml", "missing field: name"),
+      new ManifestNotFoundError("/projects/my-app/platform.yaml"),
       new MissingLayerError("base/nodejs"),
+      new RegistrationError("my-app", "already registered"),
       new ScaffoldWriteError("/tmp/x", new Error("disk full")),
       new TargetDirectoryExistsError("/tmp/x"),
       new UnsupportedCombinationError("static + database"),
@@ -133,12 +139,42 @@ describe(ScaffoldWriteError, () => {
   });
 });
 
-describe(DeferredCommandError, () => {
-  it("interpolates the command name into the message", () => {
-    const error = new DeferredCommandError("register");
+describe(ManifestNotFoundError, () => {
+  it("includes the attempted path in the message", () => {
+    const error = new ManifestNotFoundError("/projects/my-app/platform.yaml");
 
     expect(error.message).toMatchInlineSnapshot(
-      `"The 'register' command is not yet implemented in this spike. It will be available in a future release."`,
+      `"Platform manifest not found at "/projects/my-app/platform.yaml". Run "universe create" to scaffold a project first."`,
+    );
+  });
+});
+
+describe(ManifestInvalidError, () => {
+  it("includes the path and reason in the message", () => {
+    const error = new ManifestInvalidError("/projects/my-app/platform.yaml", "missing field: name");
+
+    expect(error.message).toMatchInlineSnapshot(
+      `"Platform manifest at "/projects/my-app/platform.yaml" is invalid: missing field: name"`,
+    );
+  });
+});
+
+describe(RegistrationError, () => {
+  it("includes the project name and reason in the message", () => {
+    const error = new RegistrationError("my-app", "already registered");
+
+    expect(error.message).toMatchInlineSnapshot(
+      `"Failed to register project "my-app": already registered"`,
+    );
+  });
+});
+
+describe(DeferredCommandError, () => {
+  it("interpolates the command name into the message", () => {
+    const error = new DeferredCommandError("deploy");
+
+    expect(error.message).toMatchInlineSnapshot(
+      `"The 'deploy' command is not yet implemented in this spike. It will be available in a future release."`,
     );
   });
 });

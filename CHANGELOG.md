@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.5.0] - 2026-04-09
+
+### Phase 1 — `register` Contract Definition
+
+- **`ProjectReaderPort`** (`src/ports/project-reader.ts`): port interface declaring `readFile(filePath): Promise<string>`; throws `ManifestNotFoundError` on missing file.
+- **`RegistrationClient`** (`src/ports/registration-client.ts`): port interface declaring `register(manifest): Promise<RegistrationReceipt>`; defines `RegistrationReceipt` type (`registrationId`, `name`); throws `RegistrationError` on failure.
+- **Extended error taxonomy** (`src/errors/cli-errors.ts`): added `ManifestNotFoundError` (exit 11), `ManifestInvalidError` (exit 12), `RegistrationError` (exit 13) with actionable messages; exit codes added to `EXIT_CODES`; uniqueness test updated to cover all 13 error classes.
+
 ## [2.4.0] - 2026-04-09
 
 ### Phase 4 — `platform.yaml` Schema

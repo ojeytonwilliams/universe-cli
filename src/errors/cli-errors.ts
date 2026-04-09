@@ -3,7 +3,10 @@ const EXIT_CODES = {
   INVALID_MULTI_SELECT: 7,
   INVALID_NAME: 2,
   LAYER_CONFLICT: 9,
+  MANIFEST_INVALID: 12,
+  MANIFEST_NOT_FOUND: 11,
   MISSING_LAYER: 8,
+  REGISTRATION: 13,
   SCAFFOLD_WRITE: 10,
   TARGET_EXISTS: 3,
   UNSUPPORTED_COMBINATION: 6,
@@ -109,6 +112,30 @@ class ScaffoldWriteError extends CliError {
   }
 }
 
+class ManifestNotFoundError extends CliError {
+  constructor(path: string) {
+    super(
+      `Platform manifest not found at "${path}". Run "universe create" to scaffold a project first.`,
+      EXIT_CODES.MANIFEST_NOT_FOUND,
+    );
+    this.name = "ManifestNotFoundError";
+  }
+}
+
+class ManifestInvalidError extends CliError {
+  constructor(path: string, reason: string) {
+    super(`Platform manifest at "${path}" is invalid: ${reason}`, EXIT_CODES.MANIFEST_INVALID);
+    this.name = "ManifestInvalidError";
+  }
+}
+
+class RegistrationError extends CliError {
+  constructor(name: string, reason: string) {
+    super(`Failed to register project "${name}": ${reason}`, EXIT_CODES.REGISTRATION);
+    this.name = "RegistrationError";
+  }
+}
+
 class DeferredCommandError extends CliError {
   constructor(command: string) {
     super(
@@ -125,7 +152,10 @@ export {
   InvalidMultiSelectError,
   InvalidNameError,
   LayerConflictError,
+  ManifestInvalidError,
+  ManifestNotFoundError,
   MissingLayerError,
+  RegistrationError,
   ScaffoldWriteError,
   TargetDirectoryExistsError,
   UnsupportedCombinationError,
