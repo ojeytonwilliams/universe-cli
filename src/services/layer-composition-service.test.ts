@@ -182,6 +182,65 @@ describe(LayerCompositionService, () => {
     expect(act).toThrow(LayerConflictError);
   });
 
+  describe("template rendering", () => {
+    it("substitutes {{name}} in file content using the selection name", () => {
+      const service = new LayerCompositionService({
+        always: { "README.md": "# {{name}}\n" },
+        "base/node-js-typescript": {},
+        "frameworks/none": {},
+      });
+
+      const result = service.resolveLayers({
+        confirmed: true,
+        databases: ["None"],
+        framework: "None",
+        name: "my-app",
+        platformServices: ["None"],
+        runtime: "Node.js (TypeScript)",
+      });
+
+      expect(result.files["README.md"]).toBe("# my-app\n");
+    });
+
+    it("substitutes {{runtime}} and {{framework}} in file content", () => {
+      const service = new LayerCompositionService({
+        always: { "meta.txt": "rt={{runtime}} fw={{framework}}\n" },
+        "base/node-js-typescript": {},
+        "frameworks/express": {},
+      });
+
+      const result = service.resolveLayers({
+        confirmed: true,
+        databases: ["None"],
+        framework: "Express",
+        name: "app",
+        platformServices: ["None"],
+        runtime: "Node.js (TypeScript)",
+      });
+
+      expect(result.files["meta.txt"]).toBe("rt=Node.js (TypeScript) fw=Express\n");
+    });
+
+    it("leaves unknown placeholders in file content unchanged", () => {
+      const service = new LayerCompositionService({
+        always: { "note.txt": "{{name}} {{unknown}}\n" },
+        "base/node-js-typescript": {},
+        "frameworks/none": {},
+      });
+
+      const result = service.resolveLayers({
+        confirmed: true,
+        databases: ["None"],
+        framework: "None",
+        name: "my-app",
+        platformServices: ["None"],
+        runtime: "Node.js (TypeScript)",
+      });
+
+      expect(result.files["note.txt"]).toBe("my-app {{unknown}}\n");
+    });
+  });
+
   describe("yaml config serialisation", () => {
     const makeYamlService = (overrides?: Record<string, Record<string, string>>) =>
       new LayerCompositionService({

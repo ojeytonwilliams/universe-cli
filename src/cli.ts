@@ -50,24 +50,6 @@ const DEFERRED_COMMANDS = new Set([
   "teardown",
 ]);
 
-const renderProjectFiles = (
-  files: Record<string, string>,
-  selection: {
-    framework: string;
-    name: string;
-    runtime: string;
-  },
-): Record<string, string> =>
-  Object.fromEntries(
-    Object.entries(files).map(([filePath, content]) => [
-      filePath,
-      content
-        .replaceAll("__FRAMEWORK__", selection.framework)
-        .replaceAll("__PROJECT_NAME__", selection.name)
-        .replaceAll("__RUNTIME__", selection.runtime),
-    ]),
-  );
-
 const runCli = async (argv: string[], deps: CliDependencies): Promise<CliResult> => {
   const {
     cwd,
@@ -109,15 +91,12 @@ const runCli = async (argv: string[], deps: CliDependencies): Promise<CliResult>
       const validatedInput = validator.validateCreateInput(promptResult);
       const resolvedLayers = layerResolver.resolveLayers(validatedInput);
       const targetDirectory = join(cwd, validatedInput.name);
-      const renderedFiles = renderProjectFiles(
-        {
-          ...resolvedLayers.files,
-          "platform.yaml": platformManifestGenerator.generatePlatformManifest(validatedInput),
-        },
-        validatedInput,
-      );
+      const projectFiles = {
+        ...resolvedLayers.files,
+        "platform.yaml": platformManifestGenerator.generatePlatformManifest(validatedInput),
+      };
 
-      await filesystemWriter.writeProject(targetDirectory, renderedFiles);
+      await filesystemWriter.writeProject(targetDirectory, projectFiles);
 
       return {
         exitCode: 0,

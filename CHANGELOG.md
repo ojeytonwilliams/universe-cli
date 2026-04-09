@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.3.0] - 2026-04-09
+
+### Phase 3 — Layer Templating
+
+- **Defined template variable set and delimiter syntax** ([design/todo.md](design/todo.md)): variables are `{{name}}`, `{{runtime}}`, `{{framework}}`; simple `String.replaceAll` — no engine dependency; unknown placeholders pass through unchanged.
+- **Implemented `LayerTemplateRenderer`** ([src/services/layer-template-renderer.ts](src/services/layer-template-renderer.ts)): internal service that accepts a template string and a typed context object and returns the rendered string.
+- **Wired `LayerTemplateRenderer` into `LayerCompositionService`** ([src/services/layer-composition-service.ts](src/services/layer-composition-service.ts)): template rendering now happens inside `resolveLayers` after file composition; the default layer registry uses `{{name}}` in place of the old `__PROJECT_NAME__` sentinel.
+- **Removed post-hoc `renderProjectFiles` from `cli.ts`** ([src/cli.ts](src/cli.ts)): the application layer no longer performs string substitution; resolved files are written directly.
+
 ## [2.2.0] - 2026-04-09
 
 ### Phase 2 — YAML Config Serialisation

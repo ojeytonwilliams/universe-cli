@@ -28,18 +28,22 @@
 
 ## Phase 3 — Layer Templating
 
-- [ ] TASK: Define the template variable set and delimiter syntax for this phase
+- [x] TASK: Define the template variable set and delimiter syntax for this phase
   - Acceptance:
     - Variables in scope are documented: project name, runtime, framework.
     - Chosen delimiter syntax (e.g. `{{name}}` vs `__NAME__`) is recorded in this file.
     - No engine dependency is required — simple string interpolation only.
+  - Decision:
+    - Delimiter syntax: `{{name}}`, `{{runtime}}`, `{{framework}}` (double-brace, lowercase).
+    - Simple `String.replaceAll` — no engine dependency.
+    - Unknown placeholders pass through unchanged.
 
-- [ ] CODE: Implement a `LayerTemplateRenderer` internal service in `src/services/`
+- [x] CODE: Implement a `LayerTemplateRenderer` internal service in `src/services/`
   - Acceptance:
     - The service accepts a template string and a typed context object; returns the rendered string.
     - Unit tests verify: all defined variables are substituted, unknown placeholders pass through unchanged, empty context is safe.
 
-- [ ] CODE: Wire `LayerTemplateRenderer` into `LayerCompositionService` and remove post-hoc substitution from `cli.ts`
+- [x] CODE: Wire `LayerTemplateRenderer` into `LayerCompositionService` and remove post-hoc substitution from `cli.ts`
   - Acceptance:
     - Layer file content is rendered by `LayerTemplateRenderer` before being added to the composed file set.
     - `__PROJECT_NAME__` occurrences in the layer registry are replaced with the new delimiter syntax.
