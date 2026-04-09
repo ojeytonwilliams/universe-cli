@@ -2,9 +2,11 @@
 
 ## Overview
 
-Universe CLI follows a hexagonal (ports and adapters) architecture. Command handlers
-form the application layer; all external capabilities are accessed exclusively through
-port interfaces. No command handler may import a concrete adapter directly.
+Universe CLI uses ports and adapters for true external boundaries and internal services
+for create-flow policy. Command handlers form the application layer; prompting,
+filesystem writes, and observability remain behind port interfaces, while validation,
+layer composition, and manifest generation are owned by internal services. No command
+handler may import a concrete adapter directly.
 
 ---
 
@@ -13,38 +15,39 @@ port interfaces. No command handler may import a concrete adapter directly.
 ```
 ┌─────────────────────────────────────────────────────┐
 │                  CLI Entry Point                    │
-│  (wires adapters → commands via container.ts)       │
+│  (wires adapters and services into the CLI flow)    │
 └────────────────────┬────────────────────────────────┘
-                     │ injects ports
+                     │ injects dependencies
 ┌────────────────────▼────────────────────────────────┐
-│               Command Handlers                      │
-│  src/commands/{name}.ts                             │
-│  · create.ts  (fully implemented)                   │
-│  · register.ts, deploy.ts, promote.ts, rollback.ts  │
-│  · logs.ts, status.ts, list.ts, teardown.ts         │
-│    (all emit DeferredCommandError in this spike)    │
+│               Application / CLI Flow                │
+│  src/cli.ts                                         │
+│  · orchestrates command behavior                    │
+│  · create is fully implemented in this spike        │
+│  · other commands emit DeferredCommandError         │
 └──────┬──────────────────────────────────────────────┘
-       │ depends on (port interfaces only)
+       │ depends on
 ┌──────▼──────────────────────────────────────────────┐
-│                    Ports                            │
+│            Ports (external boundaries)              │
 │  src/ports/                                         │
 │  · observability-client.ts  ObservabilityClient     │
 │  · prompt-port.ts           PromptPort              │
-│  · create-input-validator.ts CreateInputValidator   │
-│  · layer-resolver.ts        LayerResolver           │
 │  · filesystem-writer.ts     FilesystemWriter        │
-│  · platform-manifest-generator.ts                   │
-│                             PlatformManifestGenerator│
-└──────────────────────────────────────────────────────┘
-       ▲ implemented by
+└──────┬──────────────────────────────────────────────┘
+       │ implemented by
 ┌──────┴──────────────────────────────────────────────┐
 │                   Adapters                          │
 │  src/adapters/                                      │
 │  · stub-observability-client.ts  (no-op, spike)     │
-│  · clack-prompt-adapter.ts       (Phase 2)          │
-│  · local-layer-resolver.ts       (Phase 3)          │
-│  · local-filesystem-writer.ts    (Phase 3)          │
-│  · local-platform-manifest-generator.ts  (Phase 3)  │
+│  · clack-prompt-adapter.ts       terminal UI         │
+│  · local-filesystem-writer.ts    local disk writes   │
+└──────┬──────────────────────────────────────────────┘
+       │ used alongside
+┌──────▼──────────────────────────────────────────────┐
+│             Internal Services (policy)              │
+│  src/services/                                      │
+│  · CreateInputValidationService                     │
+│  · LayerCompositionService                          │
+│  · PlatformManifestService                          │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -54,48 +57,54 @@ port interfaces. No command handler may import a concrete adapter directly.
 
 ### CLI Entry Point
 
-`src/cli.ts` (added in Phase 1). Parses the CLI command, resolves the appropriate
-command handler, injects wired adapters from `src/container.ts`, and delegates.
-Catches all errors and maps them to the appropriate exit code.
+`src/bin.ts` wires concrete adapters and internal services, then calls `runCli()`.
 
-### Command Handlers (`src/commands/`)
+### Application Flow
 
-Pure application logic. Each handler receives its dependencies via constructor
-injection as port interfaces. Handlers never `import` from `src/adapters/`.
+`src/cli.ts` parses the CLI command, orchestrates the create flow, and maps known
+errors to the appropriate exit code. It may depend on both ports and internal
+services, but it must not embed infrastructure-specific logic.
 
 ### Ports (`src/ports/`)
 
-TypeScript interfaces that define every external boundary. Ports are owned by the
-application layer, not the adapters that implement them.
+TypeScript interfaces that define only external boundaries. Ports are owned by the
+application layer, not by the adapters that implement them.
 
-| Port                        | Boundary                        |
-| --------------------------- | ------------------------------- |
-| `ObservabilityClient`       | telemetry / error reporting     |
-| `PromptPort`                | interactive terminal input      |
-| `CreateInputValidator`      | user-input validation contract  |
-| `LayerResolver`             | template-layer filesystem reads |
-| `FilesystemWriter`          | project-folder writes           |
-| `PlatformManifestGenerator` | `platform.yaml` generation      |
+| Port                  | Boundary                    |
+| --------------------- | --------------------------- |
+| `ObservabilityClient` | telemetry / error reporting |
+| `PromptPort`          | interactive terminal input  |
+| `FilesystemWriter`    | project-folder writes       |
 
 ### Adapters (`src/adapters/`)
 
-Concrete implementations of ports. All spike-phase adapters implement the
-`SpikeSafeAdapter` marker interface (`isSpikeStub: true`) so the container guard
-test can assert that no real backend is wired.
+Concrete implementations of external-boundary ports. In the current spike, the key
+adapters are the Clack prompt adapter, the local filesystem writer, and the stub
+observability client.
+
+### Internal Services (`src/services/`)
+
+Internal services hold create-flow policy that does not cross a real infrastructure
+boundary.
+
+| Service                        | Responsibility                              |
+| ------------------------------ | ------------------------------------------- |
+| `CreateInputValidationService` | create-name and compatibility rules         |
+| `LayerCompositionService`      | layer ordering, conflict detection, merging |
+| `PlatformManifestService`      | runtime-specific manifest construction      |
 
 ### Container (`src/container.ts`)
 
-Wires concrete adapters to port slots and exports them for injection into command
-handlers. This is the only place where adapter imports appear.
+Wires concrete adapters for external boundaries. Internal services may be constructed
+in the CLI composition path, but they are not adapters and do not need port slots
+unless a later design introduces a real boundary.
 
 ---
 
 ## Spike-Mode Guardrail
 
-`src/container.test.ts` asserts that every adapter exported from `container.ts` is
-an instance of a known stub class. This test fails at compile time if a non-stub
-adapter is assigned to a typed slot, and fails at runtime if a non-stub instance
-sneaks in.
+`src/container.test.ts` guards the observability wiring so spike mode does not
+accidentally start using a real backend.
 
 ---
 
@@ -134,8 +143,8 @@ See `src/errors/cli-errors.ts` for canonical error classes. Exit codes:
 
 ## Invariants
 
-1. **No adapter imports in command handlers.** Commands depend only on port interfaces.
-2. **No real backends in spike.** All adapters in `container.ts` must implement `SpikeSafeAdapter`.
+1. **Ports are for external boundaries only.** Internal policy stays in services.
+2. **No adapter imports in core flow except at composition points.** The CLI flow depends on abstractions for infrastructure and on internal services for policy.
 3. **O11y is best-effort.** All observability calls go through `safeTrack` / `safeError`; failures are swallowed and must not affect command exit codes.
 4. **Deterministic layer composition.** Same inputs always produce the same resolved layer set.
 5. **No partial scaffolds.** The filesystem writer rolls back on unrecoverable failure.
