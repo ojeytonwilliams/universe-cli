@@ -35,7 +35,7 @@
 
 ## Phase 2 — Behavior Hardening and UX Consistency
 
-- [ ] CODE: Add deploy argument validation and usage guards
+- [x] CODE: Add deploy argument validation and usage guards
   - Feature: Enforce bounded deploy arguments and deterministic defaults.
   - Acceptance:
     - Command accepts `universe deploy`, `universe deploy [directory]`, and `universe deploy [directory] [environment]`.
@@ -43,14 +43,14 @@
     - Unsupported environment value returns typed unsupported-combination style error.
     - Environment defaults to `preview` when omitted.
 
-- [ ] CODE: Add non-blocking observability calls for deploy flow
+- [x] CODE: Add non-blocking observability calls for deploy flow
   - Feature: Emit deploy lifecycle telemetry through `ObservabilityClient` using safe wrappers.
   - Acceptance:
     - Deploy start, success, and failure are tracked with non-sensitive fields only.
     - Observability failures do not change deploy result or exit code.
     - No tokens, credentials, or raw environment values are emitted in telemetry payloads.
 
-- [ ] TASK: Align deploy UX copy with existing command output style
+- [x] TASK: Align deploy UX copy with existing command output style
   - Acceptance:
     - Error and success copy follows existing imperative/actionable tone.
     - Deploy output remains deterministic for snapshot-friendly testing.

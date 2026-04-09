@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.10.0] - 2026-04-09
+
+### Phase 2 — Deploy Behaviour Hardening
+
+- **Argument validation** (`src/cli.ts`): `universe deploy [directory] [environment]` — too many args returns exit 1 with usage guidance; unsupported environment value (not `preview`/`production`) returns `UnsupportedCombinationError` (exit 6).
+- **Observability** (`src/cli.ts`): `safeTrack` calls added for `deploy.start`, `deploy.success`, and `deploy.failure`; tracking failures are swallowed and do not affect exit code or output.
+
 ## [2.9.0] - 2026-04-09
 
 ### Phase 1 — Deploy Trivial Prototype

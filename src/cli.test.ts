@@ -467,5 +467,74 @@ describe(runCli, () => {
 
       expect(result.exitCode).toBe(14);
     });
+
+    it("exits 1 when more than two arguments are provided", async () => {
+      const result = await runCli(["deploy", "/dir", "preview", "extra"], deployDeps());
+
+      expect(result.exitCode).toBe(1);
+    });
+
+    it("exits 6 when environment is not preview or production", async () => {
+      const result = await runCli(["deploy", "/dir", "staging"], deployDeps());
+
+      expect(result.exitCode).toBe(6);
+    });
+
+    it("tracks deploy.start and deploy.success on a successful deployment", async () => {
+      const trackedEvents: string[] = [];
+      const trackingObservability = {
+        error() {},
+        track(event: string) {
+          trackedEvents.push(event);
+        },
+      };
+
+      await runCli(["deploy"], {
+        ...deployDeps(),
+        observability: trackingObservability,
+      });
+
+      expect(trackedEvents).toContain("deploy.start");
+      expect(trackedEvents).toContain("deploy.success");
+    });
+
+    it("tracks deploy.start and deploy.failure on a failed deployment", async () => {
+      const trackedEvents: string[] = [];
+      const trackingObservability = {
+        error() {},
+        track(event: string) {
+          trackedEvents.push(event);
+        },
+      };
+      const failingClient = {
+        deploy(request: { environment: string; manifest: PlatformManifest }) {
+          return Promise.reject(new DeploymentError(request.manifest.name, "timeout"));
+        },
+      };
+
+      await runCli(["deploy"], {
+        ...deployDeps(successReader, successValidator, failingClient),
+        observability: trackingObservability,
+      });
+
+      expect(trackedEvents).toContain("deploy.start");
+      expect(trackedEvents).toContain("deploy.failure");
+    });
+
+    it("does not change exit code when observability.track throws", async () => {
+      const throwingObservability = {
+        error() {},
+        track() {
+          throw new Error("o11y down");
+        },
+      };
+
+      const result = await runCli(["deploy"], {
+        ...deployDeps(),
+        observability: throwingObservability,
+      });
+
+      expect(result.exitCode).toBe(0);
+    });
   });
 });
