@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.26.0] - 2026-04-10
+
+### Phase 2 — Teardown Command Behavior Hardening and UX Consistency
+
+- **Argument validation**: `universe teardown` accepts zero, one, or two arguments; excess arguments exit 1 with usage guidance; unsupported environment value exits 6 via `UnsupportedCombinationError`; environment defaults to `preview` when omitted.
+- **Observability**: `teardown.start`, `teardown.success`, and `teardown.failure` events emitted via `safeTrack`; observability failures do not affect teardown result or exit code; only non-sensitive `targetEnvironment` and `name` fields are emitted.
+- **UX copy**: success output format `Tore down project "<name>" in <targetEnvironment>. Teardown ID: <teardownId>`; error messages follow existing imperative/actionable tone; output is deterministic for snapshot-friendly testing.
+
 ## [2.25.0] - 2026-04-10
 
 ### Phase 1 — Teardown Command Trivial Prototype

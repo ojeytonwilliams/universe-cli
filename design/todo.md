@@ -39,7 +39,7 @@
 
 ## Phase 2 — Behavior Hardening and UX Consistency
 
-- [ ] CODE: Add teardown argument validation and usage guards
+- [x] CODE: Add teardown argument validation and usage guards
   - Feature: Enforce bounded teardown arguments and deterministic defaults.
   - Acceptance:
     - Command accepts `universe teardown`, `universe teardown [directory]`, and `universe teardown [directory] [environment]`.
@@ -47,14 +47,14 @@
     - Unsupported environment value returns typed unsupported-combination style error.
     - Environment defaults to `preview` when omitted.
 
-- [ ] CODE: Add non-blocking observability calls for teardown flow
+- [x] CODE: Add non-blocking observability calls for teardown flow
   - Feature: Emit teardown telemetry through `ObservabilityClient` using safe wrappers.
   - Acceptance:
     - Teardown request start, success, and failure are tracked with non-sensitive fields only.
     - Observability failures do not change teardown result or exit code.
     - No tokens, credentials, or raw environment values are emitted in telemetry payloads.
 
-- [ ] TASK: Align teardown UX copy with existing command output style
+- [x] TASK: Align teardown UX copy with existing command output style
   - Acceptance:
     - Error and success copy follows existing imperative/actionable tone.
     - Teardown output remains deterministic for snapshot-friendly testing.
