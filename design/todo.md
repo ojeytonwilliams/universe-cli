@@ -37,7 +37,7 @@
 
 ## Phase 2 — Behavior Hardening and UX Consistency
 
-- [ ] CODE: Add list argument validation and usage guards
+- [x] CODE: Add list argument validation and usage guards
   - Feature: Enforce bounded list arguments and deterministic defaults.
   - Acceptance:
     - Command accepts `universe list`, `universe list [directory]`, and `universe list [directory] [environment]`.
@@ -45,14 +45,14 @@
     - Unsupported environment value returns typed unsupported-combination style error.
     - Environment defaults to `preview` when omitted.
 
-- [ ] CODE: Add non-blocking observability calls for list flow
+- [x] CODE: Add non-blocking observability calls for list flow
   - Feature: Emit list retrieval telemetry through `ObservabilityClient` using safe wrappers.
   - Acceptance:
     - List request start, success, and failure are tracked with non-sensitive fields only.
     - Observability failures do not change list result or exit code.
     - No tokens, credentials, or raw environment values are emitted in telemetry payloads.
 
-- [ ] TASK: Align list UX copy with existing command output style
+- [x] TASK: Align list UX copy with existing command output style
   - Acceptance:
     - Error and success copy follows existing imperative/actionable tone.
     - List output remains deterministic for snapshot-friendly testing.

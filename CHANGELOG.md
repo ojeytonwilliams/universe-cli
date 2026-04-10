@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.23.0] - 2026-04-10
+
+### Phase 2 — List Command Behavior Hardening and UX Consistency
+
+- **Argument validation**: `universe list` accepts zero, one, or two arguments; excess arguments exit 1 with usage guidance; unsupported environment value exits 6 via `UnsupportedCombinationError`; environment defaults to `preview` when omitted.
+- **Observability**: `list.start`, `list.success`, and `list.failure` events emitted via `safeTrack`; observability failures do not affect list result or exit code; only non-sensitive `environment` and `name` fields are emitted.
+- **UX copy**: success output format `Deployments for project "<name>" in <env>:\n  <id> — <state> (deployed: <deployedAt>)`; error messages follow existing imperative/actionable tone; output is deterministic for snapshot-friendly testing.
+
 ## [2.22.0] - 2026-04-10
 
 ### Phase 1 — List Command Trivial Prototype
