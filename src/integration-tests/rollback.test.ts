@@ -56,7 +56,7 @@ const createDependencies = (
   validator: new CreateInputValidationService((path) => existsSync(join(cwd, path))),
 });
 
-describe("rollback e2e", () => {
+describe("rollback", () => {
   const tempDirectories: string[] = [];
 
   afterEach(() => {
@@ -68,10 +68,10 @@ describe("rollback e2e", () => {
   });
 
   it("rolls back a project scaffolded by universe create", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-rollback-e2e-"));
+    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-rollback-"));
     tempDirectories.push(rootDirectory);
 
-    const projectName = "e2e-rollback-app";
+    const projectName = "rollback-app";
     const rollbackClient = new StubRollbackClient();
     const deps = createDependencies(
       rootDirectory,
@@ -91,10 +91,10 @@ describe("rollback e2e", () => {
   });
 
   it("returns a deterministic incremented rollback ID on repeated rollbacks", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-rollback-e2e-"));
+    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-rollback-"));
     tempDirectories.push(rootDirectory);
 
-    const projectName = "e2e-repeat-rollback";
+    const projectName = "repeat-rollback";
     const rollbackClient = new StubRollbackClient();
     const deps = createDependencies(
       rootDirectory,
@@ -112,7 +112,7 @@ describe("rollback e2e", () => {
   });
 
   it("exits 16 for the sentinel failure project name", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-rollback-e2e-"));
+    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-rollback-"));
     tempDirectories.push(rootDirectory);
 
     const rollbackClient = new StubRollbackClient();

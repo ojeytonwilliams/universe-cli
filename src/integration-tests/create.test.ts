@@ -139,7 +139,7 @@ const createDependencies = (
   validator: new CreateInputValidationService((path) => existsSync(join(cwd, path))),
 });
 
-describe("create e2e", () => {
+describe("create", () => {
   const tempDirectories: string[] = [];
 
   afterEach(() => {
@@ -151,7 +151,7 @@ describe("create e2e", () => {
   });
 
   it("scaffolds Node.js + Express with all services", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-e2e-"));
+    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-"));
     const selection = createNodeSelection({
       databases: ["postgresql", "redis"],
       framework: "express",
@@ -171,7 +171,7 @@ describe("create e2e", () => {
   });
 
   it("scaffolds Node.js + no framework + no services", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-e2e-"));
+    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-"));
     const selection = createNodeSelection({
       databases: ["none"],
       framework: "none",
@@ -191,7 +191,7 @@ describe("create e2e", () => {
   });
 
   it("scaffolds Static", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-e2e-"));
+    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-"));
     const selection = createStaticSelection("static-smoke");
 
     tempDirectories.push(rootDirectory);
@@ -206,7 +206,7 @@ describe("create e2e", () => {
   });
 
   it("covers deferred command flows with the standardized contract", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-e2e-"));
+    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-"));
 
     tempDirectories.push(rootDirectory);
 
@@ -230,7 +230,7 @@ describe("create e2e", () => {
   });
 
   it("covers create validation failure and target-directory conflict failure", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-e2e-"));
+    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-"));
 
     tempDirectories.push(rootDirectory);
 
@@ -280,8 +280,8 @@ describe("create e2e", () => {
     expect(targetExistsResult.output).toContain("Target directory already exists");
   });
 
-  it("covers config merge overwrite behavior in a create e2e flow", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-e2e-"));
+  it("covers config merge overwrite behavior in a create flow", async () => {
+    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-"));
     const selection = createNodeSelection({
       databases: ["none"],
       framework: "express",
@@ -335,8 +335,8 @@ describe("create e2e", () => {
     );
   });
 
-  it("covers non-config collision failure behavior in a create e2e flow", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-e2e-"));
+  it("covers non-config collision failure behavior in a create flow", async () => {
+    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-"));
     const selection = createNodeSelection({
       databases: ["none"],
       framework: "express",
@@ -370,7 +370,7 @@ describe("create e2e", () => {
   });
 
   it("snapshots generated Node.js scaffold output", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-e2e-"));
+    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-"));
     const selection = createNodeSelection({
       databases: ["postgresql", "redis"],
       framework: "express",
@@ -393,7 +393,7 @@ describe("create e2e", () => {
   });
 
   it("snapshots generated Static scaffold output", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-e2e-"));
+    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-"));
     const selection = createStaticSelection("snapshot-static-app");
 
     tempDirectories.push(rootDirectory);

@@ -52,7 +52,7 @@ const createDependencies = (cwd: string, promptPort: PromptPort) => ({
   validator: new CreateInputValidationService((path) => existsSync(join(cwd, path))),
 });
 
-describe("status e2e", () => {
+describe("status", () => {
   const tempDirectories: string[] = [];
 
   afterEach(() => {
@@ -64,10 +64,10 @@ describe("status e2e", () => {
   });
 
   it("retrieves status for a project scaffolded by universe create", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-status-e2e-"));
+    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-status-"));
     tempDirectories.push(rootDirectory);
 
-    const projectName = "e2e-status-app";
+    const projectName = "status-app";
     const deps = createDependencies(
       rootDirectory,
       createPromptPort(createNodeSelection(projectName)),
@@ -85,7 +85,7 @@ describe("status e2e", () => {
   });
 
   it("exits 18 for the sentinel failure project name", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-status-e2e-"));
+    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-status-"));
     tempDirectories.push(rootDirectory);
 
     const deps = createDependencies(

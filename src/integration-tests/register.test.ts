@@ -56,7 +56,7 @@ const createDependencies = (
   validator: new CreateInputValidationService((path) => existsSync(join(cwd, path))),
 });
 
-describe("register e2e", () => {
+describe("register", () => {
   const tempDirectories: string[] = [];
 
   afterEach(() => {
@@ -68,10 +68,10 @@ describe("register e2e", () => {
   });
 
   it("registers a project scaffolded by universe create", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-register-e2e-"));
+    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-register-"));
     tempDirectories.push(rootDirectory);
 
-    const projectName = "e2e-register-app";
+    const projectName = "register-app";
     const registrationClient = new StubRegistrationClient();
     const deps = createDependencies(
       rootDirectory,
@@ -90,10 +90,10 @@ describe("register e2e", () => {
   });
 
   it("exits 13 when the same project is registered twice", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-register-e2e-"));
+    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-register-"));
     tempDirectories.push(rootDirectory);
 
-    const projectName = "e2e-duplicate-app";
+    const projectName = "duplicate-app";
     const registrationClient = new StubRegistrationClient();
     const deps = createDependencies(
       rootDirectory,

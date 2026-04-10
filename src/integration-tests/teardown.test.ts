@@ -52,7 +52,7 @@ const createDependencies = (cwd: string, promptPort: PromptPort) => ({
   validator: new CreateInputValidationService((path) => existsSync(join(cwd, path))),
 });
 
-describe("teardown e2e", () => {
+describe("teardown", () => {
   const tempDirectories: string[] = [];
 
   afterEach(() => {
@@ -64,10 +64,10 @@ describe("teardown e2e", () => {
   });
 
   it("tears down a project scaffolded by universe create", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-teardown-e2e-"));
+    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-teardown-"));
     tempDirectories.push(rootDirectory);
 
-    const projectName = "e2e-teardown-app";
+    const projectName = "teardown-app";
     const deps = createDependencies(
       rootDirectory,
       createPromptPort(createNodeSelection(projectName)),
@@ -85,7 +85,7 @@ describe("teardown e2e", () => {
   });
 
   it("exits 20 for the sentinel failure project name", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-teardown-e2e-"));
+    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-teardown-"));
     tempDirectories.push(rootDirectory);
 
     const deps = createDependencies(

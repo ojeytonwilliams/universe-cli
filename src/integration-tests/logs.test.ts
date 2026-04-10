@@ -52,7 +52,7 @@ const createDependencies = (cwd: string, promptPort: PromptPort) => ({
   validator: new CreateInputValidationService((path) => existsSync(join(cwd, path))),
 });
 
-describe("logs e2e", () => {
+describe("logs", () => {
   const tempDirectories: string[] = [];
 
   afterEach(() => {
@@ -64,10 +64,10 @@ describe("logs e2e", () => {
   });
 
   it("retrieves logs for a project scaffolded by universe create", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-logs-e2e-"));
+    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-logs-"));
     tempDirectories.push(rootDirectory);
 
-    const projectName = "e2e-logs-app";
+    const projectName = "logs-app";
     const deps = createDependencies(
       rootDirectory,
       createPromptPort(createNodeSelection(projectName)),
@@ -84,7 +84,7 @@ describe("logs e2e", () => {
   });
 
   it("exits 17 for the sentinel failure project name", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-logs-e2e-"));
+    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-logs-"));
     tempDirectories.push(rootDirectory);
 
     const deps = createDependencies(

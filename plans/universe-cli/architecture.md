@@ -136,12 +136,12 @@ accidentally start using a real backend.
 
 All suites run under a single command: `pnpm test`.
 
-| Suite           | Location pattern                  | Purpose                           |
-| --------------- | --------------------------------- | --------------------------------- |
-| Unit            | `src/**/*.test.ts`                | Logic, validation, error taxonomy |
-| Contract        | `src/adapters/*.test.ts`          | Adapter ↔ port conformance        |
-| CLI integration | `src/**/*.cli.test.ts` (Phase 1+) | End-to-end command invocation     |
-| E2E             | `src/**/*.e2e.test.ts` (Phase 4)  | Full scaffold generation flows    |
+| Suite           | Location pattern                            | Purpose                           |
+| --------------- | ------------------------------------------- | --------------------------------- |
+| Unit            | `src/**/*.test.ts`                          | Logic, validation, error taxonomy |
+| Contract        | `src/adapters/*.test.ts`                    | Adapter ↔ port conformance        |
+| CLI integration | `src/**/*.cli.test.ts` (Phase 1+)           | End-to-end command invocation     |
+| Integration     | `src/integration-tests/*.test.ts` (Phase 4) | Full scaffold generation flows    |
 
 ---
 

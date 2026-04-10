@@ -56,7 +56,7 @@ const createDependencies = (
   validator: new CreateInputValidationService((path) => existsSync(join(cwd, path))),
 });
 
-describe("deploy e2e", () => {
+describe("deploy", () => {
   const tempDirectories: string[] = [];
 
   afterEach(() => {

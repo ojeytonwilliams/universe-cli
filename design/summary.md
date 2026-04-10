@@ -55,7 +55,7 @@ Universe CLI is defined in ADR-007, but the backing platform does not exist yet 
   - Contract tests for template/layer and filesystem ports
   - Golden/snapshot tests for key UX text where stable
   - CLI tests for `create` and stubbed-command behavior
-  - E2E tests that iterate every allowed runtime/framework/services combination and verify project-folder creation for each successful flow
+  - Integration tests (see `src/integration-tests/`) that iterate every allowed runtime/framework/services combination and verify project-folder creation for each successful flow
 
 ## Command Scope (ADR-007)
 

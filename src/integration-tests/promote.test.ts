@@ -56,7 +56,7 @@ const createDependencies = (
   validator: new CreateInputValidationService((path) => existsSync(join(cwd, path))),
 });
 
-describe("promote e2e", () => {
+describe("promote", () => {
   const tempDirectories: string[] = [];
 
   afterEach(() => {
@@ -68,10 +68,10 @@ describe("promote e2e", () => {
   });
 
   it("promotes a project scaffolded by universe create", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-promote-e2e-"));
+    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-promote-"));
     tempDirectories.push(rootDirectory);
 
-    const projectName = "e2e-promote-app";
+    const projectName = "promote-app";
     const promoteClient = new StubPromoteClient();
     const deps = createDependencies(
       rootDirectory,
@@ -91,10 +91,10 @@ describe("promote e2e", () => {
   });
 
   it("returns a deterministic incremented promotion ID on repeated promotes", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-promote-e2e-"));
+    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-promote-"));
     tempDirectories.push(rootDirectory);
 
-    const projectName = "e2e-repeat-promote";
+    const projectName = "repeat-promote";
     const promoteClient = new StubPromoteClient();
     const deps = createDependencies(
       rootDirectory,
@@ -112,7 +112,7 @@ describe("promote e2e", () => {
   });
 
   it("exits 15 for the sentinel failure project name", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-promote-e2e-"));
+    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-promote-"));
     tempDirectories.push(rootDirectory);
 
     const promoteClient = new StubPromoteClient();

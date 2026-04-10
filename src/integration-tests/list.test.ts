@@ -52,7 +52,7 @@ const createDependencies = (cwd: string, promptPort: PromptPort) => ({
   validator: new CreateInputValidationService((path) => existsSync(join(cwd, path))),
 });
 
-describe("list e2e", () => {
+describe("list", () => {
   const tempDirectories: string[] = [];
 
   afterEach(() => {
@@ -64,10 +64,10 @@ describe("list e2e", () => {
   });
 
   it("lists deployments for a project scaffolded by universe create", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-list-e2e-"));
+    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-list-"));
     tempDirectories.push(rootDirectory);
 
-    const projectName = "e2e-list-app";
+    const projectName = "list-app";
     const deps = createDependencies(
       rootDirectory,
       createPromptPort(createNodeSelection(projectName)),
@@ -85,7 +85,7 @@ describe("list e2e", () => {
   });
 
   it("exits 19 for the sentinel failure project name", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-list-e2e-"));
+    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-list-"));
     tempDirectories.push(rootDirectory);
 
     const deps = createDependencies(

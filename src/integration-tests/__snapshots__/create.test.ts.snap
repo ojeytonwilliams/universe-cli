@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`create e2e > snapshots generated Node.js scaffold output 1`] = `
+exports[`create > snapshots generated Node.js scaffold output 1`] = `
 {
   ".gitignore": "dist
 node_modules
@@ -68,7 +68,7 @@ server.listen(3000, () => {
 }
 `;
 
-exports[`create e2e > snapshots generated Static scaffold output 1`] = `
+exports[`create > snapshots generated Static scaffold output 1`] = `
 {
   ".gitignore": "dist
 node_modules

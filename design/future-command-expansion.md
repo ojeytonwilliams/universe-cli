@@ -59,7 +59,7 @@ For each deferred command:
 ### Stage 3: Expand contract and automation
 
 - Add command-specific contract tests per port.
-- Add E2E flows for success/failure paths per command.
+- Add integration flows for success/failure paths per command.
 - Keep standardized error style and exit semantics across commands.
 
 ## Shared Infrastructure Reusable for promoted commands
@@ -89,7 +89,6 @@ If matrix expansion is approved (new runtimes/frameworks/services), defer comman
 
 - Additional validation rules and typed errors.
 - Additional layer/template resolution rules.
-- Updated E2E matrix coverage budgets.
 - Potential split between local-only commands and platform-backed commands.
 
 This keeps command migration and create-matrix growth coordinated rather than diverging.
