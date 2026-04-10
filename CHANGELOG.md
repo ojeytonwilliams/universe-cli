@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.19.0] - 2026-04-10
+
+### Phase 1 — Status Command Trivial Prototype
+
+- **`StatusClient` port** (`src/ports/status-client.ts`): `getStatus(request): Promise<StatusResponse>`; request carries `manifest` and `environment`; response carries `name`, `environment`, `state` (`StatusState` union), and `updatedAt` timestamp.
+- **`StatusError`** (`src/errors/cli-errors.ts`): typed error with exit code 18 and message `Failed to retrieve status for project "<name>": <reason>`.
+- **`StubStatusClient` adapter** (`src/adapters/stub-status-client.ts`): deterministic stub returning `state: "ACTIVE"` and fixed `updatedAt`; rejects with `StatusError` for sentinel project name `"status-failure"`.
+- **`status` CLI handler** (`src/cli.ts`): `universe status [directory] [environment]` promoted from deferred; reads `platform.yaml`, validates manifest, delegates to `statusClient`, outputs `Status of project "<name>" in <env>: <state> (last updated: <updatedAt>)`.
+- **Container wiring** (`src/container.ts`, `src/bin.ts`): `statusClient` exported as `StubStatusClient` instance and wired into `runCli` dependency graph.
+
 ## [2.18.0] - 2026-04-09
 
 ### Phase 3 — Logs Command Test Coverage, Guardrails, and Documentation

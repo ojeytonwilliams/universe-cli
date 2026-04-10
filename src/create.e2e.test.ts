@@ -10,7 +10,7 @@ import { PlatformManifestService } from "./services/platform-manifest-service.js
 import { runCli } from "./cli.js";
 import type { CreateSelections, PromptPort } from "./ports/prompt-port.js";
 
-const DEFERRED_COMMANDS = ["list", "status", "teardown"] as const;
+const DEFERRED_COMMANDS = ["list", "teardown"] as const;
 
 const createPromptPort = (selection: CreateSelections | null): PromptPort => ({
   promptForCreateInputs() {
@@ -119,6 +119,11 @@ const createDependencies = (
       _request: never,
     ): Promise<{ name: string; rollbackId: string; targetEnvironment: string }> {
       return Promise.reject(new Error("rollbackClient not exercised in create tests"));
+    },
+  },
+  statusClient: {
+    getStatus(_request: never): Promise<never> {
+      return Promise.reject(new Error("statusClient not exercised in create tests"));
     },
   },
   validator: new CreateInputValidationService((path) => existsSync(join(cwd, path))),

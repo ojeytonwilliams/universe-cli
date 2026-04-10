@@ -2,7 +2,7 @@
 
 ## Phase 1 — Trivial Prototype (first working `universe status`)
 
-- [ ] CODE: Define status port contract and typed status error
+- [x] CODE: Define status port contract and typed status error
   - Feature: Add `StatusClient` port (request/response types) and `StatusError` in the CLI error taxonomy.
   - Acceptance:
     - `src/ports/status-client.ts` exports a documented interface with one status retrieval method.
@@ -10,7 +10,7 @@
     - Status response includes project `name`, `environment`, deployment `state`, and any deterministic metadata fields.
     - `StatusError` has one stable user-facing message style and one stable exit code.
 
-- [ ] CODE: Implement stub status adapter with deterministic behavior
+- [x] CODE: Implement stub status adapter with deterministic behavior
   - Feature: Add `StubStatusClient` adapter that simulates project status retrieval without network access.
   - Acceptance:
     - Stub returns a deterministic status snapshot for the same project/environment pair.
@@ -18,7 +18,7 @@
     - Adapter can simulate retrieval failure for explicit test fixtures (for example, sentinel project names).
     - Adapter performs no external network calls.
 
-- [ ] CODE: Promote `status` from deferred to implemented CLI handler
+- [x] CODE: Promote `status` from deferred to implemented CLI handler
   - Feature: Implement `universe status [directory] [environment]` in `runCli` and remove `status` from deferred command set.
   - Acceptance:
     - `status` reads `platform.yaml` from `[directory]` or `cwd` when omitted.
@@ -27,7 +27,7 @@
     - Valid manifest is passed to `StatusClient`; successful result exits `0`.
     - Success output includes project name, environment, and deterministic rendered status snapshot.
 
-- [ ] TASK: Wire container and dependency graph for status
+- [x] TASK: Wire container and dependency graph for status
   - Acceptance:
     - `src/container.ts` exports `statusClient` wired to `StubStatusClient` in spike mode.
     - CLI dependency composition includes `statusClient` without breaking existing commands.

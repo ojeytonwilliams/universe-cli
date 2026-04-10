@@ -62,10 +62,18 @@ interface CliDependencies {
   registrationClient: {
     register(manifest: PlatformManifest): Promise<{ name: string; registrationId: string }>;
   };
+  statusClient: {
+    getStatus(request: { environment: string; manifest: PlatformManifest }): Promise<{
+      environment: string;
+      name: string;
+      state: string;
+      updatedAt: string;
+    }>;
+  };
   validator: { validateCreateInput(input: CreateSelections): CreateSelections };
 }
 
-const DEFERRED_COMMANDS = new Set(["list", "status", "teardown"]);
+const DEFERRED_COMMANDS = new Set(["list", "teardown"]);
 
 const runCli = async (argv: string[], deps: CliDependencies): Promise<CliResult> => {
   const {
@@ -81,6 +89,7 @@ const runCli = async (argv: string[], deps: CliDependencies): Promise<CliResult>
     promptPort,
     registrationClient,
     rollbackClient,
+    statusClient,
     validator,
   } = deps;
   const [command] = argv;
@@ -394,6 +403,61 @@ const runCli = async (argv: string[], deps: CliDependencies): Promise<CliResult>
       if (error instanceof CliError) {
         safeError(observability, error);
         safeTrack(observability, "logs.failure", { environment });
+        return { exitCode: error.exitCode, output: error.message };
+      }
+
+      throw error;
+    }
+  }
+
+  if (command === "status") {
+    if (argv.length > 3) {
+      return {
+        exitCode: 1,
+        output: "Too many arguments. Usage: universe status [directory] [environment]",
+      };
+    }
+
+    const platformYamlDir = argv[1] ?? cwd;
+    const environment = argv[2] ?? "preview";
+    const platformYamlPath = join(platformYamlDir, "platform.yaml");
+
+    if (environment !== "preview" && environment !== "production") {
+      const envError = new UnsupportedCombinationError(
+        `environment "${environment}" — valid values are: preview, production`,
+      );
+      return { exitCode: envError.exitCode, output: envError.message };
+    }
+
+    safeTrack(observability, "status.start", { environment });
+
+    try {
+      const yaml = await projectReader.readFile(platformYamlPath);
+
+      let manifest: PlatformManifest;
+      try {
+        manifest = platformManifestGenerator.validateManifest(yaml);
+      } catch (validationError) {
+        const invalidError = new ManifestInvalidError(
+          platformYamlPath,
+          validationError instanceof Error ? validationError.message : String(validationError),
+        );
+        safeError(observability, invalidError);
+        return { exitCode: invalidError.exitCode, output: invalidError.message };
+      }
+
+      const response = await statusClient.getStatus({ environment, manifest });
+
+      safeTrack(observability, "status.success", { environment, name: response.name });
+
+      return {
+        exitCode: 0,
+        output: `Status of project "${response.name}" in ${response.environment}: ${response.state} (last updated: ${response.updatedAt})`,
+      };
+    } catch (error) {
+      if (error instanceof CliError) {
+        safeError(observability, error);
+        safeTrack(observability, "status.failure", { environment });
         return { exitCode: error.exitCode, output: error.message };
       }
 

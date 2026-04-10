@@ -2,10 +2,10 @@ import type {
   AppPlatformManifest,
   PlatformManifest,
 } from "./services/platform-manifest-service.js";
-import { LogsError, ManifestNotFoundError } from "./errors/cli-errors.js";
+import { ManifestNotFoundError, StatusError } from "./errors/cli-errors.js";
 import { runCli } from "./cli.js";
 
-const logsManifest: AppPlatformManifest = {
+const statusManifest: AppPlatformManifest = {
   domain: { preview: "my-app.preview.example.com", production: "my-app.example.com" },
   environments: { preview: { branch: "preview" }, production: { branch: "main" } },
   name: "my-app",
@@ -16,57 +16,58 @@ const logsManifest: AppPlatformManifest = {
   stack: "app",
 };
 
-const stubEntries = [
-  { level: "info", message: "Application started", timestamp: "2026-01-01T00:00:00.000Z" },
-];
-
 const successReader = {
   readFile(_filePath: string) {
     return Promise.resolve("stack: app\n");
   },
 };
 
-const successValidator = (_yaml: string): PlatformManifest => logsManifest;
+const successValidator = (_yaml: string): PlatformManifest => statusManifest;
 
-const successLogsClient = {
-  getLogs(_request: { environment: string; manifest: PlatformManifest }) {
+const successStatusClient = {
+  getStatus(_request: { environment: string; manifest: PlatformManifest }) {
     return Promise.resolve({
-      entries: stubEntries,
       environment: "preview",
       name: "my-app",
+      state: "ACTIVE",
+      updatedAt: "2026-01-01T00:00:00.000Z",
     });
   },
 };
 
-const logsDeps = (
+const statusDeps = (
   reader = successReader,
   validator = successValidator,
-  logsClient = successLogsClient,
+  statusClient = successStatusClient,
 ) => ({
   cwd: "/workspace",
   deployClient: {
     deploy(_request: never): Promise<{ deploymentId: string; environment: string; name: string }> {
-      return Promise.reject(new Error("deployClient not used in logs tests"));
+      return Promise.reject(new Error("deployClient not used in status tests"));
     },
   },
   filesystemWriter: {
     writeProject(_targetDirectory: never): Promise<void> {
-      return Promise.reject(new Error("filesystemWriter not used in logs tests"));
+      return Promise.reject(new Error("filesystemWriter not used in status tests"));
     },
   },
   layerResolver: {
     resolveLayers(_input: never): never {
-      throw new Error("layerResolver not used in logs tests");
+      throw new Error("layerResolver not used in status tests");
     },
   },
-  logsClient,
+  logsClient: {
+    getLogs(_request: never): Promise<never> {
+      return Promise.reject(new Error("logsClient not used in status tests"));
+    },
+  },
   observability: {
     error() {},
     track() {},
   },
   platformManifestGenerator: {
     generatePlatformManifest(_input: never): never {
-      throw new Error("generatePlatformManifest not used in logs tests");
+      throw new Error("generatePlatformManifest not used in status tests");
     },
     validateManifest: validator,
   },
@@ -75,7 +76,7 @@ const logsDeps = (
     promote(
       _request: never,
     ): Promise<{ name: string; promotionId: string; targetEnvironment: string }> {
-      return Promise.reject(new Error("promoteClient not used in logs tests"));
+      return Promise.reject(new Error("promoteClient not used in status tests"));
     },
   },
   promptPort: {
@@ -85,41 +86,37 @@ const logsDeps = (
   },
   registrationClient: {
     register(_manifest: never): Promise<{ name: string; registrationId: string }> {
-      return Promise.reject(new Error("registrationClient not used in logs tests"));
+      return Promise.reject(new Error("registrationClient not used in status tests"));
     },
   },
   rollbackClient: {
     rollback(
       _request: never,
     ): Promise<{ name: string; rollbackId: string; targetEnvironment: string }> {
-      return Promise.reject(new Error("rollbackClient not used in logs tests"));
+      return Promise.reject(new Error("rollbackClient not used in status tests"));
     },
   },
-  statusClient: {
-    getStatus(_request: never): Promise<never> {
-      return Promise.reject(new Error("statusClient not used in logs tests"));
-    },
-  },
+  statusClient,
   validator: {
     validateCreateInput(_input: never): never {
-      throw new Error("validator not used in logs tests");
+      throw new Error("validator not used in status tests");
     },
   },
 });
 
-describe("logs", () => {
-  it("exits 0 on successful log retrieval", async () => {
-    const result = await runCli(["logs"], logsDeps());
+describe("status", () => {
+  it("exits 0 on successful status retrieval", async () => {
+    const result = await runCli(["status"], statusDeps());
 
     expect(result.exitCode).toBe(0);
   });
 
-  it("output contains the project name, environment, and log entries", async () => {
-    const { output } = await runCli(["logs"], logsDeps());
+  it("output contains the project name, environment, and state", async () => {
+    const { output } = await runCli(["status"], statusDeps());
 
     expect(output).toContain("my-app");
     expect(output).toContain("preview");
-    expect(output).toContain("Application started");
+    expect(output).toContain("ACTIVE");
   });
 
   it("reads platform.yaml from cwd when no directory argument is given", async () => {
@@ -131,7 +128,7 @@ describe("logs", () => {
       },
     };
 
-    await runCli(["logs"], logsDeps(trackingReader));
+    await runCli(["status"], statusDeps(trackingReader));
 
     expect(paths[0]).toBe("/workspace/platform.yaml");
   });
@@ -145,7 +142,7 @@ describe("logs", () => {
       },
     };
 
-    await runCli(["logs", "/some/project"], logsDeps(trackingReader));
+    await runCli(["status", "/some/project"], statusDeps(trackingReader));
 
     expect(paths[0]).toBe("/some/project/platform.yaml");
   });
@@ -157,7 +154,7 @@ describe("logs", () => {
       },
     };
 
-    const result = await runCli(["logs"], logsDeps(missingReader));
+    const result = await runCli(["status"], statusDeps(missingReader));
 
     expect(result.exitCode).toBe(11);
   });
@@ -167,31 +164,34 @@ describe("logs", () => {
       throw new Error("invalid schema");
     };
 
-    const result = await runCli(["logs"], logsDeps(successReader, failingValidator));
+    const result = await runCli(["status"], statusDeps(successReader, failingValidator));
 
     expect(result.exitCode).toBe(12);
   });
 
-  it("exits 17 when log retrieval fails", async () => {
+  it("exits 18 when status retrieval fails", async () => {
     const failingClient = {
-      getLogs(request: { environment: string; manifest: PlatformManifest }) {
-        return Promise.reject(new LogsError(request.manifest.name, "timeout"));
+      getStatus(request: { environment: string; manifest: PlatformManifest }) {
+        return Promise.reject(new StatusError(request.manifest.name, "unavailable"));
       },
     };
 
-    const result = await runCli(["logs"], logsDeps(successReader, successValidator, failingClient));
+    const result = await runCli(
+      ["status"],
+      statusDeps(successReader, successValidator, failingClient),
+    );
 
-    expect(result.exitCode).toBe(17);
+    expect(result.exitCode).toBe(18);
   });
 
   it("exits 1 when more than two arguments are provided", async () => {
-    const result = await runCli(["logs", "/dir", "preview", "extra"], logsDeps());
+    const result = await runCli(["status", "/dir", "preview", "extra"], statusDeps());
 
     expect(result.exitCode).toBe(1);
   });
 
   it("exits 6 when environment is not preview or production", async () => {
-    const result = await runCli(["logs", "/dir", "staging"], logsDeps());
+    const result = await runCli(["status", "/dir", "staging"], statusDeps());
 
     expect(result.exitCode).toBe(6);
   });
@@ -199,22 +199,23 @@ describe("logs", () => {
   it("defaults to the preview environment when no environment argument is given", async () => {
     const requests: { environment: string }[] = [];
     const trackingClient = {
-      getLogs(request: { environment: string; manifest: PlatformManifest }) {
+      getStatus(request: { environment: string; manifest: PlatformManifest }) {
         requests.push(request);
         return Promise.resolve({
-          entries: stubEntries,
           environment: request.environment,
           name: "my-app",
+          state: "ACTIVE",
+          updatedAt: "2026-01-01T00:00:00.000Z",
         });
       },
     };
 
-    await runCli(["logs"], logsDeps(successReader, successValidator, trackingClient));
+    await runCli(["status"], statusDeps(successReader, successValidator, trackingClient));
 
     expect(requests[0]?.environment).toBe("preview");
   });
 
-  it("tracks logs.start and logs.success on successful retrieval", async () => {
+  it("tracks status.start and status.success on successful retrieval", async () => {
     const trackedEvents: string[] = [];
     const trackingObservability = {
       error() {},
@@ -223,13 +224,13 @@ describe("logs", () => {
       },
     };
 
-    await runCli(["logs"], { ...logsDeps(), observability: trackingObservability });
+    await runCli(["status"], { ...statusDeps(), observability: trackingObservability });
 
-    expect(trackedEvents).toContain("logs.start");
-    expect(trackedEvents).toContain("logs.success");
+    expect(trackedEvents).toContain("status.start");
+    expect(trackedEvents).toContain("status.success");
   });
 
-  it("tracks logs.start and logs.failure on a failed retrieval", async () => {
+  it("tracks status.start and status.failure on a failed retrieval", async () => {
     const trackedEvents: string[] = [];
     const trackingObservability = {
       error() {},
@@ -238,18 +239,18 @@ describe("logs", () => {
       },
     };
     const failingClient = {
-      getLogs(request: { environment: string; manifest: PlatformManifest }) {
-        return Promise.reject(new LogsError(request.manifest.name, "timeout"));
+      getStatus(request: { environment: string; manifest: PlatformManifest }) {
+        return Promise.reject(new StatusError(request.manifest.name, "unavailable"));
       },
     };
 
-    await runCli(["logs"], {
-      ...logsDeps(successReader, successValidator, failingClient),
+    await runCli(["status"], {
+      ...statusDeps(successReader, successValidator, failingClient),
       observability: trackingObservability,
     });
 
-    expect(trackedEvents).toContain("logs.start");
-    expect(trackedEvents).toContain("logs.failure");
+    expect(trackedEvents).toContain("status.start");
+    expect(trackedEvents).toContain("status.failure");
   });
 
   it("does not change exit code when observability.track throws", async () => {
@@ -260,8 +261,8 @@ describe("logs", () => {
       },
     };
 
-    const result = await runCli(["logs"], {
-      ...logsDeps(),
+    const result = await runCli(["status"], {
+      ...statusDeps(),
       observability: throwingObservability,
     });
 

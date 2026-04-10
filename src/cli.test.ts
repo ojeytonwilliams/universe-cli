@@ -22,7 +22,7 @@ const client: ObservabilityClient = {
   track() {},
 };
 
-const DEFERRED_COMMANDS = ["list", "status", "teardown"] as const;
+const DEFERRED_COMMANDS = ["list", "teardown"] as const;
 
 const createPromptResult: CreateSelections = {
   confirmed: true,
@@ -152,6 +152,15 @@ const defaultRollbackClient = {
   },
 };
 
+const defaultStatusClient = {
+  getStatus(_request: {
+    environment: string;
+    manifest: PlatformManifest;
+  }): Promise<{ environment: string; name: string; state: string; updatedAt: string }> {
+    return Promise.reject(new Error("statusClient.getStatus should not be called in this test"));
+  },
+};
+
 const createDeps = (
   promptPort: PromptPort,
   validator: { validateCreateInput(input: CreateSelections): CreateSelections },
@@ -169,6 +178,7 @@ const createDeps = (
   promptPort,
   registrationClient: defaultRegistrationClient,
   rollbackClient: defaultRollbackClient,
+  statusClient: defaultStatusClient,
   validator,
 });
 

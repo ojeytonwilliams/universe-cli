@@ -12,6 +12,7 @@ const EXIT_CODES = {
   REGISTRATION: 13,
   ROLLBACK: 16,
   SCAFFOLD_WRITE: 10,
+  STATUS: 18,
   TARGET_EXISTS: 3,
   UNSUPPORTED_COMBINATION: 6,
   UNSUPPORTED_FRAMEWORK: 5,
@@ -168,6 +169,13 @@ class RollbackError extends CliError {
   }
 }
 
+class StatusError extends CliError {
+  constructor(name: string, reason: string) {
+    super(`Failed to retrieve status for project "${name}": ${reason}`, EXIT_CODES.STATUS);
+    this.name = "StatusError";
+  }
+}
+
 class DeferredCommandError extends CliError {
   constructor(command: string) {
     super(
@@ -185,6 +193,7 @@ export {
   LogsError,
   PromotionError,
   RollbackError,
+  StatusError,
   InvalidMultiSelectError,
   InvalidNameError,
   LayerConflictError,

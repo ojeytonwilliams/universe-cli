@@ -14,6 +14,7 @@ import {
   promoteClient,
   registrationClient,
   rollbackClient,
+  statusClient,
 } from "./container.js";
 import { runCli } from "./cli.js";
 
@@ -36,6 +37,7 @@ const { exitCode, output } = await runCli(process.argv.slice(2), {
   promptPort,
   registrationClient,
   rollbackClient,
+  statusClient,
   validator: inputValidator,
 });
 

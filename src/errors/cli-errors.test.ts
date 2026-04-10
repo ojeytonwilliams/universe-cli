@@ -10,6 +10,7 @@ import {
   MissingLayerError,
   RegistrationError,
   ScaffoldWriteError,
+  StatusError,
   TargetDirectoryExistsError,
   UnsupportedCombinationError,
   UnsupportedFrameworkError,
@@ -29,6 +30,7 @@ describe("error exit codes", () => {
       new MissingLayerError("base/nodejs"),
       new RegistrationError("my-app", "already registered"),
       new ScaffoldWriteError("/tmp/x", new Error("disk full")),
+      new StatusError("my-app", "unavailable"),
       new TargetDirectoryExistsError("/tmp/x"),
       new UnsupportedCombinationError("static + database"),
       new UnsupportedFrameworkError("fastify", "nodejs"),
@@ -186,5 +188,15 @@ describe(DeploymentError, () => {
     const error = new DeploymentError("my-app", "timeout");
 
     expect(error.message).toMatchInlineSnapshot(`"Failed to deploy project "my-app": timeout"`);
+  });
+});
+
+describe(StatusError, () => {
+  it("includes the project name and reason in the message", () => {
+    const error = new StatusError("my-app", "unavailable");
+
+    expect(error.message).toMatchInlineSnapshot(
+      `"Failed to retrieve status for project "my-app": unavailable"`,
+    );
   });
 });
