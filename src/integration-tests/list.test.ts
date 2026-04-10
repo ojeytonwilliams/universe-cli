@@ -1,22 +1,22 @@
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { LocalFilesystemWriter } from "./adapters/local-filesystem-writer.js";
-import { LocalProjectReader } from "./adapters/local-project-reader.js";
-import { StubDeployClient } from "./adapters/stub-deploy-client.js";
-import { StubListClient } from "./adapters/stub-list-client.js";
-import { StubLogsClient } from "./adapters/stub-logs-client.js";
-import { StubObservabilityClient } from "./adapters/stub-observability-client.js";
-import { StubPromoteClient } from "./adapters/stub-promote-client.js";
-import { StubRegistrationClient } from "./adapters/stub-registration-client.js";
-import { StubRollbackClient } from "./adapters/stub-rollback-client.js";
-import { StubStatusClient } from "./adapters/stub-status-client.js";
-import { StubTeardownClient } from "./adapters/stub-teardown-client.js";
-import { CreateInputValidationService } from "./services/create-input-validation-service.js";
-import { LayerCompositionService } from "./services/layer-composition-service.js";
-import { PlatformManifestService } from "./services/platform-manifest-service.js";
-import { runCli } from "./cli.js";
-import type { CreateSelections, PromptPort } from "./ports/prompt-port.js";
+import { LocalFilesystemWriter } from "../adapters/local-filesystem-writer.js";
+import { LocalProjectReader } from "../adapters/local-project-reader.js";
+import { StubDeployClient } from "../adapters/stub-deploy-client.js";
+import { StubListClient } from "../adapters/stub-list-client.js";
+import { StubLogsClient } from "../adapters/stub-logs-client.js";
+import { StubObservabilityClient } from "../adapters/stub-observability-client.js";
+import { StubPromoteClient } from "../adapters/stub-promote-client.js";
+import { StubRegistrationClient } from "../adapters/stub-registration-client.js";
+import { StubRollbackClient } from "../adapters/stub-rollback-client.js";
+import { StubStatusClient } from "../adapters/stub-status-client.js";
+import { StubTeardownClient } from "../adapters/stub-teardown-client.js";
+import { CreateInputValidationService } from "../services/create-input-validation-service.js";
+import { LayerCompositionService } from "../services/layer-composition-service.js";
+import { PlatformManifestService } from "../services/platform-manifest-service.js";
+import { runCli } from "../cli.js";
+import type { CreateSelections, PromptPort } from "../ports/prompt-port.js";
 
 const createNodeSelection = (name: string): CreateSelections => ({
   confirmed: true,

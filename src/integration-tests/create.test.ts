@@ -1,14 +1,14 @@
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
-import { LocalFilesystemWriter } from "./adapters/local-filesystem-writer.js";
-import { StubObservabilityClient } from "./adapters/stub-observability-client.js";
-import { CreateInputValidationService } from "./services/create-input-validation-service.js";
-import { LayerCompositionService } from "./services/layer-composition-service.js";
-import type { LayerRegistry } from "./services/layer-composition-service.js";
-import { PlatformManifestService } from "./services/platform-manifest-service.js";
-import { runCli } from "./cli.js";
-import type { CreateSelections, PromptPort } from "./ports/prompt-port.js";
+import { LocalFilesystemWriter } from "../adapters/local-filesystem-writer.js";
+import { StubObservabilityClient } from "../adapters/stub-observability-client.js";
+import { CreateInputValidationService } from "../services/create-input-validation-service.js";
+import { LayerCompositionService } from "../services/layer-composition-service.js";
+import type { LayerRegistry } from "../services/layer-composition-service.js";
+import { PlatformManifestService } from "../services/platform-manifest-service.js";
+import { runCli } from "../cli.js";
+import type { CreateSelections, PromptPort } from "../ports/prompt-port.js";
 
 const DEFERRED_COMMANDS: string[] = [];
 
