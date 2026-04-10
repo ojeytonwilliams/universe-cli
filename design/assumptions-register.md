@@ -483,6 +483,56 @@ Use this register throughout the spike. Update it at the end of each phase.
 
 ---
 
+## Command — `teardown`
+
+### Current assumptions
+
+| ID      | Port/Area             | Assumption                                                                                                                                         | Why Needed                                                                         | Validation Plan                                                                                      | Status | Notes                                                                           |
+| ------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------- |
+| TDN-001 | teardown command flow | `teardown` can follow the same manifest-first pattern as the other promoted commands, reading `platform.yaml` from a directory or `cwd` by default | Reuses existing manifest parsing/validation path and keeps CLI behavior consistent | Validate with CLI tests for default-path and explicit-directory teardown flows                       | open   | Keeps teardown non-interactive in spike mode                                    |
+| TDN-002 | environment scope     | A reduced environment set with `preview` as the default is sufficient for the spike                                                                | Keeps scope small while exercising command-specific teardown behavior              | Validate with argument parsing tests, success-path tests, and assumptions review                     | open   | Additional environments can be added when real provider contracts are defined   |
+| TDN-003 | stub teardown adapter | A deterministic stub response is sufficient to validate teardown UX without simulating a real backend                                              | Avoids premature modeling of provider internals while proving command shape        | Validate with unit tests for stable entries, repeated runs, and explicit failure fixtures            | open   | Stub must remain network-free and snapshot-friendly                             |
+| TDN-004 | error taxonomy        | `teardown` needs a command-specific typed failure (`TeardownError`) rather than the shared deferred-command contract once promoted                 | Preserves actionable UX and stable exit semantics after command promotion          | Validate with CLI and adapter tests covering teardown-client failures                                | open   | Exit code to be assigned; must be unique and documented in `EXIT_CODES`         |
+| TDN-005 | observability         | Teardown telemetry can use the existing `ObservabilityClient` port and must remain best-effort and secret-safe                                     | Avoids introducing a new observability boundary for one command                    | Validate with tests that simulate observability failure and assert teardown exit/result is unchanged | open   | Payloads exclude secrets; observability throw tested and confirmed non-blocking |
+
+#### Unknowns
+
+| ID      | Port/Area          | Unknown                                                                                      | Risk if Wrong | Decision Needed By                         | Owner    | Notes                                                                |
+| ------- | ------------------ | -------------------------------------------------------------------------------------------- | ------------- | ------------------------------------------ | -------- | -------------------------------------------------------------------- |
+| TDN-U01 | teardown result    | Whether the real platform will return a simple confirmation or a richer object with metadata | Medium        | Before replacing the stub adapter          | platform | Keep stub result minimal but structured for easy schema changes      |
+| TDN-U02 | teardown semantics | What entities are affected by teardown (all resources, partial, etc.)                        | Medium        | Before real teardown contract is finalized | platform | Spike uses a fixed deterministic result per stub fixture             |
+| TDN-U03 | failure model      | Which provider failure classes should become typed errors beyond `TeardownError`             | Medium        | Before production adapter implementation   | platform | Spike keeps one typed teardown failure to avoid speculative taxonomy |
+
+#### Required adapter/provider capabilities
+
+| ID      | Port/Area                 | Required capability (CLI-owned contract)                                                     | Source command behavior             | Priority    | Notes                                                            |
+| ------- | ------------------------- | -------------------------------------------------------------------------------------------- | ----------------------------------- | ----------- | ---------------------------------------------------------------- |
+| TDN-C01 | teardown client           | `teardown(input) -> response` with normalized `TeardownError` failures                       | `universe teardown` success path    | must-have   | Input should include manifest and target environment             |
+| TDN-C02 | project reader            | `readFile(filePath) -> manifestYaml`                                                         | Manifest lookup for teardown        | must-have   | Reuses existing `ProjectReaderPort` capability from `register`   |
+| TDN-C03 | platform manifest service | `validateManifest(yaml) -> PlatformManifest`                                                 | Manifest validation before teardown | must-have   | Reuses existing validation path                                  |
+| TDN-C04 | observability client      | `track()` and `error()` remain non-blocking when teardown emits start/success/failure events | Teardown telemetry                  | should-have | Must preserve safe wrapper behavior already used by the CLI flow |
+
+#### New assumptions discovered during implementation
+
+| ID  | Port/Area | New assumption | Trigger/Context | Validation Plan | Status | Notes |
+| --- | --------- | -------------- | --------------- | --------------- | ------ | ----- |
+
+#### Validation evidence and outcomes
+
+- Evidence links / artifacts:
+  - [ ] Test(s):
+  - [ ] Notes/docs:
+  - [ ] Decision updates:
+- ## Outcome summary:
+
+#### Impact if assumptions changed
+
+- Affected command behavior: `universe teardown` argument model, rendered output, and failure mapping
+- Affected ports/adapters: `TeardownClient`, stub teardown adapter, manifest validation reuse, observability wrappers
+- Required TODO/PRD changes: teardown TODO phase ordering, teardown error taxonomy, and migration notes for real adapter parity
+
+---
+
 ## Command Template
 
 ### Command — `<name>`
