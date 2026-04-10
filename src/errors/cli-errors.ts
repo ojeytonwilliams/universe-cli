@@ -1,4 +1,5 @@
 const EXIT_CODES = {
+  BAD_ARGUMENTS: 18,
   DEPLOYMENT: 10,
   INVALID_MULTI_SELECT: 5,
   INVALID_NAME: 17,
@@ -36,6 +37,17 @@ class InvalidNameError extends CliError {
       EXIT_CODES.INVALID_NAME,
     );
     this.name = "InvalidNameError";
+  }
+}
+
+/**
+ * Thrown when a CLI command receives invalid or excessive arguments.
+ * Handlers should throw this error instead of returning an exit code for argument validation failures.
+ */
+class BadArgumentsError extends CliError {
+  constructor(message: string) {
+    super(message, EXIT_CODES.BAD_ARGUMENTS);
+    this.name = "BadArgumentsError";
   }
 }
 
@@ -193,6 +205,7 @@ export {
   ListError,
   LogsError,
   ManifestInvalidError,
+  BadArgumentsError,
   ManifestNotFoundError,
   MissingLayerError,
   PromotionError,

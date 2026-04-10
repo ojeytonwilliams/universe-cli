@@ -65,6 +65,10 @@ handler may import a concrete adapter directly.
 errors to the appropriate exit code. It may depend on both ports and internal
 services, but it must not embed infrastructure-specific logic.
 
+#### Argument Validation and Error Handling
+
+All command handlers validate their arguments and throw a `BadArgumentsError` (exit code 18) for invalid or excessive arguments. This ensures consistent error handling and messaging for argument validation failures across all commands. The CLI entry point is responsible for catching this error and displaying the appropriate usage message to the user.
+
 ### Ports (`src/ports/`)
 
 TypeScript interfaces that define only external boundaries. Ports are owned by the
@@ -104,6 +108,10 @@ unless a later design introduces a real boundary.
 ## Error Taxonomy and Exit Codes
 
 See `src/errors/cli-errors.ts` for canonical error classes. Exit codes:
+
+| Error Class       | Exit Code | Description                        |
+| ----------------- | --------- | ---------------------------------- |
+| BadArgumentsError | 18        | Invalid or excessive CLI arguments |
 
 | Code  | Error Group / Example Classes                               |
 | ----- | ----------------------------------------------------------- |

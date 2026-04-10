@@ -25,22 +25,26 @@ const projectReader = new LocalProjectReader();
 const promptPort = new ClackPromptAdapter();
 const inputValidator = new CreateInputValidationService((path) => existsSync(path));
 const { exitCode, output } = await runCli(process.argv.slice(2), {
+  adapters: {
+    deployClient: new StubDeployClient(),
+    filesystemWriter,
+    listClient: new StubListClient(),
+    logsClient: new StubLogsClient(),
+    projectReader,
+    promoteClient: new StubPromoteClient(),
+    promptPort,
+    registrationClient: new StubRegistrationClient(),
+    rollbackClient: new StubRollbackClient(),
+    statusClient: new StubStatusClient(),
+    teardownClient: new StubTeardownClient(),
+  },
   cwd: process.cwd(),
-  deployClient: new StubDeployClient(),
-  filesystemWriter,
-  layerResolver,
-  listClient: new StubListClient(),
-  logsClient: new StubLogsClient(),
   observability: new StubObservabilityClient(),
-  platformManifestGenerator: manifestGenerator,
-  projectReader,
-  promoteClient: new StubPromoteClient(),
-  promptPort,
-  registrationClient: new StubRegistrationClient(),
-  rollbackClient: new StubRollbackClient(),
-  statusClient: new StubStatusClient(),
-  teardownClient: new StubTeardownClient(),
-  validator: inputValidator,
+  services: {
+    layerResolver,
+    platformManifestGenerator: manifestGenerator,
+    validator: inputValidator,
+  },
 });
 
 if (output.length > 0) {

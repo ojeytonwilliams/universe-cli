@@ -1,9 +1,12 @@
 import { join } from "node:path";
-import { CreateUnsupportedCombinationError, ManifestInvalidError } from "./errors/cli-errors.js";
+import {
+  CreateUnsupportedCombinationError,
+  ManifestInvalidError,
+  BadArgumentsError,
+} from "./errors/cli-errors.js";
 import type { DeployReceipt, DeployRequest } from "./ports/deploy-client.js";
 import type { FilesystemWriter } from "./ports/filesystem-writer.js";
 import type { ListRequest, ListResponse } from "./ports/list-client.js";
-import type { ObservabilityClient } from "./ports/observability-client.js";
 import type { PromoteReceipt, PromoteRequest } from "./ports/promote-client.js";
 import type { CreateSelections, PromptPort } from "./ports/prompt-port.js";
 import type { RollbackReceipt, RollbackRequest } from "./ports/rollback-client.js";
@@ -17,11 +20,18 @@ interface CliResult {
   output: string;
 }
 
-interface CliDependencies {
-  cwd: string;
+interface Services {
+  layerResolver: { resolveLayers(input: CreateSelections): ResolvedLayerSet };
+  platformManifestGenerator: {
+    generatePlatformManifest(input: CreateSelections): string;
+    validateManifest(yaml: string): PlatformManifest;
+  };
+  validator: { validateCreateInput(input: CreateSelections): CreateSelections };
+}
+
+interface Adapters {
   deployClient: { deploy(request: DeployRequest): Promise<DeployReceipt> };
   filesystemWriter: FilesystemWriter;
-  layerResolver: { resolveLayers(input: CreateSelections): ResolvedLayerSet };
   listClient: { getList(request: ListRequest): Promise<ListResponse> };
   logsClient: {
     getLogs(request: { environment: string; manifest: PlatformManifest }): Promise<{
@@ -29,11 +39,6 @@ interface CliDependencies {
       environment: string;
       name: string;
     }>;
-  };
-  observability: ObservabilityClient;
-  platformManifestGenerator: {
-    generatePlatformManifest(input: CreateSelections): string;
-    validateManifest(yaml: string): PlatformManifest;
   };
   projectReader: { readFile(filePath: string): Promise<string> };
   promoteClient: { promote(request: PromoteRequest): Promise<PromoteReceipt> };
@@ -44,18 +49,18 @@ interface CliDependencies {
   rollbackClient: { rollback(request: RollbackRequest): Promise<RollbackReceipt> };
   statusClient: { getStatus(request: StatusRequest): Promise<StatusResponse> };
   teardownClient: { teardown(request: TeardownRequest): Promise<TeardownReceipt> };
-  validator: { validateCreateInput(input: CreateSelections): CreateSelections };
 }
 
 type HandlerResult = CliResult & { meta?: Record<string, string> };
 
 const readAndValidateManifest = async (
   platformYamlPath: string,
-  deps: CliDependencies,
+  services: Pick<Services, "platformManifestGenerator">,
+  adapters: Pick<Adapters, "projectReader">,
 ): Promise<PlatformManifest> => {
-  const yaml = await deps.projectReader.readFile(platformYamlPath);
+  const yaml = await adapters.projectReader.readFile(platformYamlPath);
   try {
-    return deps.platformManifestGenerator.validateManifest(yaml);
+    return services.platformManifestGenerator.validateManifest(yaml);
   } catch (validationError) {
     throw new ManifestInvalidError(
       platformYamlPath,
@@ -64,43 +69,57 @@ const readAndValidateManifest = async (
   }
 };
 
-const handleCreate = async (argv: string[], deps: CliDependencies): Promise<HandlerResult> => {
+const handleCreate = async (
+  argv: string[],
+  cwd: string,
+  deps: {
+    services: Pick<Services, "layerResolver" | "platformManifestGenerator" | "validator">;
+    adapters: Pick<Adapters, "filesystemWriter" | "promptPort">;
+  },
+): Promise<HandlerResult> => {
+  const { services, adapters } = deps;
   if (argv.length > 1) {
-    return {
-      exitCode: 1,
-      output:
-        'The "create" command is interactive-only in this spike. Run "universe create" with no additional arguments.',
-    };
+    throw new BadArgumentsError(
+      'The "create" command is interactive-only in this spike. Run "universe create" with no additional arguments.',
+    );
   }
 
-  const promptResult = await deps.promptPort.promptForCreateInputs();
+  const promptResult = await adapters.promptPort.promptForCreateInputs();
 
   if (promptResult === null || !promptResult.confirmed) {
     return { exitCode: 1, output: "Create cancelled before writing files." };
   }
 
-  const validatedInput = deps.validator.validateCreateInput(promptResult);
-  const resolvedLayers = deps.layerResolver.resolveLayers(validatedInput);
-  const targetDirectory = join(deps.cwd, validatedInput.name);
+  const validatedInput = services.validator.validateCreateInput(promptResult);
+  const resolvedLayers = services.layerResolver.resolveLayers(validatedInput);
+  const targetDirectory = join(cwd, validatedInput.name);
   const projectFiles = {
     ...resolvedLayers.files,
-    "platform.yaml": deps.platformManifestGenerator.generatePlatformManifest(validatedInput),
+    "platform.yaml": services.platformManifestGenerator.generatePlatformManifest(validatedInput),
   };
 
-  await deps.filesystemWriter.writeProject(targetDirectory, projectFiles);
+  await adapters.filesystemWriter.writeProject(targetDirectory, projectFiles);
 
   return { exitCode: 0, output: `Scaffolded project at ${targetDirectory}` };
 };
 
-const handleRegister = async (argv: string[], deps: CliDependencies): Promise<HandlerResult> => {
+const handleRegister = async (
+  argv: string[],
+  cwd: string,
+  deps: {
+    services: Pick<Services, "platformManifestGenerator">;
+    adapters: Pick<Adapters, "projectReader" | "registrationClient">;
+  },
+): Promise<HandlerResult> => {
+  const { services, adapters } = deps;
   if (argv.length > 2) {
-    return { exitCode: 1, output: "Too many arguments. Usage: universe register [directory]" };
+    throw new BadArgumentsError("Too many arguments. Usage: universe register [directory]");
   }
 
-  const platformYamlDir = argv[1] ?? deps.cwd;
+  const platformYamlDir = argv[1] ?? cwd;
   const platformYamlPath = join(platformYamlDir, "platform.yaml");
-  const manifest = await readAndValidateManifest(platformYamlPath, deps);
-  const receipt = await deps.registrationClient.register(manifest);
+  const manifest = await readAndValidateManifest(platformYamlPath, services, adapters);
+  const receipt = await adapters.registrationClient.register(manifest);
 
   return {
     exitCode: 0,
@@ -109,15 +128,22 @@ const handleRegister = async (argv: string[], deps: CliDependencies): Promise<Ha
   };
 };
 
-const handleDeploy = async (argv: string[], deps: CliDependencies): Promise<HandlerResult> => {
+const handleDeploy = async (
+  argv: string[],
+  cwd: string,
+  deps: {
+    services: Pick<Services, "platformManifestGenerator">;
+    adapters: Pick<Adapters, "deployClient" | "projectReader">;
+  },
+): Promise<HandlerResult> => {
+  const { services, adapters } = deps;
   if (argv.length > 3) {
-    return {
-      exitCode: 1,
-      output: "Too many arguments. Usage: universe deploy [directory] [environment]",
-    };
+    throw new BadArgumentsError(
+      "Too many arguments. Usage: universe deploy [directory] [environment]",
+    );
   }
 
-  const platformYamlDir = argv[1] ?? deps.cwd;
+  const platformYamlDir = argv[1] ?? cwd;
   const environment = argv[2] ?? "preview";
 
   if (environment !== "preview" && environment !== "production") {
@@ -127,8 +153,8 @@ const handleDeploy = async (argv: string[], deps: CliDependencies): Promise<Hand
   }
 
   const platformYamlPath = join(platformYamlDir, "platform.yaml");
-  const manifest = await readAndValidateManifest(platformYamlPath, deps);
-  const receipt = await deps.deployClient.deploy({ environment, manifest });
+  const manifest = await readAndValidateManifest(platformYamlPath, services, adapters);
+  const receipt = await adapters.deployClient.deploy({ environment, manifest });
 
   return {
     exitCode: 0,
@@ -137,15 +163,22 @@ const handleDeploy = async (argv: string[], deps: CliDependencies): Promise<Hand
   };
 };
 
-const handlePromote = async (argv: string[], deps: CliDependencies): Promise<HandlerResult> => {
+const handlePromote = async (
+  argv: string[],
+  cwd: string,
+  deps: {
+    services: Pick<Services, "platformManifestGenerator">;
+    adapters: Pick<Adapters, "projectReader" | "promoteClient">;
+  },
+): Promise<HandlerResult> => {
+  const { services, adapters } = deps;
   if (argv.length > 3) {
-    return {
-      exitCode: 1,
-      output: "Too many arguments. Usage: universe promote [directory] [target-environment]",
-    };
+    throw new BadArgumentsError(
+      "Too many arguments. Usage: universe promote [directory] [target-environment]",
+    );
   }
 
-  const platformYamlDir = argv[1] ?? deps.cwd;
+  const platformYamlDir = argv[1] ?? cwd;
   const targetEnvironment = argv[2] ?? "production";
 
   if (targetEnvironment !== "preview" && targetEnvironment !== "production") {
@@ -155,8 +188,8 @@ const handlePromote = async (argv: string[], deps: CliDependencies): Promise<Han
   }
 
   const platformYamlPath = join(platformYamlDir, "platform.yaml");
-  const manifest = await readAndValidateManifest(platformYamlPath, deps);
-  const receipt = await deps.promoteClient.promote({ manifest, targetEnvironment });
+  const manifest = await readAndValidateManifest(platformYamlPath, services, adapters);
+  const receipt = await adapters.promoteClient.promote({ manifest, targetEnvironment });
 
   return {
     exitCode: 0,
@@ -165,15 +198,22 @@ const handlePromote = async (argv: string[], deps: CliDependencies): Promise<Han
   };
 };
 
-const handleRollback = async (argv: string[], deps: CliDependencies): Promise<HandlerResult> => {
+const handleRollback = async (
+  argv: string[],
+  cwd: string,
+  deps: {
+    services: Pick<Services, "platformManifestGenerator">;
+    adapters: Pick<Adapters, "projectReader" | "rollbackClient">;
+  },
+): Promise<HandlerResult> => {
+  const { services, adapters } = deps;
   if (argv.length > 3) {
-    return {
-      exitCode: 1,
-      output: "Too many arguments. Usage: universe rollback [directory] [target-environment]",
-    };
+    throw new BadArgumentsError(
+      "Too many arguments. Usage: universe rollback [directory] [target-environment]",
+    );
   }
 
-  const platformYamlDir = argv[1] ?? deps.cwd;
+  const platformYamlDir = argv[1] ?? cwd;
   const targetEnvironment = argv[2] ?? "production";
 
   if (targetEnvironment !== "preview" && targetEnvironment !== "production") {
@@ -183,8 +223,8 @@ const handleRollback = async (argv: string[], deps: CliDependencies): Promise<Ha
   }
 
   const platformYamlPath = join(platformYamlDir, "platform.yaml");
-  const manifest = await readAndValidateManifest(platformYamlPath, deps);
-  const receipt = await deps.rollbackClient.rollback({ manifest, targetEnvironment });
+  const manifest = await readAndValidateManifest(platformYamlPath, services, adapters);
+  const receipt = await adapters.rollbackClient.rollback({ manifest, targetEnvironment });
 
   return {
     exitCode: 0,
@@ -193,15 +233,22 @@ const handleRollback = async (argv: string[], deps: CliDependencies): Promise<Ha
   };
 };
 
-const handleLogs = async (argv: string[], deps: CliDependencies): Promise<HandlerResult> => {
+const handleLogs = async (
+  argv: string[],
+  cwd: string,
+  deps: {
+    services: Pick<Services, "platformManifestGenerator">;
+    adapters: Pick<Adapters, "logsClient" | "projectReader">;
+  },
+): Promise<HandlerResult> => {
+  const { services, adapters } = deps;
   if (argv.length > 3) {
-    return {
-      exitCode: 1,
-      output: "Too many arguments. Usage: universe logs [directory] [environment]",
-    };
+    throw new BadArgumentsError(
+      "Too many arguments. Usage: universe logs [directory] [environment]",
+    );
   }
 
-  const platformYamlDir = argv[1] ?? deps.cwd;
+  const platformYamlDir = argv[1] ?? cwd;
   const environment = argv[2] ?? "preview";
 
   if (environment !== "preview" && environment !== "production") {
@@ -211,8 +258,8 @@ const handleLogs = async (argv: string[], deps: CliDependencies): Promise<Handle
   }
 
   const platformYamlPath = join(platformYamlDir, "platform.yaml");
-  const manifest = await readAndValidateManifest(platformYamlPath, deps);
-  const response = await deps.logsClient.getLogs({ environment, manifest });
+  const manifest = await readAndValidateManifest(platformYamlPath, services, adapters);
+  const response = await adapters.logsClient.getLogs({ environment, manifest });
 
   const renderedEntries = response.entries
     .map((e) => `${e.timestamp} [${e.level}] ${e.message}`)
@@ -225,15 +272,22 @@ const handleLogs = async (argv: string[], deps: CliDependencies): Promise<Handle
   };
 };
 
-const handleList = async (argv: string[], deps: CliDependencies): Promise<HandlerResult> => {
+const handleList = async (
+  argv: string[],
+  cwd: string,
+  deps: {
+    services: Pick<Services, "platformManifestGenerator">;
+    adapters: Pick<Adapters, "listClient" | "projectReader">;
+  },
+): Promise<HandlerResult> => {
+  const { services, adapters } = deps;
   if (argv.length > 3) {
-    return {
-      exitCode: 1,
-      output: "Too many arguments. Usage: universe list [directory] [environment]",
-    };
+    throw new BadArgumentsError(
+      "Too many arguments. Usage: universe list [directory] [environment]",
+    );
   }
 
-  const platformYamlDir = argv[1] ?? deps.cwd;
+  const platformYamlDir = argv[1] ?? cwd;
   const environment = argv[2] ?? "preview";
 
   if (environment !== "preview" && environment !== "production") {
@@ -243,8 +297,8 @@ const handleList = async (argv: string[], deps: CliDependencies): Promise<Handle
   }
 
   const platformYamlPath = join(platformYamlDir, "platform.yaml");
-  const manifest = await readAndValidateManifest(platformYamlPath, deps);
-  const response = await deps.listClient.getList({ environment, manifest });
+  const manifest = await readAndValidateManifest(platformYamlPath, services, adapters);
+  const response = await adapters.listClient.getList({ environment, manifest });
 
   const renderedEntries = response.deployments
     .map((d) => `  ${d.deploymentId} — ${d.state} (deployed: ${d.deployedAt})`)
@@ -257,15 +311,22 @@ const handleList = async (argv: string[], deps: CliDependencies): Promise<Handle
   };
 };
 
-const handleStatus = async (argv: string[], deps: CliDependencies): Promise<HandlerResult> => {
+const handleStatus = async (
+  argv: string[],
+  cwd: string,
+  deps: {
+    services: Pick<Services, "platformManifestGenerator">;
+    adapters: Pick<Adapters, "projectReader" | "statusClient">;
+  },
+): Promise<HandlerResult> => {
+  const { services, adapters } = deps;
   if (argv.length > 3) {
-    return {
-      exitCode: 1,
-      output: "Too many arguments. Usage: universe status [directory] [environment]",
-    };
+    throw new BadArgumentsError(
+      "Too many arguments. Usage: universe status [directory] [environment]",
+    );
   }
 
-  const platformYamlDir = argv[1] ?? deps.cwd;
+  const platformYamlDir = argv[1] ?? cwd;
   const environment = argv[2] ?? "preview";
 
   if (environment !== "preview" && environment !== "production") {
@@ -275,8 +336,8 @@ const handleStatus = async (argv: string[], deps: CliDependencies): Promise<Hand
   }
 
   const platformYamlPath = join(platformYamlDir, "platform.yaml");
-  const manifest = await readAndValidateManifest(platformYamlPath, deps);
-  const response = await deps.statusClient.getStatus({ environment, manifest });
+  const manifest = await readAndValidateManifest(platformYamlPath, services, adapters);
+  const response = await adapters.statusClient.getStatus({ environment, manifest });
 
   return {
     exitCode: 0,
@@ -285,15 +346,22 @@ const handleStatus = async (argv: string[], deps: CliDependencies): Promise<Hand
   };
 };
 
-const handleTeardown = async (argv: string[], deps: CliDependencies): Promise<HandlerResult> => {
+const handleTeardown = async (
+  argv: string[],
+  cwd: string,
+  deps: {
+    services: Pick<Services, "platformManifestGenerator">;
+    adapters: Pick<Adapters, "projectReader" | "teardownClient">;
+  },
+): Promise<HandlerResult> => {
+  const { services, adapters } = deps;
   if (argv.length > 3) {
-    return {
-      exitCode: 1,
-      output: "Too many arguments. Usage: universe teardown [directory] [target-environment]",
-    };
+    throw new BadArgumentsError(
+      "Too many arguments. Usage: universe teardown [directory] [target-environment]",
+    );
   }
 
-  const platformYamlDir = argv[1] ?? deps.cwd;
+  const platformYamlDir = argv[1] ?? cwd;
   const targetEnvironment = argv[2] ?? "preview";
 
   if (targetEnvironment !== "preview" && targetEnvironment !== "production") {
@@ -303,8 +371,8 @@ const handleTeardown = async (argv: string[], deps: CliDependencies): Promise<Ha
   }
 
   const platformYamlPath = join(platformYamlDir, "platform.yaml");
-  const manifest = await readAndValidateManifest(platformYamlPath, deps);
-  const receipt = await deps.teardownClient.teardown({ manifest, targetEnvironment });
+  const manifest = await readAndValidateManifest(platformYamlPath, services, adapters);
+  const receipt = await adapters.teardownClient.teardown({ manifest, targetEnvironment });
 
   return {
     exitCode: 0,
@@ -324,4 +392,4 @@ export {
   handleStatus,
   handleTeardown,
 };
-export type { CliDependencies, CliResult, HandlerResult };
+export type { Adapters, CliResult, HandlerResult, Services };

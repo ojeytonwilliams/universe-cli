@@ -72,18 +72,23 @@ const collectGeneratedFiles = (directory: string): Record<string, string> => {
 };
 
 const makeDeps = (cwd: string, promptPort: PromptPort, layerRegistry?: LayerRegistry) => {
-  const stubs = createAdapterStubs();
+  const { observability, ...adapters } = createAdapterStubs();
   return {
-    ...stubs,
+    adapters: {
+      ...adapters,
+      filesystemWriter: new LocalFilesystemWriter(),
+      projectReader: new LocalProjectReader(),
+      promptPort,
+    },
     cwd,
-    filesystemWriter: new LocalFilesystemWriter(),
-    layerResolver: layerRegistry
-      ? new LayerCompositionService(layerRegistry)
-      : new LayerCompositionService(),
-    platformManifestGenerator: new PlatformManifestService(),
-    projectReader: new LocalProjectReader(),
-    promptPort,
-    validator: new CreateInputValidationService((path) => existsSync(join(cwd, path))),
+    observability,
+    services: {
+      layerResolver: layerRegistry
+        ? new LayerCompositionService(layerRegistry)
+        : new LayerCompositionService(),
+      platformManifestGenerator: new PlatformManifestService(),
+      validator: new CreateInputValidationService((path) => existsSync(join(cwd, path))),
+    },
   };
 };
 

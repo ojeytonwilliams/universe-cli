@@ -1,6 +1,7 @@
 import { range } from "lodash";
 
 import {
+  BadArgumentsError,
   CreateUnsupportedCombinationError,
   CreateUnsupportedFrameworkError,
   CreateUnsupportedRuntimeError,
@@ -41,6 +42,7 @@ describe("error exit codes", () => {
       new CreateUnsupportedCombinationError("static + database"),
       new CreateUnsupportedFrameworkError("fastify", "nodejs"),
       new CreateUnsupportedRuntimeError("python"),
+      new BadArgumentsError("bad args"),
     ];
   });
 
@@ -61,6 +63,14 @@ describe(CliError, () => {
     const error = new InvalidNameError("bad-name");
 
     expect(error).toBeInstanceOf(CliError);
+  });
+});
+
+describe(BadArgumentsError, () => {
+  it("passes the message through without modification", () => {
+    const error = new BadArgumentsError("bad args");
+
+    expect(error.message).toBe("bad args");
   });
 });
 

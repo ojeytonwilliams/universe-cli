@@ -26,17 +26,21 @@ const createPromptPort = (selection: CreateSelections | null): PromptPort => ({
 });
 
 const makeDeps = (cwd: string, promptPort: PromptPort) => {
-  const stubs = createAdapterStubs();
+  const { observability, ...adapters } = createAdapterStubs();
   return {
+    adapters: {
+      ...adapters,
+      filesystemWriter: new LocalFilesystemWriter(),
+      projectReader: new LocalProjectReader(),
+      promptPort,
+    },
     cwd,
-    ...stubs,
-    deployClient: stubs.deployClient,
-    filesystemWriter: new LocalFilesystemWriter(),
-    layerResolver: new LayerCompositionService(),
-    platformManifestGenerator: new PlatformManifestService(),
-    projectReader: new LocalProjectReader(),
-    promptPort,
-    validator: new CreateInputValidationService((path) => existsSync(join(cwd, path))),
+    observability,
+    services: {
+      layerResolver: new LayerCompositionService(),
+      platformManifestGenerator: new PlatformManifestService(),
+      validator: new CreateInputValidationService((path) => existsSync(join(cwd, path))),
+    },
   };
 };
 

@@ -44,76 +44,82 @@ const listDeps = (
   validator = successValidator,
   listClient = successListClient,
 ) => ({
+  adapters: {
+    deployClient: {
+      deploy(
+        _request: never,
+      ): Promise<{ deploymentId: string; environment: string; name: string }> {
+        return Promise.reject(new Error("deployClient not used in list tests"));
+      },
+    },
+    filesystemWriter: {
+      writeProject(_targetDirectory: never): Promise<void> {
+        return Promise.reject(new Error("filesystemWriter not used in list tests"));
+      },
+    },
+    listClient,
+    logsClient: {
+      getLogs(_request: never): Promise<never> {
+        return Promise.reject(new Error("logsClient not used in list tests"));
+      },
+    },
+    projectReader: reader,
+    promoteClient: {
+      promote(
+        _request: never,
+      ): Promise<{ name: string; promotionId: string; targetEnvironment: string }> {
+        return Promise.reject(new Error("promoteClient not used in list tests"));
+      },
+    },
+    promptPort: {
+      promptForCreateInputs() {
+        return Promise.resolve(null);
+      },
+    },
+    registrationClient: {
+      register(_manifest: never): Promise<{ name: string; registrationId: string }> {
+        return Promise.reject(new Error("registrationClient not used in list tests"));
+      },
+    },
+    rollbackClient: {
+      rollback(
+        _request: never,
+      ): Promise<{ name: string; rollbackId: string; targetEnvironment: string }> {
+        return Promise.reject(new Error("rollbackClient not used in list tests"));
+      },
+    },
+    statusClient: {
+      getStatus(_request: never): Promise<never> {
+        return Promise.reject(new Error("statusClient not used in list tests"));
+      },
+    },
+    teardownClient: {
+      teardown(_request: never): Promise<never> {
+        return Promise.reject(new Error("teardownClient not used in list tests"));
+      },
+    },
+  },
   cwd: "/workspace",
-  deployClient: {
-    deploy(_request: never): Promise<{ deploymentId: string; environment: string; name: string }> {
-      return Promise.reject(new Error("deployClient not used in list tests"));
-    },
-  },
-  filesystemWriter: {
-    writeProject(_targetDirectory: never): Promise<void> {
-      return Promise.reject(new Error("filesystemWriter not used in list tests"));
-    },
-  },
-  layerResolver: {
-    resolveLayers(_input: never): never {
-      throw new Error("layerResolver not used in list tests");
-    },
-  },
-  listClient,
-  logsClient: {
-    getLogs(_request: never): Promise<never> {
-      return Promise.reject(new Error("logsClient not used in list tests"));
-    },
-  },
   observability: {
     error() {},
     track() {},
   },
-  platformManifestGenerator: {
-    generatePlatformManifest(_input: never): never {
-      throw new Error("generatePlatformManifest not used in list tests");
+  services: {
+    layerResolver: {
+      resolveLayers(_input: never): never {
+        throw new Error("layerResolver not used in list tests");
+      },
     },
-    validateManifest: validator,
-  },
-  projectReader: reader,
-  promoteClient: {
-    promote(
-      _request: never,
-    ): Promise<{ name: string; promotionId: string; targetEnvironment: string }> {
-      return Promise.reject(new Error("promoteClient not used in list tests"));
+    platformManifestGenerator: {
+      generatePlatformManifest(_input: never): never {
+        throw new Error("generatePlatformManifest not used in list tests");
+      },
+      validateManifest: validator,
     },
-  },
-  promptPort: {
-    promptForCreateInputs() {
-      return Promise.resolve(null);
-    },
-  },
-  registrationClient: {
-    register(_manifest: never): Promise<{ name: string; registrationId: string }> {
-      return Promise.reject(new Error("registrationClient not used in list tests"));
-    },
-  },
-  rollbackClient: {
-    rollback(
-      _request: never,
-    ): Promise<{ name: string; rollbackId: string; targetEnvironment: string }> {
-      return Promise.reject(new Error("rollbackClient not used in list tests"));
-    },
-  },
-  statusClient: {
-    getStatus(_request: never): Promise<never> {
-      return Promise.reject(new Error("statusClient not used in list tests"));
-    },
-  },
-  teardownClient: {
-    teardown(_request: never): Promise<never> {
-      return Promise.reject(new Error("teardownClient not used in list tests"));
-    },
-  },
-  validator: {
-    validateCreateInput(_input: never): never {
-      throw new Error("validator not used in list tests");
+    validator: {
+      validateCreateInput(_input: never): never {
+        throw new Error("validator not used in list tests");
+      },
     },
   },
 });
@@ -198,7 +204,7 @@ describe("list", () => {
   it("exits when more than two arguments are provided", async () => {
     const result = await runCli(["list", "/dir", "preview", "extra"], listDeps());
 
-    expect(result.exitCode).toBe(1);
+    expect(result.exitCode).toBe(18);
   });
 
   it("exits when environment is not preview or production", async () => {

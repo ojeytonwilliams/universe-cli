@@ -36,6 +36,7 @@ Expose all commands defined in ADR-007:
 - Running `universe --help` shows all 9 commands.
 - Commands whose port contracts have been defined and whose stub adapters have been implemented are fully implemented.
 - Commands whose port contracts have not yet been defined emit a standardized `DeferredCommandError`.
+- All commands validate their arguments and throw a `BadArgumentsError` for invalid or excessive arguments, ensuring consistent error handling and messaging for argument validation failures.
 - The standardized non-implemented contract defines one exact message template and one exact exit code, shared by all commands still in the deferred state.
 
 ### FR-2 `create` Local Scaffolding Flow

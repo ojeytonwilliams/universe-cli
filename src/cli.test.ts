@@ -1,3 +1,4 @@
+// oxlint-disable max-lines
 import type { FilesystemWriter } from "./ports/filesystem-writer.js";
 import type { ObservabilityClient } from "./ports/observability-client.js";
 import type { CreateSelections, PromptPort } from "./ports/prompt-port.js";
@@ -173,22 +174,26 @@ const createDeps = (
   validator: { validateCreateInput(input: CreateSelections): CreateSelections },
   filesystemWriter: FilesystemWriter = recordingWriter,
 ) => ({
+  adapters: {
+    deployClient: defaultDeployClient,
+    filesystemWriter,
+    listClient: defaultListClient,
+    logsClient: defaultLogsClient,
+    projectReader: defaultProjectReader,
+    promoteClient: defaultPromoteClient,
+    promptPort,
+    registrationClient: defaultRegistrationClient,
+    rollbackClient: defaultRollbackClient,
+    statusClient: defaultStatusClient,
+    teardownClient: defaultTeardownClient,
+  },
   cwd: "/workspace",
-  deployClient: defaultDeployClient,
-  filesystemWriter,
-  layerResolver: passThroughLayerResolver,
-  listClient: defaultListClient,
-  logsClient: defaultLogsClient,
   observability: client,
-  platformManifestGenerator: manifestGenerator,
-  projectReader: defaultProjectReader,
-  promoteClient: defaultPromoteClient,
-  promptPort,
-  registrationClient: defaultRegistrationClient,
-  rollbackClient: defaultRollbackClient,
-  statusClient: defaultStatusClient,
-  teardownClient: defaultTeardownClient,
-  validator,
+  services: {
+    layerResolver: passThroughLayerResolver,
+    platformManifestGenerator: manifestGenerator,
+    validator,
+  },
 });
 
 describe(runCli, () => {
@@ -306,12 +311,17 @@ describe(runCli, () => {
       reader = successReader,
       validator = successValidator,
       registrationClient = successClient,
-    ) => ({
-      ...createDeps(createPrompt, passThroughValidator),
-      platformManifestGenerator: { ...manifestGenerator, validateManifest: validator },
-      projectReader: reader,
-      registrationClient,
-    });
+    ) => {
+      const base = createDeps(createPrompt, passThroughValidator);
+      return {
+        ...base,
+        adapters: { ...base.adapters, projectReader: reader, registrationClient },
+        services: {
+          ...base.services,
+          platformManifestGenerator: { ...manifestGenerator, validateManifest: validator },
+        },
+      };
+    };
 
     it("exits 0 on successful registration", async () => {
       const result = await runCli(["register"], registerDeps());
@@ -354,7 +364,7 @@ describe(runCli, () => {
       expect(paths[0]).toBe("/some/project/platform.yaml");
     });
 
-    it("exits 11 when platform.yaml is missing", async () => {
+    it("exits when platform.yaml is missing", async () => {
       const missingReader = {
         readFile(filePath: string) {
           return Promise.reject(new ManifestNotFoundError(filePath));
@@ -366,7 +376,7 @@ describe(runCli, () => {
       expect(result.exitCode).toBe(8);
     });
 
-    it("exits 12 when platform.yaml fails validation", async () => {
+    it("exits when platform.yaml fails validation", async () => {
       const failingValidator = (_yaml: string): PlatformManifest => {
         throw new Error("invalid schema");
       };
@@ -376,7 +386,7 @@ describe(runCli, () => {
       expect(result.exitCode).toBe(8);
     });
 
-    it("exits 13 when registration fails", async () => {
+    it("exits when registration fails", async () => {
       const failingClient = {
         register(manifest: PlatformManifest) {
           return Promise.reject(new RegistrationError(manifest.name, "already registered"));
@@ -391,10 +401,10 @@ describe(runCli, () => {
       expect(result.exitCode).toBe(9);
     });
 
-    it("exits 1 when more than one argument is provided", async () => {
+    it("exits when more than one argument is provided", async () => {
       const result = await runCli(["register", "dir1", "dir2"], registerDeps());
 
-      expect(result.exitCode).toBe(1);
+      expect(result.exitCode).toBe(18);
     });
   });
 
@@ -430,12 +440,17 @@ describe(runCli, () => {
       reader = successReader,
       validator = successValidator,
       deployClient = successDeployClient,
-    ) => ({
-      ...createDeps(createPrompt, passThroughValidator),
-      deployClient,
-      platformManifestGenerator: { ...manifestGenerator, validateManifest: validator },
-      projectReader: reader,
-    });
+    ) => {
+      const base = createDeps(createPrompt, passThroughValidator);
+      return {
+        ...base,
+        adapters: { ...base.adapters, deployClient, projectReader: reader },
+        services: {
+          ...base.services,
+          platformManifestGenerator: { ...manifestGenerator, validateManifest: validator },
+        },
+      };
+    };
 
     it("exits 0 on successful deployment", async () => {
       const result = await runCli(["deploy"], deployDeps());
@@ -469,7 +484,7 @@ describe(runCli, () => {
       expect(requests[0]?.environment).toBe("preview");
     });
 
-    it("exits 11 when platform.yaml is missing", async () => {
+    it("exits when platform.yaml is missing", async () => {
       const missingReader = {
         readFile(filePath: string) {
           return Promise.reject(new ManifestNotFoundError(filePath));
@@ -481,7 +496,7 @@ describe(runCli, () => {
       expect(result.exitCode).toBe(8);
     });
 
-    it("exits 12 when platform.yaml fails validation", async () => {
+    it("exits when platform.yaml fails validation", async () => {
       const failingValidator = (_yaml: string): PlatformManifest => {
         throw new Error("invalid schema");
       };
@@ -491,7 +506,7 @@ describe(runCli, () => {
       expect(result.exitCode).toBe(8);
     });
 
-    it("exits 14 when deployment fails", async () => {
+    it("exits when deployment fails", async () => {
       const failingClient = {
         deploy(request: { environment: string; manifest: PlatformManifest }) {
           return Promise.reject(new DeploymentError(request.manifest.name, "timeout"));
@@ -506,10 +521,10 @@ describe(runCli, () => {
       expect(result.exitCode).toBe(10);
     });
 
-    it("exits 1 when more than two arguments are provided", async () => {
+    it("exits when more than two arguments are provided", async () => {
       const result = await runCli(["deploy", "/dir", "preview", "extra"], deployDeps());
 
-      expect(result.exitCode).toBe(1);
+      expect(result.exitCode).toBe(18);
     });
 
     it("exits 6 when environment is not preview or production", async () => {
@@ -608,12 +623,17 @@ describe(runCli, () => {
       reader = successReader,
       validator = successValidator,
       promoteClient = successPromoteClient,
-    ) => ({
-      ...createDeps(createPrompt, passThroughValidator),
-      platformManifestGenerator: { ...manifestGenerator, validateManifest: validator },
-      projectReader: reader,
-      promoteClient,
-    });
+    ) => {
+      const base = createDeps(createPrompt, passThroughValidator);
+      return {
+        ...base,
+        adapters: { ...base.adapters, projectReader: reader, promoteClient },
+        services: {
+          ...base.services,
+          platformManifestGenerator: { ...manifestGenerator, validateManifest: validator },
+        },
+      };
+    };
 
     it("exits 0 on successful promotion", async () => {
       const result = await runCli(["promote"], promoteDeps());
@@ -657,7 +677,7 @@ describe(runCli, () => {
       expect(paths[0]).toBe("/some/project/platform.yaml");
     });
 
-    it("exits 11 when platform.yaml is missing", async () => {
+    it("exits when platform.yaml is missing", async () => {
       const missingReader = {
         readFile(filePath: string) {
           return Promise.reject(new ManifestNotFoundError(filePath));
@@ -669,7 +689,7 @@ describe(runCli, () => {
       expect(result.exitCode).toBe(8);
     });
 
-    it("exits 12 when platform.yaml fails validation", async () => {
+    it("exits when platform.yaml fails validation", async () => {
       const failingValidator = (_yaml: string): PlatformManifest => {
         throw new Error("invalid schema");
       };
@@ -679,7 +699,7 @@ describe(runCli, () => {
       expect(result.exitCode).toBe(8);
     });
 
-    it("exits 15 when promotion fails", async () => {
+    it("exits when promotion fails", async () => {
       const failingClient = {
         promote(request: { manifest: PlatformManifest; targetEnvironment: string }) {
           return Promise.reject(new PromotionError(request.manifest.name, "timeout"));
@@ -694,13 +714,13 @@ describe(runCli, () => {
       expect(result.exitCode).toBe(11);
     });
 
-    it("exits 1 when more than two arguments are provided", async () => {
+    it("exits when more than two arguments are provided", async () => {
       const result = await runCli(["promote", "/dir", "production", "extra"], promoteDeps());
 
-      expect(result.exitCode).toBe(1);
+      expect(result.exitCode).toBe(18);
     });
 
-    it("exits 6 when target environment is not preview or production", async () => {
+    it("exits when target environment is not preview or production", async () => {
       const result = await runCli(["promote", "/dir", "staging"], promoteDeps());
 
       expect(result.exitCode).toBe(4);
@@ -814,12 +834,17 @@ describe(runCli, () => {
       reader = successReader,
       validator = successValidator,
       rollbackClient = successRollbackClient,
-    ) => ({
-      ...createDeps(createPrompt, passThroughValidator),
-      platformManifestGenerator: { ...manifestGenerator, validateManifest: validator },
-      projectReader: reader,
-      rollbackClient,
-    });
+    ) => {
+      const base = createDeps(createPrompt, passThroughValidator);
+      return {
+        ...base,
+        adapters: { ...base.adapters, projectReader: reader, rollbackClient },
+        services: {
+          ...base.services,
+          platformManifestGenerator: { ...manifestGenerator, validateManifest: validator },
+        },
+      };
+    };
 
     it("exits 0 on successful rollback", async () => {
       const result = await runCli(["rollback"], rollbackDeps());
@@ -903,7 +928,7 @@ describe(runCli, () => {
     it("exits 1 when more than two arguments are provided", async () => {
       const result = await runCli(["rollback", "/dir", "production", "extra"], rollbackDeps());
 
-      expect(result.exitCode).toBe(1);
+      expect(result.exitCode).toBe(18);
     });
 
     it("exits 6 when target environment is not preview or production", async () => {

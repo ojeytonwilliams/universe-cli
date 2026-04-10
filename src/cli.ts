@@ -1,5 +1,6 @@
 import { CliError } from "./errors/cli-errors.js";
 import { safeError, safeTrack } from "./ports/observability-client.js";
+import type { ObservabilityClient } from "./ports/observability-client.js";
 import {
   handleCreate,
   handleDeploy,
@@ -11,7 +12,7 @@ import {
   handleStatus,
   handleTeardown,
 } from "./commands.js";
-import type { CliDependencies, CliResult, HandlerResult } from "./commands.js";
+import type { Adapters, CliResult, HandlerResult, Services } from "./commands.js";
 
 const HELP_TEXT = `
 Usage: universe <command>
@@ -31,7 +32,21 @@ Options:
   --help      Show this help message
 `.trim();
 
-type CommandHandler = (argv: string[], deps: CliDependencies) => Promise<HandlerResult>;
+interface CliDependencies {
+  adapters: Adapters;
+  cwd: string;
+  observability: ObservabilityClient;
+  services: Services;
+}
+
+type CommandHandler = (
+  argv: string[],
+  cwd: string,
+  deps: {
+    services: Services;
+    adapters: Adapters;
+  },
+) => Promise<HandlerResult>;
 
 interface CommandDef {
   context?: (value: string | undefined) => Record<string, string>;
@@ -92,7 +107,7 @@ const runCli = async (argv: string[], deps: CliDependencies): Promise<CliResult>
   safeTrack(observability, `${command}.start`, ctx);
 
   try {
-    const result = await def.handler(argv, deps);
+    const result = await def.handler(argv, deps.cwd, deps);
     if (result.exitCode === 0) {
       safeTrack(observability, `${command}.success`, { ...ctx, ...result.meta });
     }

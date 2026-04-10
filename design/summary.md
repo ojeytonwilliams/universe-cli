@@ -50,6 +50,8 @@ Universe CLI is defined in ADR-007, but the backing platform does not exist yet 
   - Port interfaces (domain/application boundary)
   - Stub adapters (infrastructure boundary)
 - **State model for spike:** no lifecycle state store required beyond what `create` needs to scaffold files locally.
+- **Error handling:**
+  - All command handlers validate their arguments and throw a `BadArgumentsError` (exit code 18) for invalid or excessive arguments, ensuring consistent CLI error handling and messaging for argument validation failures.
 - **Testing:**
   - Unit tests for prompt validation and layer selection
   - Contract tests for template/layer and filesystem ports
