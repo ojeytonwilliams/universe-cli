@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.24.0] - 2026-04-10
+
+### Phase 3 — List Command Test Coverage, Guardrails, and Documentation
+
+- **Stub adapter unit tests** (`src/adapters/stub-list-client.test.ts`): deterministic entry ordering, stable field types, repeated calls return same entries, sentinel failure raises `ListError`, instance isolation.
+- **CLI integration tests** (`src/cli.list.test.ts`): 13 tests covering all success and error paths, argument validation, observability, and default environment.
+- **E2E tests** (`src/list.e2e.test.ts`): create-then-list flow confirms output contains project name, environment, and stub deployment ID; sentinel failure exits 19.
+- **Container guard** (`src/container.test.ts`): asserts `listClient` is an instance of `StubListClient`.
+- **Design docs**: LST-001–005 validated in `design/assumptions-register.md`; two new assumptions (LST-N01, LST-N02) captured around response shape and type boundary choices; remaining migration unknowns documented; `design/future-command-expansion.md` lists `list` as implemented at v2.22.0.
+
 ## [2.23.0] - 2026-04-10
 
 ### Phase 2 — List Command Behavior Hardening and UX Consistency

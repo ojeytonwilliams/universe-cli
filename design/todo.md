@@ -59,14 +59,14 @@
 
 ## Phase 3 — Test Coverage, Guardrails, and Documentation
 
-- [ ] CODE: Add unit tests for list stub adapter and port contract behavior
+- [x] CODE: Add unit tests for list stub adapter and port contract behavior
   - Feature: Create `StubListClient` tests covering success, deterministic entries, and simulated failures.
   - Acceptance:
     - Tests verify deterministic entry ordering and stable field values.
     - Tests verify failure path raises `ListError`.
     - Tests verify state isolation between adapter instances when applicable.
 
-- [ ] CODE: Add CLI integration tests for list success and error paths
+- [x] CODE: Add CLI integration tests for list success and error paths
   - Feature: Extend `src/cli.test.ts` list coverage for implemented behavior.
   - Acceptance:
     - Success path validates output and exit code `0`.
@@ -75,14 +75,14 @@
     - List-client failure path validates typed list error exit code.
     - Deferred-command test set excludes `list` and still validates remaining deferred commands.
 
-- [ ] CODE: Add E2E flow for create-then-list and container guard
+- [x] CODE: Add E2E flow for create-then-list and container guard
   - Feature: Add `list.e2e` coverage and spike container guard for list wiring.
   - Acceptance:
     - E2E test scaffolds with `create`, then successfully runs `list` against generated `platform.yaml`.
     - E2E test covers at least one list failure fixture with deterministic assertion.
     - Container guard test asserts `listClient` is an instance of `StubListClient`.
 
-- [ ] TASK: Update design docs and migration notes for list promotion
+- [x] TASK: Update design docs and migration notes for list promotion
   - Acceptance:
     - `design/future-command-expansion.md` marks `list` as implemented in spike mode.
     - `design/assumptions-register.md` records list-specific assumptions and validation outcomes.
