@@ -8,7 +8,6 @@ Document how the remaining deferred commands evolve from the shared non-implemen
 
 The deferred commands are:
 
-- `status`
 - `list`
 - `teardown`
 
@@ -31,6 +30,7 @@ The following commands have been promoted from deferred to fully implemented aga
 | `promote`  | `PromoteClient`      | `StubPromoteClient`      | v2.12.0     |
 | `rollback` | `RollbackClient`     | `StubRollbackClient`     | v2.14.0     |
 | `logs`     | `LogsClient`         | `StubLogsClient`         | v2.16.0     |
+| `status`   | `StatusClient`       | `StubStatusClient`       | v2.18.0     |
 
 Each implemented command:
 
@@ -65,7 +65,7 @@ For each deferred command:
 
 ## Shared Infrastructure Reusable for promoted commands
 
-`register`, `deploy`, `promote`, `rollback`, and `logs` can reuse the following existing infrastructure directly:
+`register`, `deploy`, `promote`, `rollback`, `logs`, and `status` can reuse the following existing infrastructure directly:
 
 - `runCli` command dispatch and result contract (`CliResult`).
 - Shared typed error base (`CliError`) and exit-code mapping style.

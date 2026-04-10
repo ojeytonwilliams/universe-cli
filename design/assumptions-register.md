@@ -371,6 +371,56 @@ Use this register throughout the spike. Update it at the end of each phase.
 
 ---
 
+## Command — `status`
+
+### Current assumptions
+
+| ID      | Port/Area           | Assumption                                                                                                                                       | Why Needed                                                                         | Validation Plan                                                                                    | Status | Notes                                                                           |
+| ------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------- |
+| STS-001 | status command flow | `status` can follow the same manifest-first pattern as the other promoted commands, reading `platform.yaml` from a directory or `cwd` by default | Reuses existing manifest parsing/validation path and keeps CLI behavior consistent | Validate with CLI tests for default-path and explicit-directory status flows                       | open   | Keeps status non-interactive in spike mode                                      |
+| STS-002 | environment scope   | A reduced environment set with `preview` as the default is sufficient for the spike                                                              | Keeps scope small while exercising command-specific state retrieval behavior       | Validate with argument parsing tests, success-path tests, and assumptions review                   | open   | Additional environments can be added when real provider contracts are defined   |
+| STS-003 | stub status adapter | A deterministic stub snapshot is sufficient to validate status UX without simulating real infrastructure state                                   | Avoids premature modeling of provider internals while proving command shape        | Validate with unit tests for stable fields, repeated reads, and explicit failure fixtures          | open   | Stub must remain network-free and snapshot-friendly                             |
+| STS-004 | error taxonomy      | `status` needs a command-specific typed failure (`StatusError`) rather than the shared deferred-command contract once promoted                   | Preserves actionable UX and stable exit semantics after command promotion          | Validate with CLI and adapter tests covering status-client failures                                | open   | Exit code to be assigned; must be unique and documented in `EXIT_CODES`         |
+| STS-005 | observability       | Status telemetry can use the existing `ObservabilityClient` port and must remain best-effort and secret-safe                                     | Avoids introducing a new observability boundary for one command                    | Validate with tests that simulate observability failure and assert status exit/result is unchanged | open   | Payloads exclude secrets; observability throw tested and confirmed non-blocking |
+
+#### Unknowns
+
+| ID      | Port/Area        | Unknown                                                                                          | Risk if Wrong | Decision Needed By                       | Owner    | Notes                                                              |
+| ------- | ---------------- | ------------------------------------------------------------------------------------------------ | ------------- | ---------------------------------------- | -------- | ------------------------------------------------------------------ |
+| STS-U01 | status response  | Whether the real platform will return a simple state enum or a richer status object with history | Medium        | Before replacing the stub adapter        | platform | Keep stub fields minimal but structured for easy schema evolution  |
+| STS-U02 | state vocabulary | Which state values (`deploying`, `deployed`, `failed`, etc.) are canonical in the platform API   | Medium        | Before real status contract is finalized | platform | Spike uses a fixed deterministic state string per stub fixture     |
+| STS-U03 | failure model    | Which provider failure classes should become typed errors beyond `StatusError`                   | Medium        | Before production adapter implementation | platform | Spike keeps one typed status failure to avoid speculative taxonomy |
+
+#### Required adapter/provider capabilities
+
+| ID      | Port/Area                 | Required capability (CLI-owned contract)                                                   | Source command behavior           | Priority    | Notes                                                            |
+| ------- | ------------------------- | ------------------------------------------------------------------------------------------ | --------------------------------- | ----------- | ---------------------------------------------------------------- |
+| STS-C01 | status client             | `getStatus(input) -> response` with normalized `StatusError` failures                      | `universe status` success path    | must-have   | Input should include manifest and target environment             |
+| STS-C02 | project reader            | `readFile(filePath) -> manifestYaml`                                                       | Manifest lookup for status        | must-have   | Reuses existing `ProjectReaderPort` capability from `register`   |
+| STS-C03 | platform manifest service | `validateManifest(yaml) -> PlatformManifest`                                               | Manifest validation before status | must-have   | Reuses existing validation path                                  |
+| STS-C04 | observability client      | `track()` and `error()` remain non-blocking when status emits start/success/failure events | Status telemetry                  | should-have | Must preserve safe wrapper behavior already used by the CLI flow |
+
+#### New assumptions discovered during implementation
+
+| ID  | Port/Area | New assumption | Trigger/Context | Validation Plan | Status | Notes |
+| --- | --------- | -------------- | --------------- | --------------- | ------ | ----- |
+
+#### Validation evidence and outcomes
+
+- Evidence links / artifacts:
+  - [ ] Test(s):
+  - [ ] Notes/docs:
+  - [ ] Decision updates:
+- ## Outcome summary:
+
+#### Impact if assumptions changed
+
+- Affected command behavior: `universe status` argument model, rendered snapshot output, and failure mapping
+- Affected ports/adapters: `StatusClient`, stub status adapter, manifest validation reuse, observability wrappers
+- Required TODO/PRD changes: status TODO phase ordering, status error taxonomy, and migration notes for real adapter parity
+
+---
+
 ## Command Template
 
 ### Command — `<name>`
