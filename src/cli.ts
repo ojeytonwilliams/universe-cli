@@ -1,19 +1,19 @@
 import { join } from "node:path";
 import {
-  CreateUnsupportedCombinationError,
   CliError,
+  CreateUnsupportedCombinationError,
   ManifestInvalidError,
 } from "./errors/cli-errors.js";
 import type { DeployReceipt, DeployRequest } from "./ports/deploy-client.js";
-import type { PromoteReceipt, PromoteRequest } from "./ports/promote-client.js";
+import type { FilesystemWriter } from "./ports/filesystem-writer.js";
 import type { ListRequest, ListResponse } from "./ports/list-client.js";
+import type { ObservabilityClient } from "./ports/observability-client.js";
+import { safeError, safeTrack } from "./ports/observability-client.js";
+import type { PromoteReceipt, PromoteRequest } from "./ports/promote-client.js";
+import type { CreateSelections, PromptPort } from "./ports/prompt-port.js";
 import type { RollbackReceipt, RollbackRequest } from "./ports/rollback-client.js";
 import type { StatusRequest, StatusResponse } from "./ports/status-client.js";
 import type { TeardownReceipt, TeardownRequest } from "./ports/teardown-client.js";
-import type { FilesystemWriter } from "./ports/filesystem-writer.js";
-import type { ObservabilityClient } from "./ports/observability-client.js";
-import { safeError, safeTrack } from "./ports/observability-client.js";
-import type { CreateSelections, PromptPort } from "./ports/prompt-port.js";
 import type { ResolvedLayerSet } from "./services/layer-composition-service.js";
 import type { PlatformManifest } from "./services/platform-manifest-service.js";
 
@@ -61,519 +61,354 @@ interface CliDependencies {
   projectReader: { readFile(filePath: string): Promise<string> };
   promoteClient: { promote(request: PromoteRequest): Promise<PromoteReceipt> };
   promptPort: PromptPort;
-  rollbackClient: { rollback(request: RollbackRequest): Promise<RollbackReceipt> };
   registrationClient: {
     register(manifest: PlatformManifest): Promise<{ name: string; registrationId: string }>;
   };
+  rollbackClient: { rollback(request: RollbackRequest): Promise<RollbackReceipt> };
   statusClient: { getStatus(request: StatusRequest): Promise<StatusResponse> };
   teardownClient: { teardown(request: TeardownRequest): Promise<TeardownReceipt> };
   validator: { validateCreateInput(input: CreateSelections): CreateSelections };
 }
 
+type HandlerResult = CliResult & { meta?: Record<string, string> };
+type CommandHandler = (argv: string[], deps: CliDependencies) => Promise<HandlerResult>;
+
+interface CommandDef {
+  context?: (value: string | undefined) => Record<string, string>;
+  handler: CommandHandler;
+}
+
+const readAndValidateManifest = async (
+  platformYamlPath: string,
+  deps: CliDependencies,
+): Promise<PlatformManifest> => {
+  const yaml = await deps.projectReader.readFile(platformYamlPath);
+  try {
+    return deps.platformManifestGenerator.validateManifest(yaml);
+  } catch (validationError) {
+    throw new ManifestInvalidError(
+      platformYamlPath,
+      validationError instanceof Error ? validationError.message : String(validationError),
+    );
+  }
+};
+
+const handleCreate = async (argv: string[], deps: CliDependencies): Promise<HandlerResult> => {
+  if (argv.length > 1) {
+    return {
+      exitCode: 1,
+      output:
+        'The "create" command is interactive-only in this spike. Run "universe create" with no additional arguments.',
+    };
+  }
+
+  const promptResult = await deps.promptPort.promptForCreateInputs();
+
+  if (promptResult === null || !promptResult.confirmed) {
+    return { exitCode: 1, output: "Create cancelled before writing files." };
+  }
+
+  const validatedInput = deps.validator.validateCreateInput(promptResult);
+  const resolvedLayers = deps.layerResolver.resolveLayers(validatedInput);
+  const targetDirectory = join(deps.cwd, validatedInput.name);
+  const projectFiles = {
+    ...resolvedLayers.files,
+    "platform.yaml": deps.platformManifestGenerator.generatePlatformManifest(validatedInput),
+  };
+
+  await deps.filesystemWriter.writeProject(targetDirectory, projectFiles);
+
+  return { exitCode: 0, output: `Scaffolded project at ${targetDirectory}` };
+};
+
+const handleRegister = async (argv: string[], deps: CliDependencies): Promise<HandlerResult> => {
+  if (argv.length > 2) {
+    return { exitCode: 1, output: "Too many arguments. Usage: universe register [directory]" };
+  }
+
+  const platformYamlDir = argv[1] ?? deps.cwd;
+  const platformYamlPath = join(platformYamlDir, "platform.yaml");
+  const manifest = await readAndValidateManifest(platformYamlPath, deps);
+  const receipt = await deps.registrationClient.register(manifest);
+
+  return {
+    exitCode: 0,
+    meta: { name: receipt.name },
+    output: `Registered project "${receipt.name}". Registration ID: ${receipt.registrationId}`,
+  };
+};
+
+const handleDeploy = async (argv: string[], deps: CliDependencies): Promise<HandlerResult> => {
+  if (argv.length > 3) {
+    return {
+      exitCode: 1,
+      output: "Too many arguments. Usage: universe deploy [directory] [environment]",
+    };
+  }
+
+  const platformYamlDir = argv[1] ?? deps.cwd;
+  const environment = argv[2] ?? "preview";
+
+  if (environment !== "preview" && environment !== "production") {
+    throw new CreateUnsupportedCombinationError(
+      `environment "${environment}" — valid values are: preview, production`,
+    );
+  }
+
+  const platformYamlPath = join(platformYamlDir, "platform.yaml");
+  const manifest = await readAndValidateManifest(platformYamlPath, deps);
+  const receipt = await deps.deployClient.deploy({ environment, manifest });
+
+  return {
+    exitCode: 0,
+    meta: { name: receipt.name },
+    output: `Deployed project "${receipt.name}" to ${receipt.environment}. Deployment ID: ${receipt.deploymentId}`,
+  };
+};
+
+const handlePromote = async (argv: string[], deps: CliDependencies): Promise<HandlerResult> => {
+  if (argv.length > 3) {
+    return {
+      exitCode: 1,
+      output: "Too many arguments. Usage: universe promote [directory] [target-environment]",
+    };
+  }
+
+  const platformYamlDir = argv[1] ?? deps.cwd;
+  const targetEnvironment = argv[2] ?? "production";
+
+  if (targetEnvironment !== "preview" && targetEnvironment !== "production") {
+    throw new CreateUnsupportedCombinationError(
+      `target-environment "${targetEnvironment}" — valid values are: preview, production`,
+    );
+  }
+
+  const platformYamlPath = join(platformYamlDir, "platform.yaml");
+  const manifest = await readAndValidateManifest(platformYamlPath, deps);
+  const receipt = await deps.promoteClient.promote({ manifest, targetEnvironment });
+
+  return {
+    exitCode: 0,
+    meta: { name: receipt.name },
+    output: `Promoted project "${receipt.name}" to ${receipt.targetEnvironment}. Promotion ID: ${receipt.promotionId}`,
+  };
+};
+
+const handleRollback = async (argv: string[], deps: CliDependencies): Promise<HandlerResult> => {
+  if (argv.length > 3) {
+    return {
+      exitCode: 1,
+      output: "Too many arguments. Usage: universe rollback [directory] [target-environment]",
+    };
+  }
+
+  const platformYamlDir = argv[1] ?? deps.cwd;
+  const targetEnvironment = argv[2] ?? "production";
+
+  if (targetEnvironment !== "preview" && targetEnvironment !== "production") {
+    throw new CreateUnsupportedCombinationError(
+      `target-environment "${targetEnvironment}" — valid values are: preview, production`,
+    );
+  }
+
+  const platformYamlPath = join(platformYamlDir, "platform.yaml");
+  const manifest = await readAndValidateManifest(platformYamlPath, deps);
+  const receipt = await deps.rollbackClient.rollback({ manifest, targetEnvironment });
+
+  return {
+    exitCode: 0,
+    meta: { name: receipt.name },
+    output: `Rolled back project "${receipt.name}" to ${receipt.targetEnvironment}. Rollback ID: ${receipt.rollbackId}`,
+  };
+};
+
+const handleLogs = async (argv: string[], deps: CliDependencies): Promise<HandlerResult> => {
+  if (argv.length > 3) {
+    return {
+      exitCode: 1,
+      output: "Too many arguments. Usage: universe logs [directory] [environment]",
+    };
+  }
+
+  const platformYamlDir = argv[1] ?? deps.cwd;
+  const environment = argv[2] ?? "preview";
+
+  if (environment !== "preview" && environment !== "production") {
+    throw new CreateUnsupportedCombinationError(
+      `environment "${environment}" — valid values are: preview, production`,
+    );
+  }
+
+  const platformYamlPath = join(platformYamlDir, "platform.yaml");
+  const manifest = await readAndValidateManifest(platformYamlPath, deps);
+  const response = await deps.logsClient.getLogs({ environment, manifest });
+
+  const renderedEntries = response.entries
+    .map((e) => `${e.timestamp} [${e.level}] ${e.message}`)
+    .join("\n");
+
+  return {
+    exitCode: 0,
+    meta: { name: response.name },
+    output: `Logs for project "${response.name}" in ${response.environment}:\n${renderedEntries}`,
+  };
+};
+
+const handleList = async (argv: string[], deps: CliDependencies): Promise<HandlerResult> => {
+  if (argv.length > 3) {
+    return {
+      exitCode: 1,
+      output: "Too many arguments. Usage: universe list [directory] [environment]",
+    };
+  }
+
+  const platformYamlDir = argv[1] ?? deps.cwd;
+  const environment = argv[2] ?? "preview";
+
+  if (environment !== "preview" && environment !== "production") {
+    throw new CreateUnsupportedCombinationError(
+      `environment "${environment}" — valid values are: preview, production`,
+    );
+  }
+
+  const platformYamlPath = join(platformYamlDir, "platform.yaml");
+  const manifest = await readAndValidateManifest(platformYamlPath, deps);
+  const response = await deps.listClient.getList({ environment, manifest });
+
+  const renderedEntries = response.deployments
+    .map((d) => `  ${d.deploymentId} — ${d.state} (deployed: ${d.deployedAt})`)
+    .join("\n");
+
+  return {
+    exitCode: 0,
+    meta: { name: response.name },
+    output: `Deployments for project "${response.name}" in ${response.environment}:\n${renderedEntries}`,
+  };
+};
+
+const handleStatus = async (argv: string[], deps: CliDependencies): Promise<HandlerResult> => {
+  if (argv.length > 3) {
+    return {
+      exitCode: 1,
+      output: "Too many arguments. Usage: universe status [directory] [environment]",
+    };
+  }
+
+  const platformYamlDir = argv[1] ?? deps.cwd;
+  const environment = argv[2] ?? "preview";
+
+  if (environment !== "preview" && environment !== "production") {
+    throw new CreateUnsupportedCombinationError(
+      `environment "${environment}" — valid values are: preview, production`,
+    );
+  }
+
+  const platformYamlPath = join(platformYamlDir, "platform.yaml");
+  const manifest = await readAndValidateManifest(platformYamlPath, deps);
+  const response = await deps.statusClient.getStatus({ environment, manifest });
+
+  return {
+    exitCode: 0,
+    meta: { name: response.name },
+    output: `Status of project "${response.name}" in ${response.environment}: ${response.state} (last updated: ${response.updatedAt})`,
+  };
+};
+
+const handleTeardown = async (argv: string[], deps: CliDependencies): Promise<HandlerResult> => {
+  if (argv.length > 3) {
+    return {
+      exitCode: 1,
+      output: "Too many arguments. Usage: universe teardown [directory] [target-environment]",
+    };
+  }
+
+  const platformYamlDir = argv[1] ?? deps.cwd;
+  const targetEnvironment = argv[2] ?? "preview";
+
+  if (targetEnvironment !== "preview" && targetEnvironment !== "production") {
+    throw new CreateUnsupportedCombinationError(
+      `target-environment "${targetEnvironment}" — valid values are: preview, production`,
+    );
+  }
+
+  const platformYamlPath = join(platformYamlDir, "platform.yaml");
+  const manifest = await readAndValidateManifest(platformYamlPath, deps);
+  const receipt = await deps.teardownClient.teardown({ manifest, targetEnvironment });
+
+  return {
+    exitCode: 0,
+    meta: { name: receipt.name },
+    output: `Tore down project "${receipt.name}" in ${receipt.targetEnvironment}. Teardown ID: ${receipt.teardownId}`,
+  };
+};
+
+const COMMANDS: Record<string, CommandDef> = {
+  create: { handler: handleCreate },
+  deploy: {
+    context: (value) => ({ environment: value ?? "preview" }),
+    handler: handleDeploy,
+  },
+  list: {
+    context: (value) => ({ environment: value ?? "preview" }),
+    handler: handleList,
+  },
+  logs: {
+    context: (value) => ({ environment: value ?? "preview" }),
+    handler: handleLogs,
+  },
+  promote: {
+    context: (value) => ({ targetEnvironment: value ?? "production" }),
+    handler: handlePromote,
+  },
+  register: { handler: handleRegister },
+  rollback: {
+    context: (value) => ({ targetEnvironment: value ?? "production" }),
+    handler: handleRollback,
+  },
+  status: {
+    context: (value) => ({ environment: value ?? "preview" }),
+    handler: handleStatus,
+  },
+  teardown: {
+    context: (value) => ({ targetEnvironment: value ?? "preview" }),
+    handler: handleTeardown,
+  },
+};
+
 const runCli = async (argv: string[], deps: CliDependencies): Promise<CliResult> => {
-  const {
-    cwd,
-    deployClient,
-    filesystemWriter,
-    layerResolver,
-    listClient,
-    logsClient,
-    observability,
-    platformManifestGenerator,
-    projectReader,
-    promoteClient,
-    promptPort,
-    registrationClient,
-    rollbackClient,
-    statusClient,
-    teardownClient,
-    validator,
-  } = deps;
+  const { observability } = deps;
   const [command] = argv;
 
   if (command === undefined || command === "--help" || command === "-h") {
     return { exitCode: 0, output: HELP_TEXT };
   }
 
-  if (command === "create") {
-    if (argv.length > 1) {
-      return {
-        exitCode: 1,
-        output:
-          'The "create" command is interactive-only in this spike. Run "universe create" with no additional arguments.',
-      };
-    }
+  const def = COMMANDS[command];
 
-    const promptResult = await promptPort.promptForCreateInputs();
-
-    if (promptResult === null || !promptResult.confirmed) {
-      return { exitCode: 1, output: "Create cancelled before writing files." };
-    }
-
-    try {
-      const validatedInput = validator.validateCreateInput(promptResult);
-      const resolvedLayers = layerResolver.resolveLayers(validatedInput);
-      const targetDirectory = join(cwd, validatedInput.name);
-      const projectFiles = {
-        ...resolvedLayers.files,
-        "platform.yaml": platformManifestGenerator.generatePlatformManifest(validatedInput),
-      };
-
-      await filesystemWriter.writeProject(targetDirectory, projectFiles);
-
-      return {
-        exitCode: 0,
-        output: `Scaffolded project at ${targetDirectory}`,
-      };
-    } catch (error) {
-      if (error instanceof CliError) {
-        safeError(observability, error);
-        return { exitCode: error.exitCode, output: error.message };
-      }
-
-      throw error;
-    }
+  if (!def) {
+    return {
+      exitCode: 1,
+      output: `Unknown command: "${command}". Run "universe --help" for usage.`,
+    };
   }
 
-  if (command === "register") {
-    if (argv.length > 2) {
-      return {
-        exitCode: 1,
-        output: "Too many arguments. Usage: universe register [directory]",
-      };
+  const ctx = def.context?.(argv[2]) ?? {};
+  safeTrack(observability, `${command}.start`, ctx);
+
+  try {
+    const result = await def.handler(argv, deps);
+    if (result.exitCode === 0) {
+      safeTrack(observability, `${command}.success`, { ...ctx, ...result.meta });
     }
-
-    const platformYamlDir = argv[1] ?? cwd;
-    const platformYamlPath = join(platformYamlDir, "platform.yaml");
-
-    try {
-      const yaml = await projectReader.readFile(platformYamlPath);
-
-      let manifest: PlatformManifest;
-      try {
-        manifest = platformManifestGenerator.validateManifest(yaml);
-      } catch (validationError) {
-        const invalidError = new ManifestInvalidError(
-          platformYamlPath,
-          validationError instanceof Error ? validationError.message : String(validationError),
-        );
-        safeError(observability, invalidError);
-        return { exitCode: invalidError.exitCode, output: invalidError.message };
-      }
-
-      const receipt = await registrationClient.register(manifest);
-
-      return {
-        exitCode: 0,
-        output: `Registered project "${receipt.name}". Registration ID: ${receipt.registrationId}`,
-      };
-    } catch (error) {
-      if (error instanceof CliError) {
-        safeError(observability, error);
-        return { exitCode: error.exitCode, output: error.message };
-      }
-
-      throw error;
+    return { exitCode: result.exitCode, output: result.output };
+  } catch (error) {
+    if (error instanceof CliError) {
+      safeError(observability, error);
+      safeTrack(observability, `${command}.failure`, ctx);
+      return { exitCode: error.exitCode, output: error.message };
     }
+    throw error;
   }
-
-  if (command === "deploy") {
-    if (argv.length > 3) {
-      return {
-        exitCode: 1,
-        output: "Too many arguments. Usage: universe deploy [directory] [environment]",
-      };
-    }
-
-    const platformYamlDir = argv[1] ?? cwd;
-    const environment = argv[2] ?? "preview";
-    const platformYamlPath = join(platformYamlDir, "platform.yaml");
-
-    if (environment !== "preview" && environment !== "production") {
-      const envError = new CreateUnsupportedCombinationError(
-        `environment "${environment}" — valid values are: preview, production`,
-      );
-      return { exitCode: envError.exitCode, output: envError.message };
-    }
-
-    safeTrack(observability, "deploy.start", { environment });
-
-    try {
-      const yaml = await projectReader.readFile(platformYamlPath);
-
-      let manifest: PlatformManifest;
-      try {
-        manifest = platformManifestGenerator.validateManifest(yaml);
-      } catch (validationError) {
-        const invalidError = new ManifestInvalidError(
-          platformYamlPath,
-          validationError instanceof Error ? validationError.message : String(validationError),
-        );
-        safeError(observability, invalidError);
-        return { exitCode: invalidError.exitCode, output: invalidError.message };
-      }
-
-      const receipt = await deployClient.deploy({ environment, manifest });
-
-      safeTrack(observability, "deploy.success", { environment, name: receipt.name });
-
-      return {
-        exitCode: 0,
-        output: `Deployed project "${receipt.name}" to ${receipt.environment}. Deployment ID: ${receipt.deploymentId}`,
-      };
-    } catch (error) {
-      if (error instanceof CliError) {
-        safeError(observability, error);
-        safeTrack(observability, "deploy.failure", { environment });
-        return { exitCode: error.exitCode, output: error.message };
-      }
-
-      throw error;
-    }
-  }
-
-  if (command === "promote") {
-    if (argv.length > 3) {
-      return {
-        exitCode: 1,
-        output: "Too many arguments. Usage: universe promote [directory] [target-environment]",
-      };
-    }
-
-    const platformYamlDir = argv[1] ?? cwd;
-    const targetEnvironment = argv[2] ?? "production";
-    const platformYamlPath = join(platformYamlDir, "platform.yaml");
-
-    if (targetEnvironment !== "preview" && targetEnvironment !== "production") {
-      const envError = new CreateUnsupportedCombinationError(
-        `target-environment "${targetEnvironment}" — valid values are: preview, production`,
-      );
-      return { exitCode: envError.exitCode, output: envError.message };
-    }
-
-    safeTrack(observability, "promote.start", { targetEnvironment });
-
-    try {
-      const yaml = await projectReader.readFile(platformYamlPath);
-
-      let manifest: PlatformManifest;
-      try {
-        manifest = platformManifestGenerator.validateManifest(yaml);
-      } catch (validationError) {
-        const invalidError = new ManifestInvalidError(
-          platformYamlPath,
-          validationError instanceof Error ? validationError.message : String(validationError),
-        );
-        safeError(observability, invalidError);
-        return { exitCode: invalidError.exitCode, output: invalidError.message };
-      }
-
-      const receipt = await promoteClient.promote({ manifest, targetEnvironment });
-
-      safeTrack(observability, "promote.success", { name: receipt.name, targetEnvironment });
-
-      return {
-        exitCode: 0,
-        output: `Promoted project "${receipt.name}" to ${receipt.targetEnvironment}. Promotion ID: ${receipt.promotionId}`,
-      };
-    } catch (error) {
-      if (error instanceof CliError) {
-        safeError(observability, error);
-        safeTrack(observability, "promote.failure", { targetEnvironment });
-        return { exitCode: error.exitCode, output: error.message };
-      }
-
-      throw error;
-    }
-  }
-
-  if (command === "rollback") {
-    if (argv.length > 3) {
-      return {
-        exitCode: 1,
-        output: "Too many arguments. Usage: universe rollback [directory] [target-environment]",
-      };
-    }
-
-    const platformYamlDir = argv[1] ?? cwd;
-    const targetEnvironment = argv[2] ?? "production";
-    const platformYamlPath = join(platformYamlDir, "platform.yaml");
-
-    if (targetEnvironment !== "preview" && targetEnvironment !== "production") {
-      const envError = new CreateUnsupportedCombinationError(
-        `target-environment "${targetEnvironment}" — valid values are: preview, production`,
-      );
-      return { exitCode: envError.exitCode, output: envError.message };
-    }
-
-    safeTrack(observability, "rollback.start", { targetEnvironment });
-
-    try {
-      const yaml = await projectReader.readFile(platformYamlPath);
-
-      let manifest: PlatformManifest;
-      try {
-        manifest = platformManifestGenerator.validateManifest(yaml);
-      } catch (validationError) {
-        const invalidError = new ManifestInvalidError(
-          platformYamlPath,
-          validationError instanceof Error ? validationError.message : String(validationError),
-        );
-        safeError(observability, invalidError);
-        return { exitCode: invalidError.exitCode, output: invalidError.message };
-      }
-
-      const receipt = await rollbackClient.rollback({ manifest, targetEnvironment });
-
-      safeTrack(observability, "rollback.success", { name: receipt.name, targetEnvironment });
-
-      return {
-        exitCode: 0,
-        output: `Rolled back project "${receipt.name}" to ${receipt.targetEnvironment}. Rollback ID: ${receipt.rollbackId}`,
-      };
-    } catch (error) {
-      if (error instanceof CliError) {
-        safeError(observability, error);
-        safeTrack(observability, "rollback.failure", { targetEnvironment });
-        return { exitCode: error.exitCode, output: error.message };
-      }
-
-      throw error;
-    }
-  }
-
-  if (command === "logs") {
-    if (argv.length > 3) {
-      return {
-        exitCode: 1,
-        output: "Too many arguments. Usage: universe logs [directory] [environment]",
-      };
-    }
-
-    const platformYamlDir = argv[1] ?? cwd;
-    const environment = argv[2] ?? "preview";
-    const platformYamlPath = join(platformYamlDir, "platform.yaml");
-
-    if (environment !== "preview" && environment !== "production") {
-      const envError = new CreateUnsupportedCombinationError(
-        `environment "${environment}" — valid values are: preview, production`,
-      );
-      return { exitCode: envError.exitCode, output: envError.message };
-    }
-
-    safeTrack(observability, "logs.start", { environment });
-
-    try {
-      const yaml = await projectReader.readFile(platformYamlPath);
-
-      let manifest: PlatformManifest;
-      try {
-        manifest = platformManifestGenerator.validateManifest(yaml);
-      } catch (validationError) {
-        const invalidError = new ManifestInvalidError(
-          platformYamlPath,
-          validationError instanceof Error ? validationError.message : String(validationError),
-        );
-        safeError(observability, invalidError);
-        return { exitCode: invalidError.exitCode, output: invalidError.message };
-      }
-
-      const response = await logsClient.getLogs({ environment, manifest });
-
-      safeTrack(observability, "logs.success", { environment, name: response.name });
-
-      const renderedEntries = response.entries
-        .map((e) => `${e.timestamp} [${e.level}] ${e.message}`)
-        .join("\n");
-
-      return {
-        exitCode: 0,
-        output: `Logs for project "${response.name}" in ${response.environment}:\n${renderedEntries}`,
-      };
-    } catch (error) {
-      if (error instanceof CliError) {
-        safeError(observability, error);
-        safeTrack(observability, "logs.failure", { environment });
-        return { exitCode: error.exitCode, output: error.message };
-      }
-
-      throw error;
-    }
-  }
-
-  if (command === "list") {
-    if (argv.length > 3) {
-      return {
-        exitCode: 1,
-        output: "Too many arguments. Usage: universe list [directory] [environment]",
-      };
-    }
-
-    const platformYamlDir = argv[1] ?? cwd;
-    const environment = argv[2] ?? "preview";
-    const platformYamlPath = join(platformYamlDir, "platform.yaml");
-
-    if (environment !== "preview" && environment !== "production") {
-      const envError = new CreateUnsupportedCombinationError(
-        `environment "${environment}" — valid values are: preview, production`,
-      );
-      return { exitCode: envError.exitCode, output: envError.message };
-    }
-
-    safeTrack(observability, "list.start", { environment });
-
-    try {
-      const yaml = await projectReader.readFile(platformYamlPath);
-
-      let manifest: PlatformManifest;
-      try {
-        manifest = platformManifestGenerator.validateManifest(yaml);
-      } catch (validationError) {
-        const invalidError = new ManifestInvalidError(
-          platformYamlPath,
-          validationError instanceof Error ? validationError.message : String(validationError),
-        );
-        safeError(observability, invalidError);
-        return { exitCode: invalidError.exitCode, output: invalidError.message };
-      }
-
-      const response = await listClient.getList({ environment, manifest });
-
-      safeTrack(observability, "list.success", { environment, name: response.name });
-
-      const renderedEntries = response.deployments
-        .map((d) => `  ${d.deploymentId} — ${d.state} (deployed: ${d.deployedAt})`)
-        .join("\n");
-
-      return {
-        exitCode: 0,
-        output: `Deployments for project "${response.name}" in ${response.environment}:\n${renderedEntries}`,
-      };
-    } catch (error) {
-      if (error instanceof CliError) {
-        safeError(observability, error);
-        safeTrack(observability, "list.failure", { environment });
-        return { exitCode: error.exitCode, output: error.message };
-      }
-
-      throw error;
-    }
-  }
-
-  if (command === "status") {
-    if (argv.length > 3) {
-      return {
-        exitCode: 1,
-        output: "Too many arguments. Usage: universe status [directory] [environment]",
-      };
-    }
-
-    const platformYamlDir = argv[1] ?? cwd;
-    const environment = argv[2] ?? "preview";
-    const platformYamlPath = join(platformYamlDir, "platform.yaml");
-
-    if (environment !== "preview" && environment !== "production") {
-      const envError = new CreateUnsupportedCombinationError(
-        `environment "${environment}" — valid values are: preview, production`,
-      );
-      return { exitCode: envError.exitCode, output: envError.message };
-    }
-
-    safeTrack(observability, "status.start", { environment });
-
-    try {
-      const yaml = await projectReader.readFile(platformYamlPath);
-
-      let manifest: PlatformManifest;
-      try {
-        manifest = platformManifestGenerator.validateManifest(yaml);
-      } catch (validationError) {
-        const invalidError = new ManifestInvalidError(
-          platformYamlPath,
-          validationError instanceof Error ? validationError.message : String(validationError),
-        );
-        safeError(observability, invalidError);
-        return { exitCode: invalidError.exitCode, output: invalidError.message };
-      }
-
-      const response = await statusClient.getStatus({ environment, manifest });
-
-      safeTrack(observability, "status.success", { environment, name: response.name });
-
-      return {
-        exitCode: 0,
-        output: `Status of project "${response.name}" in ${response.environment}: ${response.state} (last updated: ${response.updatedAt})`,
-      };
-    } catch (error) {
-      if (error instanceof CliError) {
-        safeError(observability, error);
-        safeTrack(observability, "status.failure", { environment });
-        return { exitCode: error.exitCode, output: error.message };
-      }
-
-      throw error;
-    }
-  }
-
-  if (command === "teardown") {
-    if (argv.length > 3) {
-      return {
-        exitCode: 1,
-        output: "Too many arguments. Usage: universe teardown [directory] [target-environment]",
-      };
-    }
-
-    const platformYamlDir = argv[1] ?? cwd;
-    const targetEnvironment = argv[2] ?? "preview";
-    const platformYamlPath = join(platformYamlDir, "platform.yaml");
-
-    if (targetEnvironment !== "preview" && targetEnvironment !== "production") {
-      const envError = new CreateUnsupportedCombinationError(
-        `target-environment "${targetEnvironment}" — valid values are: preview, production`,
-      );
-      return { exitCode: envError.exitCode, output: envError.message };
-    }
-
-    safeTrack(observability, "teardown.start", { targetEnvironment });
-
-    try {
-      const yaml = await projectReader.readFile(platformYamlPath);
-
-      let manifest: PlatformManifest;
-      try {
-        manifest = platformManifestGenerator.validateManifest(yaml);
-      } catch (validationError) {
-        const invalidError = new ManifestInvalidError(
-          platformYamlPath,
-          validationError instanceof Error ? validationError.message : String(validationError),
-        );
-        safeError(observability, invalidError);
-        return { exitCode: invalidError.exitCode, output: invalidError.message };
-      }
-
-      const receipt = await teardownClient.teardown({ manifest, targetEnvironment });
-
-      safeTrack(observability, "teardown.success", {
-        name: receipt.name,
-        targetEnvironment,
-      });
-
-      return {
-        exitCode: 0,
-        output: `Tore down project "${receipt.name}" in ${receipt.targetEnvironment}. Teardown ID: ${receipt.teardownId}`,
-      };
-    } catch (error) {
-      if (error instanceof CliError) {
-        safeError(observability, error);
-        safeTrack(observability, "teardown.failure", { targetEnvironment });
-        return { exitCode: error.exitCode, output: error.message };
-      }
-
-      throw error;
-    }
-  }
-
-  return { exitCode: 1, output: `Unknown command: "${command}". Run "universe --help" for usage.` };
 };
 
 export { runCli };
