@@ -78,6 +78,6 @@ describe("list", () => {
     await runCli(["create"], deps);
 
     const result = await runCli(["list", projectDir], deps);
-    expect(result.exitCode).toBe(19);
+    expect(result.exitCode).toBe(15);
   });
 });

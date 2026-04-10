@@ -11,6 +11,9 @@ importers:
       '@clack/prompts':
         specifier: 1.2.0
         version: 1.2.0
+      lodash:
+        specifier: 4.18.1
+        version: 4.18.1
       yaml:
         specifier: 2.8.3
         version: 2.8.3
@@ -18,6 +21,9 @@ importers:
         specifier: 4.3.6
         version: 4.3.6
     devDependencies:
+      '@types/lodash':
+        specifier: 4.17.24
+        version: 4.17.24
       '@types/node':
         specifier: 24.12.2
         version: 24.12.2
@@ -625,6 +631,9 @@ packages:
   '@types/estree@1.0.8':
     resolution: {integrity: sha512-dWHzHa2WqEXI/O1E9OjrocMTKJl2mSrEolh1Iomrv6U+JuNwaHXsXx9bLu5gG7BUWFIN0skIQJQ/L1rIex4X6w==}
 
+  '@types/lodash@4.17.24':
+    resolution: {integrity: sha512-gIW7lQLZbue7lRSWEFql49QJJWThrTFFeIMJdp3eH4tKoxm1OvEPg02rm4wCCSHS0cL3/Fizimb35b7k8atwsQ==}
+
   '@types/node@24.12.2':
     resolution: {integrity: sha512-A1sre26ke7HDIuY/M23nd9gfB+nrmhtYyMINbjI1zHJxYteKR6qSMX56FsmjMcDb3SMcjJg5BiRRgOCC/yBD0g==}
 
@@ -785,6 +794,9 @@ packages:
   listr2@9.0.5:
     resolution: {integrity: sha512-ME4Fb83LgEgwNw96RKNvKV4VTLuXfoKudAmm2lP8Kk87KaMK0/Xrx/aAkMWmT8mDb+3MlFDspfbCs7adjRxA2g==}
     engines: {node: '>=20.0.0'}
+
+  lodash@4.18.1:
+    resolution: {integrity: sha512-dMInicTPVE8d1e5otfwmmjlxkZoUpiVLwyeTdUsi/Caj/gfzzblBcCE5sRHV/AsjuCmxWrte2TNGSYuCeCq+0Q==}
 
   log-update@6.1.0:
     resolution: {integrity: sha512-9ie8ItPR6tjY5uYJh8K/Zrv/RMZ5VOlOWvtZdEHYSTFKZfIBPQa9tOAEeAWhd+AnIneLJ22w5fjOYtoutpWq5w==}
@@ -1336,6 +1348,8 @@ snapshots:
 
   '@types/estree@1.0.8': {}
 
+  '@types/lodash@4.17.24': {}
+
   '@types/node@24.12.2':
     dependencies:
       undici-types: 7.16.0
@@ -1510,6 +1524,8 @@ snapshots:
       log-update: 6.1.0
       rfdc: 1.4.1
       wrap-ansi: 9.0.2
+
+  lodash@4.18.1: {}
 
   log-update@6.1.0:
     dependencies:

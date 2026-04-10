@@ -78,6 +78,6 @@ describe("teardown", () => {
     await runCli(["create"], deps);
 
     const result = await runCli(["teardown", projectDir], deps);
-    expect(result.exitCode).toBe(20);
+    expect(result.exitCode).toBe(16);
   });
 });

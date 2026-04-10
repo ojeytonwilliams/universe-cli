@@ -160,7 +160,7 @@ describe("logs", () => {
     expect(paths[0]).toBe("/some/project/platform.yaml");
   });
 
-  it("exits 11 when platform.yaml is missing", async () => {
+  it("exits when platform.yaml is missing", async () => {
     const missingReader = {
       readFile(filePath: string) {
         return Promise.reject(new ManifestNotFoundError(filePath));
@@ -169,20 +169,20 @@ describe("logs", () => {
 
     const result = await runCli(["logs"], logsDeps(missingReader));
 
-    expect(result.exitCode).toBe(11);
+    expect(result.exitCode).toBe(8);
   });
 
-  it("exits 12 when platform.yaml fails validation", async () => {
+  it("exits when platform.yaml fails validation", async () => {
     const failingValidator = (_yaml: string): PlatformManifest => {
       throw new Error("invalid schema");
     };
 
     const result = await runCli(["logs"], logsDeps(successReader, failingValidator));
 
-    expect(result.exitCode).toBe(12);
+    expect(result.exitCode).toBe(8);
   });
 
-  it("exits 17 when log retrieval fails", async () => {
+  it("exits when log retrieval fails", async () => {
     const failingClient = {
       getLogs(request: { environment: string; manifest: PlatformManifest }) {
         return Promise.reject(new LogsError(request.manifest.name, "timeout"));
@@ -191,19 +191,19 @@ describe("logs", () => {
 
     const result = await runCli(["logs"], logsDeps(successReader, successValidator, failingClient));
 
-    expect(result.exitCode).toBe(17);
+    expect(result.exitCode).toBe(13);
   });
 
-  it("exits 1 when more than two arguments are provided", async () => {
+  it("exits when more than two arguments are provided", async () => {
     const result = await runCli(["logs", "/dir", "preview", "extra"], logsDeps());
 
     expect(result.exitCode).toBe(1);
   });
 
-  it("exits 6 when environment is not preview or production", async () => {
+  it("exits when environment is not preview or production", async () => {
     const result = await runCli(["logs", "/dir", "staging"], logsDeps());
 
-    expect(result.exitCode).toBe(6);
+    expect(result.exitCode).toBe(4);
   });
 
   it("defaults to the preview environment when no environment argument is given", async () => {

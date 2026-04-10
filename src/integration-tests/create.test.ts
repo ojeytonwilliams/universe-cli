@@ -11,8 +11,6 @@ import { LocalProjectReader } from "../adapters/local-project-reader.js";
 import { runCli } from "../cli.js";
 import type { CreateSelections, PromptPort } from "../ports/prompt-port.js";
 
-const DEFERRED_COMMANDS: string[] = [];
-
 const createPromptPort = (selection: CreateSelections | null): PromptPort => ({
   promptForCreateInputs() {
     return Promise.resolve(selection);
@@ -146,29 +144,6 @@ describe("create", () => {
     expect(existsSync(join(rootDirectory, selection.name))).toBe(true);
   });
 
-  it("covers deferred command flows with the standardized contract", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-"));
-
-    tempDirectories.push(rootDirectory);
-
-    const results = await Promise.all(
-      DEFERRED_COMMANDS.map(async (command) => {
-        const result = await runCli(
-          [command],
-          makeDeps(rootDirectory, createPromptPort(createStaticSelection("ignored"))),
-        );
-        return { command, result };
-      }),
-    );
-
-    for (const { command, result } of results) {
-      expect(result.exitCode).toBe(1);
-      expect(result.output).toBe(
-        `The '${command}' command is not yet implemented in this spike. It will be available in a future release.`,
-      );
-    }
-  });
-
   it("covers create validation failure and target-directory conflict failure", async () => {
     const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-"));
 
@@ -179,7 +154,7 @@ describe("create", () => {
       makeDeps(rootDirectory, createPromptPort(createStaticSelection("InvalidName"))),
     );
 
-    expect(invalidNameResult.exitCode).toBe(2);
+    expect(invalidNameResult.exitCode).toBe(17);
     expect(invalidNameResult.output).toContain("Invalid project name");
 
     const conflictProjectName = "already-exists";
@@ -304,7 +279,7 @@ describe("create", () => {
       makeDeps(rootDirectory, createPromptPort(selection), customLayers),
     );
 
-    expect(result.exitCode).toBe(9);
+    expect(result.exitCode).toBe(6);
     expect(result.output).toContain('File path conflict: "README.md"');
     expect(existsSync(join(rootDirectory, selection.name))).toBe(false);
   });

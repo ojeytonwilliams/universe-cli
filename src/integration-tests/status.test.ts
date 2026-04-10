@@ -78,6 +78,6 @@ describe("status", () => {
     await runCli(["create"], deps);
 
     const result = await runCli(["status", projectDir], deps);
-    expect(result.exitCode).toBe(18);
+    expect(result.exitCode).toBe(14);
   });
 });

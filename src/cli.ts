@@ -1,7 +1,6 @@
 import { join } from "node:path";
 import {
   CliError,
-  DeferredCommandError,
   ManifestInvalidError,
   UnsupportedCombinationError,
 } from "./errors/cli-errors.js";
@@ -71,8 +70,6 @@ interface CliDependencies {
   validator: { validateCreateInput(input: CreateSelections): CreateSelections };
 }
 
-const DEFERRED_COMMANDS = new Set<string>();
-
 const runCli = async (argv: string[], deps: CliDependencies): Promise<CliResult> => {
   const {
     cwd,
@@ -96,12 +93,6 @@ const runCli = async (argv: string[], deps: CliDependencies): Promise<CliResult>
 
   if (command === undefined || command === "--help" || command === "-h") {
     return { exitCode: 0, output: HELP_TEXT };
-  }
-
-  if (DEFERRED_COMMANDS.has(command)) {
-    const error = new DeferredCommandError(command);
-    safeError(observability, error);
-    return { exitCode: error.exitCode, output: error.message };
   }
 
   if (command === "create") {

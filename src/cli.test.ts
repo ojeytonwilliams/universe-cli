@@ -363,7 +363,7 @@ describe(runCli, () => {
 
       const result = await runCli(["register"], registerDeps(missingReader));
 
-      expect(result.exitCode).toBe(11);
+      expect(result.exitCode).toBe(8);
     });
 
     it("exits 12 when platform.yaml fails validation", async () => {
@@ -373,7 +373,7 @@ describe(runCli, () => {
 
       const result = await runCli(["register"], registerDeps(successReader, failingValidator));
 
-      expect(result.exitCode).toBe(12);
+      expect(result.exitCode).toBe(8);
     });
 
     it("exits 13 when registration fails", async () => {
@@ -388,7 +388,7 @@ describe(runCli, () => {
         registerDeps(successReader, successValidator, failingClient),
       );
 
-      expect(result.exitCode).toBe(13);
+      expect(result.exitCode).toBe(9);
     });
 
     it("exits 1 when more than one argument is provided", async () => {
@@ -478,7 +478,7 @@ describe(runCli, () => {
 
       const result = await runCli(["deploy"], deployDeps(missingReader));
 
-      expect(result.exitCode).toBe(11);
+      expect(result.exitCode).toBe(8);
     });
 
     it("exits 12 when platform.yaml fails validation", async () => {
@@ -488,7 +488,7 @@ describe(runCli, () => {
 
       const result = await runCli(["deploy"], deployDeps(successReader, failingValidator));
 
-      expect(result.exitCode).toBe(12);
+      expect(result.exitCode).toBe(8);
     });
 
     it("exits 14 when deployment fails", async () => {
@@ -503,7 +503,7 @@ describe(runCli, () => {
         deployDeps(successReader, successValidator, failingClient),
       );
 
-      expect(result.exitCode).toBe(14);
+      expect(result.exitCode).toBe(10);
     });
 
     it("exits 1 when more than two arguments are provided", async () => {
@@ -515,7 +515,7 @@ describe(runCli, () => {
     it("exits 6 when environment is not preview or production", async () => {
       const result = await runCli(["deploy", "/dir", "staging"], deployDeps());
 
-      expect(result.exitCode).toBe(6);
+      expect(result.exitCode).toBe(4);
     });
 
     it("tracks deploy.start and deploy.success on a successful deployment", async () => {
@@ -666,7 +666,7 @@ describe(runCli, () => {
 
       const result = await runCli(["promote"], promoteDeps(missingReader));
 
-      expect(result.exitCode).toBe(11);
+      expect(result.exitCode).toBe(8);
     });
 
     it("exits 12 when platform.yaml fails validation", async () => {
@@ -676,7 +676,7 @@ describe(runCli, () => {
 
       const result = await runCli(["promote"], promoteDeps(successReader, failingValidator));
 
-      expect(result.exitCode).toBe(12);
+      expect(result.exitCode).toBe(8);
     });
 
     it("exits 15 when promotion fails", async () => {
@@ -691,7 +691,7 @@ describe(runCli, () => {
         promoteDeps(successReader, successValidator, failingClient),
       );
 
-      expect(result.exitCode).toBe(15);
+      expect(result.exitCode).toBe(11);
     });
 
     it("exits 1 when more than two arguments are provided", async () => {
@@ -703,7 +703,7 @@ describe(runCli, () => {
     it("exits 6 when target environment is not preview or production", async () => {
       const result = await runCli(["promote", "/dir", "staging"], promoteDeps());
 
-      expect(result.exitCode).toBe(6);
+      expect(result.exitCode).toBe(4);
     });
 
     it("defaults to the production target environment when no target argument is given", async () => {
@@ -872,7 +872,7 @@ describe(runCli, () => {
 
       const result = await runCli(["rollback"], rollbackDeps(missingReader));
 
-      expect(result.exitCode).toBe(11);
+      expect(result.exitCode).toBe(8);
     });
 
     it("exits 12 when platform.yaml fails validation", async () => {
@@ -882,7 +882,7 @@ describe(runCli, () => {
 
       const result = await runCli(["rollback"], rollbackDeps(successReader, failingValidator));
 
-      expect(result.exitCode).toBe(12);
+      expect(result.exitCode).toBe(8);
     });
 
     it("exits 16 when rollback fails", async () => {
@@ -897,7 +897,7 @@ describe(runCli, () => {
         rollbackDeps(successReader, successValidator, failingClient),
       );
 
-      expect(result.exitCode).toBe(16);
+      expect(result.exitCode).toBe(12);
     });
 
     it("exits 1 when more than two arguments are provided", async () => {
@@ -909,7 +909,7 @@ describe(runCli, () => {
     it("exits 6 when target environment is not preview or production", async () => {
       const result = await runCli(["rollback", "/dir", "staging"], rollbackDeps());
 
-      expect(result.exitCode).toBe(6);
+      expect(result.exitCode).toBe(4);
     });
 
     it("defaults to the production target environment when no target argument is given", async () => {

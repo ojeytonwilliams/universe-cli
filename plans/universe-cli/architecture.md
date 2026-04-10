@@ -101,6 +101,43 @@ unless a later design introduces a real boundary.
 
 ---
 
+## Error Taxonomy and Exit Codes
+
+See `src/errors/cli-errors.ts` for canonical error classes. Exit codes:
+
+| Code  | Error Group / Example Classes                               |
+| ----- | ----------------------------------------------------------- |
+| 0     | Success                                                     |
+| 1     | Unhandled error (reserved, never used by CLI directly)      |
+| 2     | Shell builtin misuse (reserved, never used by CLI directly) |
+| 3-125 | All custom CLI errors (see below)                           |
+
+| 3 | `TargetDirectoryExistsError` |
+| 4 | **Unsupported**: `UnsupportedRuntimeError`, `UnsupportedFrameworkError`, `UnsupportedCombinationError` |
+| 5 | `InvalidMultiSelectError` |
+| 6 | **Layer**: `MissingLayerError`, `LayerConflictError` |
+| 7 | `ScaffoldWriteError` |
+| 8 | **Manifest**: `ManifestNotFoundError`, `ManifestInvalidError`|
+| 9 | `RegistrationError` |
+| 10 | `DeploymentError` |
+| 11 | `PromotionError` |
+| 12 | `RollbackError` |
+| 13 | `LogsError` |
+| 14 | `StatusError` |
+| 15 | `ListError` |
+| 16 | `TeardownError` |
+| 17 | `InvalidNameError` |
+
+**Exit Code Policy:**
+
+- All custom CLI error exit codes must be between 3 and 125 (inclusive) based on the assumption this tool is to be used in [bash](https://tldp.org/LDP/abs/html/exitcodes.html)
+
+**Grouping:**
+
+- Related error classes (e.g., all "unsupported" errors) share a single exit code.
+
+---
+
 ## Reclassification and Migration
 
 Three classes that were initially placed in `src/adapters/` have been reclassified as
@@ -156,12 +193,19 @@ See `src/errors/cli-errors.ts` for canonical error classes. Exit codes:
 | 2    | `InvalidNameError`                                        |
 | 3    | `TargetDirectoryExistsError`                              |
 | 4    | `UnsupportedRuntimeError`                                 |
-| 5    | `UnsupportedFrameworkError`                               |
-| 6    | `UnsupportedCombinationError`                             |
-| 7    | `InvalidMultiSelectError`                                 |
-| 8    | `MissingLayerError`                                       |
-| 9    | `LayerConflictError`                                      |
-| 10   | `ScaffoldWriteError`                                      |
+| 5    | `InvalidMultiSelectError`                                 |
+| 6    | `MissingLayerError`, `LayerConflictError`                 |
+| 7    | `ScaffoldWriteError`                                      |
+| 8    | `ManifestNotFoundError`, `ManifestInvalidError`           |
+| 9    | `RegistrationError`                                       |
+| 10   | `DeploymentError`                                         |
+| 11   | `PromotionError`                                          |
+| 12   | `RollbackError`                                           |
+| 13   | `LogsError`                                               |
+| 14   | `StatusError`                                             |
+| 15   | `ListError`                                               |
+| 16   | `TeardownError`                                           |
+| 17   | `InvalidNameError`                                        |
 
 ---
 
