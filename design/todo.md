@@ -35,7 +35,7 @@
 
 ## Phase 2 — Behavior Hardening and UX Consistency
 
-- [ ] CODE: Add status argument validation and usage guards
+- [x] CODE: Add status argument validation and usage guards
   - Feature: Enforce bounded status arguments and deterministic defaults.
   - Acceptance:
     - Command accepts `universe status`, `universe status [directory]`, and `universe status [directory] [environment]`.
@@ -43,14 +43,14 @@
     - Unsupported environment value returns typed unsupported-combination style error.
     - Environment defaults to `preview` when omitted.
 
-- [ ] CODE: Add non-blocking observability calls for status flow
+- [x] CODE: Add non-blocking observability calls for status flow
   - Feature: Emit status retrieval telemetry through `ObservabilityClient` using safe wrappers.
   - Acceptance:
     - Status request start, success, and failure are tracked with non-sensitive fields only.
     - Observability failures do not change status result or exit code.
     - No tokens, credentials, or raw environment values are emitted in telemetry payloads.
 
-- [ ] TASK: Align status UX copy with existing command output style
+- [x] TASK: Align status UX copy with existing command output style
   - Acceptance:
     - Error and success copy follows existing imperative/actionable tone.
     - Status output remains deterministic for snapshot-friendly testing.

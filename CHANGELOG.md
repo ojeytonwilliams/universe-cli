@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.20.0] - 2026-04-10
+
+### Phase 2 — Status Command Behavior Hardening
+
+- **Argument validation**: `universe status` accepts zero, one, or two arguments; excess arguments exit 1 with usage guidance; unsupported environment exits 6 via `UnsupportedCombinationError`; environment defaults to `preview`.
+- **Observability**: `status.start`, `status.success`, and `status.failure` events emitted via `safeTrack`; observability errors do not affect exit code or output; only non-sensitive `environment` and `name` fields are included in payloads.
+- **UX copy**: success output format `Status of project "<name>" in <env>: <state> (last updated: <updatedAt>)`; error messages follow existing imperative/actionable tone; output is deterministic for snapshot-friendly testing.
+
 ## [2.19.0] - 2026-04-10
 
 ### Phase 1 — Status Command Trivial Prototype
