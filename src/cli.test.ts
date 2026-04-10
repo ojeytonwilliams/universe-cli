@@ -153,10 +153,7 @@ const defaultRollbackClient = {
 };
 
 const defaultStatusClient = {
-  getStatus(_request: {
-    environment: string;
-    manifest: PlatformManifest;
-  }): Promise<{ environment: string; name: string; state: string; updatedAt: string }> {
+  getStatus(_request: { environment: string; manifest: PlatformManifest }): Promise<never> {
     return Promise.reject(new Error("statusClient.getStatus should not be called in this test"));
   },
 };

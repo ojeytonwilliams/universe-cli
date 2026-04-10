@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.21.0] - 2026-04-10
+
+### Phase 3 — Status Command Test Coverage, Guardrails, and Documentation
+
+- **Stub adapter unit tests** (`src/adapters/stub-status-client.test.ts`): deterministic snapshot ordering, stable field types, repeated calls return same snapshot, sentinel failure raises `StatusError`, instance isolation.
+- **CLI integration tests** (`src/cli.status.test.ts`): 13 tests covering all success and error paths, argument validation, observability, and default environment.
+- **E2E tests** (`src/status.e2e.test.ts`): create-then-status flow, sentinel failure exit 18.
+- **Container guard** (`src/container.test.ts`): asserts `statusClient` is an instance of `StubStatusClient`.
+- **Typed port import** (`src/cli.ts`): `CliDependencies.statusClient` uses `StatusRequest`/`StatusResponse` from the port contract rather than inline anonymous types; stale `oxlint-disable` directives removed from all e2e test files.
+- **Design docs**: STS-001–005 validated in `design/assumptions-register.md`; two new assumptions (STS-N01, STS-N02) captured; remaining migration unknowns documented; `design/future-command-expansion.md` lists `status` as implemented at v2.19.0.
+
 ## [2.20.0] - 2026-04-10
 
 ### Phase 2 — Status Command Behavior Hardening

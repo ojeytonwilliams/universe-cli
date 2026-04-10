@@ -30,7 +30,7 @@ The following commands have been promoted from deferred to fully implemented aga
 | `promote`  | `PromoteClient`      | `StubPromoteClient`      | v2.12.0     |
 | `rollback` | `RollbackClient`     | `StubRollbackClient`     | v2.14.0     |
 | `logs`     | `LogsClient`         | `StubLogsClient`         | v2.16.0     |
-| `status`   | `StatusClient`       | `StubStatusClient`       | v2.18.0     |
+| `status`   | `StatusClient`       | `StubStatusClient`       | v2.19.0     |
 
 Each implemented command:
 

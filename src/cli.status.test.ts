@@ -3,6 +3,7 @@ import type {
   PlatformManifest,
 } from "./services/platform-manifest-service.js";
 import { ManifestNotFoundError, StatusError } from "./errors/cli-errors.js";
+import type { StatusResponse } from "./ports/status-client.js";
 import { runCli } from "./cli.js";
 
 const statusManifest: AppPlatformManifest = {
@@ -25,7 +26,10 @@ const successReader = {
 const successValidator = (_yaml: string): PlatformManifest => statusManifest;
 
 const successStatusClient = {
-  getStatus(_request: { environment: string; manifest: PlatformManifest }) {
+  getStatus(_request: {
+    environment: string;
+    manifest: PlatformManifest;
+  }): Promise<StatusResponse> {
     return Promise.resolve({
       environment: "preview",
       name: "my-app",
@@ -199,7 +203,10 @@ describe("status", () => {
   it("defaults to the preview environment when no environment argument is given", async () => {
     const requests: { environment: string }[] = [];
     const trackingClient = {
-      getStatus(request: { environment: string; manifest: PlatformManifest }) {
+      getStatus(request: {
+        environment: string;
+        manifest: PlatformManifest;
+      }): Promise<StatusResponse> {
         requests.push(request);
         return Promise.resolve({
           environment: request.environment,

@@ -4,10 +4,10 @@ import { join } from "node:path";
 import { LocalFilesystemWriter } from "./adapters/local-filesystem-writer.js";
 import { LocalProjectReader } from "./adapters/local-project-reader.js";
 import { StubDeployClient } from "./adapters/stub-deploy-client.js";
+import { StubLogsClient } from "./adapters/stub-logs-client.js";
 import { StubObservabilityClient } from "./adapters/stub-observability-client.js";
 import { StubPromoteClient } from "./adapters/stub-promote-client.js";
 import { StubRegistrationClient } from "./adapters/stub-registration-client.js";
-import { StubLogsClient } from "./adapters/stub-logs-client.js";
 import { StubRollbackClient } from "./adapters/stub-rollback-client.js";
 import { StubStatusClient } from "./adapters/stub-status-client.js";
 import { CreateInputValidationService } from "./services/create-input-validation-service.js";
@@ -31,13 +31,9 @@ const createPromptPort = (selection: CreateSelections | null): PromptPort => ({
   },
 });
 
-const createDependencies = (
-  cwd: string,
-  promptPort: PromptPort,
-  deployClient: StubDeployClient,
-) => ({
+const createDependencies = (cwd: string, promptPort: PromptPort) => ({
   cwd,
-  deployClient,
+  deployClient: new StubDeployClient(),
   filesystemWriter: new LocalFilesystemWriter(),
   layerResolver: new LayerCompositionService(),
   logsClient: new StubLogsClient(),
@@ -52,7 +48,7 @@ const createDependencies = (
   validator: new CreateInputValidationService((path) => existsSync(join(cwd, path))),
 });
 
-describe("deploy e2e", () => {
+describe("status e2e", () => {
   const tempDirectories: string[] = [];
 
   afterEach(() => {
@@ -63,65 +59,40 @@ describe("deploy e2e", () => {
     tempDirectories.length = 0;
   });
 
-  it("deploys a project scaffolded by universe create", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-deploy-e2e-"));
+  it("retrieves status for a project scaffolded by universe create", async () => {
+    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-status-e2e-"));
     tempDirectories.push(rootDirectory);
 
-    const projectName = "e2e-deploy-app";
-    const deployClient = new StubDeployClient();
+    const projectName = "e2e-status-app";
     const deps = createDependencies(
       rootDirectory,
       createPromptPort(createNodeSelection(projectName)),
-      deployClient,
     );
     const projectDir = join(rootDirectory, projectName);
 
     const createResult = await runCli(["create"], deps);
     expect(createResult.exitCode).toBe(0);
 
-    const deployResult = await runCli(["deploy", projectDir], deps);
-    expect(deployResult.exitCode).toBe(0);
-    expect(deployResult.output).toContain(projectName);
-    expect(deployResult.output).toContain("preview");
-    expect(deployResult.output).toContain(`stub-${projectName}-preview-1`);
+    const statusResult = await runCli(["status", projectDir], deps);
+    expect(statusResult.exitCode).toBe(0);
+    expect(statusResult.output).toContain(projectName);
+    expect(statusResult.output).toContain("preview");
+    expect(statusResult.output).toContain("ACTIVE");
   });
 
-  it("returns a deterministic incremented deployment ID on repeated deploys", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-deploy-e2e-"));
+  it("exits 18 for the sentinel failure project name", async () => {
+    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-status-e2e-"));
     tempDirectories.push(rootDirectory);
 
-    const projectName = "e2e-repeat-deploy";
-    const deployClient = new StubDeployClient();
     const deps = createDependencies(
       rootDirectory,
-      createPromptPort(createNodeSelection(projectName)),
-      deployClient,
+      createPromptPort(createNodeSelection("status-failure")),
     );
-    const projectDir = join(rootDirectory, projectName);
-
-    await runCli(["create"], deps);
-    await runCli(["deploy", projectDir], deps);
-
-    const secondResult = await runCli(["deploy", projectDir], deps);
-    expect(secondResult.exitCode).toBe(0);
-    expect(secondResult.output).toContain(`stub-${projectName}-preview-2`);
-  });
-
-  it("exits 14 for the sentinel failure project name", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-deploy-e2e-"));
-    tempDirectories.push(rootDirectory);
-
-    const deployClient = new StubDeployClient();
-    const deps = createDependencies(
-      rootDirectory,
-      createPromptPort(createNodeSelection("deploy-failure")),
-      deployClient,
-    );
-    const projectDir = join(rootDirectory, "deploy-failure");
+    const projectDir = join(rootDirectory, "status-failure");
 
     await runCli(["create"], deps);
 
-    const result = await runCli(["deploy", projectDir], deps);
-    expect(result.exitCode).toBe(14);
+    const result = await runCli(["status", projectDir], deps);
+    expect(result.exitCode).toBe(18);
   });
 });

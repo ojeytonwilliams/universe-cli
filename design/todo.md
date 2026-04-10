@@ -57,14 +57,14 @@
 
 ## Phase 3 — Test Coverage, Guardrails, and Documentation
 
-- [ ] CODE: Add unit tests for status stub adapter and port contract behavior
+- [x] CODE: Add unit tests for status stub adapter and port contract behavior
   - Feature: Create `StubStatusClient` tests covering success, deterministic snapshots, and simulated failures.
   - Acceptance:
     - Tests verify deterministic state and metadata field values.
     - Tests verify failure path raises `StatusError`.
     - Tests verify state isolation between adapter instances when applicable.
 
-- [ ] CODE: Add CLI integration tests for status success and error paths
+- [x] CODE: Add CLI integration tests for status success and error paths
   - Feature: Extend `src/cli.test.ts` status coverage for implemented behavior.
   - Acceptance:
     - Success path validates output and exit code `0`.
@@ -73,14 +73,14 @@
     - Status-client failure path validates typed status error exit code.
     - Deferred-command test set excludes `status` and still validates remaining deferred commands.
 
-- [ ] CODE: Add E2E flow for create-then-status and container guard
+- [x] CODE: Add E2E flow for create-then-status and container guard
   - Feature: Add `status.e2e` coverage and spike container guard for status wiring.
   - Acceptance:
     - E2E test scaffolds with `create`, then successfully runs `status` against generated `platform.yaml`.
     - E2E test covers at least one status failure fixture with deterministic assertion.
     - Container guard test asserts `statusClient` is an instance of `StubStatusClient`.
 
-- [ ] TASK: Update design docs and migration notes for status promotion
+- [x] TASK: Update design docs and migration notes for status promotion
   - Acceptance:
     - `design/future-command-expansion.md` marks `status` as implemented in spike mode.
     - `design/assumptions-register.md` records status-specific assumptions and validation outcomes.

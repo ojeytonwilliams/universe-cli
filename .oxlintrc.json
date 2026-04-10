@@ -33,6 +33,9 @@
     /* Too dogmatic. A responsibility does not have to be contained with a
     single class */
     "max-classes-per-file": "off",
+    /* This is a useful code smell, but fixing it on the fly warps the codebase.
+    It only makes sense as a refactoring hint */
+    "import/max-dependencies": "off",
     /* We're using node */
     "import/no-nodejs-modules": "off",
     /* Makes it explicit */

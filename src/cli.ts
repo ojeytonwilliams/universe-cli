@@ -8,6 +8,7 @@ import {
 import type { DeployReceipt, DeployRequest } from "./ports/deploy-client.js";
 import type { PromoteReceipt, PromoteRequest } from "./ports/promote-client.js";
 import type { RollbackReceipt, RollbackRequest } from "./ports/rollback-client.js";
+import type { StatusRequest, StatusResponse } from "./ports/status-client.js";
 import type { FilesystemWriter } from "./ports/filesystem-writer.js";
 import type { ObservabilityClient } from "./ports/observability-client.js";
 import { safeError, safeTrack } from "./ports/observability-client.js";
@@ -62,14 +63,7 @@ interface CliDependencies {
   registrationClient: {
     register(manifest: PlatformManifest): Promise<{ name: string; registrationId: string }>;
   };
-  statusClient: {
-    getStatus(request: { environment: string; manifest: PlatformManifest }): Promise<{
-      environment: string;
-      name: string;
-      state: string;
-      updatedAt: string;
-    }>;
-  };
+  statusClient: { getStatus(request: StatusRequest): Promise<StatusResponse> };
   validator: { validateCreateInput(input: CreateSelections): CreateSelections };
 }
 
