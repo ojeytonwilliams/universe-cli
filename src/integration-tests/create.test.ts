@@ -1,12 +1,13 @@
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
-import { LocalFilesystemWriter } from "../adapters/local-filesystem-writer.js";
-import { StubObservabilityClient } from "../adapters/stub-observability-client.js";
-import { CreateInputValidationService } from "../services/create-input-validation-service.js";
+import { createAdapterStubs } from "./adapter-stubs.js";
 import { LayerCompositionService } from "../services/layer-composition-service.js";
 import type { LayerRegistry } from "../services/layer-composition-service.js";
 import { PlatformManifestService } from "../services/platform-manifest-service.js";
+import { CreateInputValidationService } from "../services/create-input-validation-service.js";
+import { LocalFilesystemWriter } from "../adapters/local-filesystem-writer.js";
+import { LocalProjectReader } from "../adapters/local-project-reader.js";
 import { runCli } from "../cli.js";
 import type { CreateSelections, PromptPort } from "../ports/prompt-port.js";
 
@@ -72,72 +73,21 @@ const collectGeneratedFiles = (directory: string): Record<string, string> => {
   );
 };
 
-const createDependencies = (
-  cwd: string,
-  promptPort: PromptPort,
-  layerRegistry?: LayerRegistry,
-) => ({
-  cwd,
-  deployClient: {
-    deploy(_request: never): Promise<{ deploymentId: string; environment: string; name: string }> {
-      return Promise.reject(new Error("deployClient not exercised in create tests"));
-    },
-  },
-  filesystemWriter: new LocalFilesystemWriter(),
-  layerResolver: new LayerCompositionService(layerRegistry),
-  listClient: {
-    getList(_request: never): Promise<never> {
-      return Promise.reject(new Error("listClient not exercised in create tests"));
-    },
-  },
-  logsClient: {
-    getLogs(_request: never): Promise<{
-      entries: { level: string; message: string; timestamp: string }[];
-      environment: string;
-      name: string;
-    }> {
-      return Promise.reject(new Error("logsClient not exercised in create tests"));
-    },
-  },
-  observability: new StubObservabilityClient(),
-  platformManifestGenerator: new PlatformManifestService(),
-  projectReader: {
-    readFile(_filePath: string): Promise<string> {
-      return Promise.reject(new Error("projectReader not exercised in create tests"));
-    },
-  },
-  promoteClient: {
-    promote(
-      _request: never,
-    ): Promise<{ name: string; promotionId: string; targetEnvironment: string }> {
-      return Promise.reject(new Error("promoteClient not exercised in create tests"));
-    },
-  },
-  promptPort,
-  registrationClient: {
-    register(_manifest: never): Promise<{ name: string; registrationId: string }> {
-      return Promise.reject(new Error("registrationClient not exercised in create tests"));
-    },
-  },
-  rollbackClient: {
-    rollback(
-      _request: never,
-    ): Promise<{ name: string; rollbackId: string; targetEnvironment: string }> {
-      return Promise.reject(new Error("rollbackClient not exercised in create tests"));
-    },
-  },
-  statusClient: {
-    getStatus(_request: never): Promise<never> {
-      return Promise.reject(new Error("statusClient not exercised in create tests"));
-    },
-  },
-  teardownClient: {
-    teardown(_request: never): Promise<never> {
-      return Promise.reject(new Error("teardownClient not exercised in create tests"));
-    },
-  },
-  validator: new CreateInputValidationService((path) => existsSync(join(cwd, path))),
-});
+const makeDeps = (cwd: string, promptPort: PromptPort, layerRegistry?: LayerRegistry) => {
+  const stubs = createAdapterStubs();
+  return {
+    ...stubs,
+    cwd,
+    filesystemWriter: new LocalFilesystemWriter(),
+    layerResolver: layerRegistry
+      ? new LayerCompositionService(layerRegistry)
+      : new LayerCompositionService(),
+    platformManifestGenerator: new PlatformManifestService(),
+    projectReader: new LocalProjectReader(),
+    promptPort,
+    validator: new CreateInputValidationService((path) => existsSync(join(cwd, path))),
+  };
+};
 
 describe("create", () => {
   const tempDirectories: string[] = [];
@@ -161,10 +111,7 @@ describe("create", () => {
 
     tempDirectories.push(rootDirectory);
 
-    const result = await runCli(
-      ["create"],
-      createDependencies(rootDirectory, createPromptPort(selection)),
-    );
+    const result = await runCli(["create"], makeDeps(rootDirectory, createPromptPort(selection)));
 
     expect(result.exitCode).toBe(0);
     expect(existsSync(join(rootDirectory, selection.name))).toBe(true);
@@ -181,10 +128,7 @@ describe("create", () => {
 
     tempDirectories.push(rootDirectory);
 
-    const result = await runCli(
-      ["create"],
-      createDependencies(rootDirectory, createPromptPort(selection)),
-    );
+    const result = await runCli(["create"], makeDeps(rootDirectory, createPromptPort(selection)));
 
     expect(result.exitCode).toBe(0);
     expect(existsSync(join(rootDirectory, selection.name))).toBe(true);
@@ -196,10 +140,7 @@ describe("create", () => {
 
     tempDirectories.push(rootDirectory);
 
-    const result = await runCli(
-      ["create"],
-      createDependencies(rootDirectory, createPromptPort(selection)),
-    );
+    const result = await runCli(["create"], makeDeps(rootDirectory, createPromptPort(selection)));
 
     expect(result.exitCode).toBe(0);
     expect(existsSync(join(rootDirectory, selection.name))).toBe(true);
@@ -214,9 +155,8 @@ describe("create", () => {
       DEFERRED_COMMANDS.map(async (command) => {
         const result = await runCli(
           [command],
-          createDependencies(rootDirectory, createPromptPort(createStaticSelection("ignored"))),
+          makeDeps(rootDirectory, createPromptPort(createStaticSelection("ignored"))),
         );
-
         return { command, result };
       }),
     );
@@ -236,7 +176,7 @@ describe("create", () => {
 
     const invalidNameResult = await runCli(
       ["create"],
-      createDependencies(rootDirectory, createPromptPort(createStaticSelection("InvalidName"))),
+      makeDeps(rootDirectory, createPromptPort(createStaticSelection("InvalidName"))),
     );
 
     expect(invalidNameResult.exitCode).toBe(2);
@@ -246,7 +186,7 @@ describe("create", () => {
 
     const firstCreateResult = await runCli(
       ["create"],
-      createDependencies(
+      makeDeps(
         rootDirectory,
         createPromptPort(
           createNodeSelection({
@@ -263,7 +203,7 @@ describe("create", () => {
 
     const targetExistsResult = await runCli(
       ["create"],
-      createDependencies(
+      makeDeps(
         rootDirectory,
         createPromptPort(
           createNodeSelection({
@@ -320,7 +260,7 @@ describe("create", () => {
 
     const result = await runCli(
       ["create"],
-      createDependencies(rootDirectory, createPromptPort(selection), customLayers),
+      makeDeps(rootDirectory, createPromptPort(selection), customLayers),
     );
 
     expect(result.exitCode).toBe(0);
@@ -361,7 +301,7 @@ describe("create", () => {
 
     const result = await runCli(
       ["create"],
-      createDependencies(rootDirectory, createPromptPort(selection), customLayers),
+      makeDeps(rootDirectory, createPromptPort(selection), customLayers),
     );
 
     expect(result.exitCode).toBe(9);
@@ -380,10 +320,7 @@ describe("create", () => {
 
     tempDirectories.push(rootDirectory);
 
-    const result = await runCli(
-      ["create"],
-      createDependencies(rootDirectory, createPromptPort(selection)),
-    );
+    const result = await runCli(["create"], makeDeps(rootDirectory, createPromptPort(selection)));
 
     expect(result.exitCode).toBe(0);
 
@@ -398,10 +335,7 @@ describe("create", () => {
 
     tempDirectories.push(rootDirectory);
 
-    const result = await runCli(
-      ["create"],
-      createDependencies(rootDirectory, createPromptPort(selection)),
-    );
+    const result = await runCli(["create"], makeDeps(rootDirectory, createPromptPort(selection)));
 
     expect(result.exitCode).toBe(0);
 

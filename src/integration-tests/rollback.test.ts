@@ -1,17 +1,9 @@
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createAdapterStubs } from "./adapter-stubs.js";
 import { LocalFilesystemWriter } from "../adapters/local-filesystem-writer.js";
 import { LocalProjectReader } from "../adapters/local-project-reader.js";
-import { StubDeployClient } from "../adapters/stub-deploy-client.js";
-import { StubListClient } from "../adapters/stub-list-client.js";
-import { StubObservabilityClient } from "../adapters/stub-observability-client.js";
-import { StubLogsClient } from "../adapters/stub-logs-client.js";
-import { StubPromoteClient } from "../adapters/stub-promote-client.js";
-import { StubRegistrationClient } from "../adapters/stub-registration-client.js";
-import { StubRollbackClient } from "../adapters/stub-rollback-client.js";
-import { StubStatusClient } from "../adapters/stub-status-client.js";
-import { StubTeardownClient } from "../adapters/stub-teardown-client.js";
 import { CreateInputValidationService } from "../services/create-input-validation-service.js";
 import { LayerCompositionService } from "../services/layer-composition-service.js";
 import { PlatformManifestService } from "../services/platform-manifest-service.js";
@@ -33,28 +25,19 @@ const createPromptPort = (selection: CreateSelections | null): PromptPort => ({
   },
 });
 
-const createDependencies = (
-  cwd: string,
-  promptPort: PromptPort,
-  rollbackClient: StubRollbackClient,
-) => ({
-  cwd,
-  deployClient: new StubDeployClient(),
-  filesystemWriter: new LocalFilesystemWriter(),
-  layerResolver: new LayerCompositionService(),
-  listClient: new StubListClient(),
-  logsClient: new StubLogsClient(),
-  observability: new StubObservabilityClient(),
-  platformManifestGenerator: new PlatformManifestService(),
-  projectReader: new LocalProjectReader(),
-  promoteClient: new StubPromoteClient(),
-  promptPort,
-  registrationClient: new StubRegistrationClient(),
-  rollbackClient,
-  statusClient: new StubStatusClient(),
-  teardownClient: new StubTeardownClient(),
-  validator: new CreateInputValidationService((path) => existsSync(join(cwd, path))),
-});
+const makeDeps = (cwd: string, promptPort: PromptPort) => {
+  const stubs = createAdapterStubs();
+  return {
+    cwd,
+    ...stubs,
+    filesystemWriter: new LocalFilesystemWriter(),
+    layerResolver: new LayerCompositionService(),
+    platformManifestGenerator: new PlatformManifestService(),
+    projectReader: new LocalProjectReader(),
+    promptPort,
+    validator: new CreateInputValidationService((path) => existsSync(join(cwd, path))),
+  };
+};
 
 describe("rollback", () => {
   const tempDirectories: string[] = [];
@@ -72,12 +55,7 @@ describe("rollback", () => {
     tempDirectories.push(rootDirectory);
 
     const projectName = "rollback-app";
-    const rollbackClient = new StubRollbackClient();
-    const deps = createDependencies(
-      rootDirectory,
-      createPromptPort(createNodeSelection(projectName)),
-      rollbackClient,
-    );
+    const deps = makeDeps(rootDirectory, createPromptPort(createNodeSelection(projectName)));
     const projectDir = join(rootDirectory, projectName);
 
     const createResult = await runCli(["create"], deps);
@@ -95,12 +73,7 @@ describe("rollback", () => {
     tempDirectories.push(rootDirectory);
 
     const projectName = "repeat-rollback";
-    const rollbackClient = new StubRollbackClient();
-    const deps = createDependencies(
-      rootDirectory,
-      createPromptPort(createNodeSelection(projectName)),
-      rollbackClient,
-    );
+    const deps = makeDeps(rootDirectory, createPromptPort(createNodeSelection(projectName)));
     const projectDir = join(rootDirectory, projectName);
 
     await runCli(["create"], deps);
@@ -115,12 +88,7 @@ describe("rollback", () => {
     const rootDirectory = mkdtempSync(join(tmpdir(), "universe-rollback-"));
     tempDirectories.push(rootDirectory);
 
-    const rollbackClient = new StubRollbackClient();
-    const deps = createDependencies(
-      rootDirectory,
-      createPromptPort(createNodeSelection("rollback-failure")),
-      rollbackClient,
-    );
+    const deps = makeDeps(rootDirectory, createPromptPort(createNodeSelection("rollback-failure")));
     const projectDir = join(rootDirectory, "rollback-failure");
 
     await runCli(["create"], deps);

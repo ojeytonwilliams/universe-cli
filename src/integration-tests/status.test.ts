@@ -1,17 +1,9 @@
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createAdapterStubs } from "./adapter-stubs.js";
 import { LocalFilesystemWriter } from "../adapters/local-filesystem-writer.js";
 import { LocalProjectReader } from "../adapters/local-project-reader.js";
-import { StubDeployClient } from "../adapters/stub-deploy-client.js";
-import { StubListClient } from "../adapters/stub-list-client.js";
-import { StubLogsClient } from "../adapters/stub-logs-client.js";
-import { StubObservabilityClient } from "../adapters/stub-observability-client.js";
-import { StubPromoteClient } from "../adapters/stub-promote-client.js";
-import { StubRegistrationClient } from "../adapters/stub-registration-client.js";
-import { StubRollbackClient } from "../adapters/stub-rollback-client.js";
-import { StubStatusClient } from "../adapters/stub-status-client.js";
-import { StubTeardownClient } from "../adapters/stub-teardown-client.js";
 import { CreateInputValidationService } from "../services/create-input-validation-service.js";
 import { LayerCompositionService } from "../services/layer-composition-service.js";
 import { PlatformManifestService } from "../services/platform-manifest-service.js";
@@ -33,24 +25,19 @@ const createPromptPort = (selection: CreateSelections | null): PromptPort => ({
   },
 });
 
-const createDependencies = (cwd: string, promptPort: PromptPort) => ({
-  cwd,
-  deployClient: new StubDeployClient(),
-  filesystemWriter: new LocalFilesystemWriter(),
-  layerResolver: new LayerCompositionService(),
-  listClient: new StubListClient(),
-  logsClient: new StubLogsClient(),
-  observability: new StubObservabilityClient(),
-  platformManifestGenerator: new PlatformManifestService(),
-  projectReader: new LocalProjectReader(),
-  promoteClient: new StubPromoteClient(),
-  promptPort,
-  registrationClient: new StubRegistrationClient(),
-  rollbackClient: new StubRollbackClient(),
-  statusClient: new StubStatusClient(),
-  teardownClient: new StubTeardownClient(),
-  validator: new CreateInputValidationService((path) => existsSync(join(cwd, path))),
-});
+const makeDeps = (cwd: string, promptPort: PromptPort) => {
+  const stubs = createAdapterStubs();
+  return {
+    cwd,
+    ...stubs,
+    filesystemWriter: new LocalFilesystemWriter(),
+    layerResolver: new LayerCompositionService(),
+    platformManifestGenerator: new PlatformManifestService(),
+    projectReader: new LocalProjectReader(),
+    promptPort,
+    validator: new CreateInputValidationService((path) => existsSync(join(cwd, path))),
+  };
+};
 
 describe("status", () => {
   const tempDirectories: string[] = [];
@@ -68,10 +55,7 @@ describe("status", () => {
     tempDirectories.push(rootDirectory);
 
     const projectName = "status-app";
-    const deps = createDependencies(
-      rootDirectory,
-      createPromptPort(createNodeSelection(projectName)),
-    );
+    const deps = makeDeps(rootDirectory, createPromptPort(createNodeSelection(projectName)));
     const projectDir = join(rootDirectory, projectName);
 
     const createResult = await runCli(["create"], deps);
@@ -88,10 +72,7 @@ describe("status", () => {
     const rootDirectory = mkdtempSync(join(tmpdir(), "universe-status-"));
     tempDirectories.push(rootDirectory);
 
-    const deps = createDependencies(
-      rootDirectory,
-      createPromptPort(createNodeSelection("status-failure")),
-    );
+    const deps = makeDeps(rootDirectory, createPromptPort(createNodeSelection("status-failure")));
     const projectDir = join(rootDirectory, "status-failure");
 
     await runCli(["create"], deps);

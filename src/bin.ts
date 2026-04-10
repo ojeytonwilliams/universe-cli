@@ -7,17 +7,15 @@ import { LocalProjectReader } from "./adapters/local-project-reader.js";
 import { CreateInputValidationService } from "./services/create-input-validation-service.js";
 import { LayerCompositionService } from "./services/layer-composition-service.js";
 import { PlatformManifestService } from "./services/platform-manifest-service.js";
-import {
-  deployClient,
-  listClient,
-  logsClient,
-  observabilityClient,
-  promoteClient,
-  registrationClient,
-  rollbackClient,
-  statusClient,
-  teardownClient,
-} from "./container.js";
+import { StubDeployClient } from "./adapters/stub-deploy-client.js";
+import { StubListClient } from "./adapters/stub-list-client.js";
+import { StubLogsClient } from "./adapters/stub-logs-client.js";
+import { StubObservabilityClient } from "./adapters/stub-observability-client.js";
+import { StubPromoteClient } from "./adapters/stub-promote-client.js";
+import { StubRegistrationClient } from "./adapters/stub-registration-client.js";
+import { StubRollbackClient } from "./adapters/stub-rollback-client.js";
+import { StubStatusClient } from "./adapters/stub-status-client.js";
+import { StubTeardownClient } from "./adapters/stub-teardown-client.js";
 import { runCli } from "./cli.js";
 
 const filesystemWriter = new LocalFilesystemWriter();
@@ -28,20 +26,20 @@ const promptPort = new ClackPromptAdapter();
 const inputValidator = new CreateInputValidationService((path) => existsSync(path));
 const { exitCode, output } = await runCli(process.argv.slice(2), {
   cwd: process.cwd(),
-  deployClient,
+  deployClient: new StubDeployClient(),
   filesystemWriter,
   layerResolver,
-  listClient,
-  logsClient,
-  observability: observabilityClient,
+  listClient: new StubListClient(),
+  logsClient: new StubLogsClient(),
+  observability: new StubObservabilityClient(),
   platformManifestGenerator: manifestGenerator,
   projectReader,
-  promoteClient,
+  promoteClient: new StubPromoteClient(),
   promptPort,
-  registrationClient,
-  rollbackClient,
-  statusClient,
-  teardownClient,
+  registrationClient: new StubRegistrationClient(),
+  rollbackClient: new StubRollbackClient(),
+  statusClient: new StubStatusClient(),
+  teardownClient: new StubTeardownClient(),
   validator: inputValidator,
 });
 

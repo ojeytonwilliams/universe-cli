@@ -1,17 +1,9 @@
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createAdapterStubs } from "./adapter-stubs.js";
 import { LocalFilesystemWriter } from "../adapters/local-filesystem-writer.js";
 import { LocalProjectReader } from "../adapters/local-project-reader.js";
-import { StubDeployClient } from "../adapters/stub-deploy-client.js";
-import { StubListClient } from "../adapters/stub-list-client.js";
-import { StubObservabilityClient } from "../adapters/stub-observability-client.js";
-import { StubPromoteClient } from "../adapters/stub-promote-client.js";
-import { StubRegistrationClient } from "../adapters/stub-registration-client.js";
-import { StubLogsClient } from "../adapters/stub-logs-client.js";
-import { StubRollbackClient } from "../adapters/stub-rollback-client.js";
-import { StubStatusClient } from "../adapters/stub-status-client.js";
-import { StubTeardownClient } from "../adapters/stub-teardown-client.js";
 import { CreateInputValidationService } from "../services/create-input-validation-service.js";
 import { LayerCompositionService } from "../services/layer-composition-service.js";
 import { PlatformManifestService } from "../services/platform-manifest-service.js";
@@ -33,28 +25,20 @@ const createPromptPort = (selection: CreateSelections | null): PromptPort => ({
   },
 });
 
-const createDependencies = (
-  cwd: string,
-  promptPort: PromptPort,
-  deployClient: StubDeployClient,
-) => ({
-  cwd,
-  deployClient,
-  filesystemWriter: new LocalFilesystemWriter(),
-  layerResolver: new LayerCompositionService(),
-  listClient: new StubListClient(),
-  logsClient: new StubLogsClient(),
-  observability: new StubObservabilityClient(),
-  platformManifestGenerator: new PlatformManifestService(),
-  projectReader: new LocalProjectReader(),
-  promoteClient: new StubPromoteClient(),
-  promptPort,
-  registrationClient: new StubRegistrationClient(),
-  rollbackClient: new StubRollbackClient(),
-  statusClient: new StubStatusClient(),
-  teardownClient: new StubTeardownClient(),
-  validator: new CreateInputValidationService((path) => existsSync(join(cwd, path))),
-});
+const makeDeps = (cwd: string, promptPort: PromptPort) => {
+  const stubs = createAdapterStubs();
+  return {
+    cwd,
+    ...stubs,
+    deployClient: stubs.deployClient,
+    filesystemWriter: new LocalFilesystemWriter(),
+    layerResolver: new LayerCompositionService(),
+    platformManifestGenerator: new PlatformManifestService(),
+    projectReader: new LocalProjectReader(),
+    promptPort,
+    validator: new CreateInputValidationService((path) => existsSync(join(cwd, path))),
+  };
+};
 
 describe("deploy", () => {
   const tempDirectories: string[] = [];
@@ -72,12 +56,7 @@ describe("deploy", () => {
     tempDirectories.push(rootDirectory);
 
     const projectName = "e2e-deploy-app";
-    const deployClient = new StubDeployClient();
-    const deps = createDependencies(
-      rootDirectory,
-      createPromptPort(createNodeSelection(projectName)),
-      deployClient,
-    );
+    const deps = makeDeps(rootDirectory, createPromptPort(createNodeSelection(projectName)));
     const projectDir = join(rootDirectory, projectName);
 
     const createResult = await runCli(["create"], deps);
@@ -95,12 +74,7 @@ describe("deploy", () => {
     tempDirectories.push(rootDirectory);
 
     const projectName = "e2e-repeat-deploy";
-    const deployClient = new StubDeployClient();
-    const deps = createDependencies(
-      rootDirectory,
-      createPromptPort(createNodeSelection(projectName)),
-      deployClient,
-    );
+    const deps = makeDeps(rootDirectory, createPromptPort(createNodeSelection(projectName)));
     const projectDir = join(rootDirectory, projectName);
 
     await runCli(["create"], deps);
@@ -115,12 +89,7 @@ describe("deploy", () => {
     const rootDirectory = mkdtempSync(join(tmpdir(), "universe-deploy-e2e-"));
     tempDirectories.push(rootDirectory);
 
-    const deployClient = new StubDeployClient();
-    const deps = createDependencies(
-      rootDirectory,
-      createPromptPort(createNodeSelection("deploy-failure")),
-      deployClient,
-    );
+    const deps = makeDeps(rootDirectory, createPromptPort(createNodeSelection("deploy-failure")));
     const projectDir = join(rootDirectory, "deploy-failure");
 
     await runCli(["create"], deps);
