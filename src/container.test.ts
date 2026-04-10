@@ -6,6 +6,7 @@ import { StubPromoteClient } from "./adapters/stub-promote-client.js";
 import { StubRegistrationClient } from "./adapters/stub-registration-client.js";
 import { StubRollbackClient } from "./adapters/stub-rollback-client.js";
 import { StubStatusClient } from "./adapters/stub-status-client.js";
+import { StubTeardownClient } from "./adapters/stub-teardown-client.js";
 import {
   deployClient,
   listClient,
@@ -15,6 +16,7 @@ import {
   registrationClient,
   rollbackClient,
   statusClient,
+  teardownClient,
 } from "./container.js";
 
 describe("spike container guard", () => {
@@ -48,5 +50,9 @@ describe("spike container guard", () => {
 
   it("wires StubStatusClient as the status adapter", () => {
     expect(statusClient).toBeInstanceOf(StubStatusClient);
+  });
+
+  it("wires StubTeardownClient as the teardown adapter", () => {
+    expect(teardownClient).toBeInstanceOf(StubTeardownClient);
   });
 });

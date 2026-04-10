@@ -13,6 +13,7 @@ import {
   ScaffoldWriteError,
   StatusError,
   TargetDirectoryExistsError,
+  TeardownError,
   UnsupportedCombinationError,
   UnsupportedFrameworkError,
   UnsupportedRuntimeError,
@@ -34,6 +35,7 @@ describe("error exit codes", () => {
       new ScaffoldWriteError("/tmp/x", new Error("disk full")),
       new StatusError("my-app", "unavailable"),
       new TargetDirectoryExistsError("/tmp/x"),
+      new TeardownError("my-app", "unavailable"),
       new UnsupportedCombinationError("static + database"),
       new UnsupportedFrameworkError("fastify", "nodejs"),
       new UnsupportedRuntimeError("python"),
@@ -209,6 +211,16 @@ describe(ListError, () => {
 
     expect(error.message).toMatchInlineSnapshot(
       `"Failed to list deployments for project "my-app": unavailable"`,
+    );
+  });
+});
+
+describe(TeardownError, () => {
+  it("includes the project name and reason in the message", () => {
+    const error = new TeardownError("my-app", "unavailable");
+
+    expect(error.message).toMatchInlineSnapshot(
+      `"Failed to tear down project "my-app": unavailable"`,
     );
   });
 });

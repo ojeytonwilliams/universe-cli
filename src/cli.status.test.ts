@@ -106,6 +106,11 @@ const statusDeps = (
     },
   },
   statusClient,
+  teardownClient: {
+    teardown(_request: never): Promise<never> {
+      return Promise.reject(new Error("teardownClient not used in status tests"));
+    },
+  },
   validator: {
     validateCreateInput(_input: never): never {
       throw new Error("validator not used in status tests");

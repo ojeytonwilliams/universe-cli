@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.25.0] - 2026-04-10
+
+### Phase 1 — Teardown Command Trivial Prototype
+
+- **`TeardownClient` port** (`src/ports/teardown-client.ts`): `teardown(request): Promise<TeardownReceipt>`; request carries `manifest` and `targetEnvironment`; response carries `name`, `targetEnvironment`, and `teardownId`.
+- **`TeardownError`** (`src/errors/cli-errors.ts`): typed error with exit code 20 and message `Failed to tear down project "<name>": <reason>`.
+- **`StubTeardownClient` adapter** (`src/adapters/stub-teardown-client.ts`): deterministic stub with incrementing ID per project/environment pair; rejects with `TeardownError` for sentinel project name `"teardown-failure"`.
+- **`teardown` CLI handler** (`src/cli.ts`): `universe teardown [directory] [target-environment]` promoted from deferred; reads `platform.yaml`, validates manifest, delegates to `teardownClient`, outputs `Tore down project "<name>" in <targetEnvironment>. Teardown ID: <teardownId>`; all commands now implemented (DEFERRED_COMMANDS is empty).
+- **Container wiring** (`src/container.ts`, `src/bin.ts`): `teardownClient` exported as `StubTeardownClient` instance and wired into `runCli` dependency graph.
+
 ## [2.24.0] - 2026-04-10
 
 ### Phase 3 — List Command Test Coverage, Guardrails, and Documentation

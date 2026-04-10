@@ -10,6 +10,7 @@ import type { PromoteReceipt, PromoteRequest } from "./ports/promote-client.js";
 import type { ListRequest, ListResponse } from "./ports/list-client.js";
 import type { RollbackReceipt, RollbackRequest } from "./ports/rollback-client.js";
 import type { StatusRequest, StatusResponse } from "./ports/status-client.js";
+import type { TeardownReceipt, TeardownRequest } from "./ports/teardown-client.js";
 import type { FilesystemWriter } from "./ports/filesystem-writer.js";
 import type { ObservabilityClient } from "./ports/observability-client.js";
 import { safeError, safeTrack } from "./ports/observability-client.js";
@@ -66,10 +67,11 @@ interface CliDependencies {
     register(manifest: PlatformManifest): Promise<{ name: string; registrationId: string }>;
   };
   statusClient: { getStatus(request: StatusRequest): Promise<StatusResponse> };
+  teardownClient: { teardown(request: TeardownRequest): Promise<TeardownReceipt> };
   validator: { validateCreateInput(input: CreateSelections): CreateSelections };
 }
 
-const DEFERRED_COMMANDS = new Set(["teardown"]);
+const DEFERRED_COMMANDS = new Set<string>();
 
 const runCli = async (argv: string[], deps: CliDependencies): Promise<CliResult> => {
   const {
@@ -87,6 +89,7 @@ const runCli = async (argv: string[], deps: CliDependencies): Promise<CliResult>
     registrationClient,
     rollbackClient,
     statusClient,
+    teardownClient,
     validator,
   } = deps;
   const [command] = argv;
@@ -514,6 +517,64 @@ const runCli = async (argv: string[], deps: CliDependencies): Promise<CliResult>
       if (error instanceof CliError) {
         safeError(observability, error);
         safeTrack(observability, "status.failure", { environment });
+        return { exitCode: error.exitCode, output: error.message };
+      }
+
+      throw error;
+    }
+  }
+
+  if (command === "teardown") {
+    if (argv.length > 3) {
+      return {
+        exitCode: 1,
+        output: "Too many arguments. Usage: universe teardown [directory] [target-environment]",
+      };
+    }
+
+    const platformYamlDir = argv[1] ?? cwd;
+    const targetEnvironment = argv[2] ?? "preview";
+    const platformYamlPath = join(platformYamlDir, "platform.yaml");
+
+    if (targetEnvironment !== "preview" && targetEnvironment !== "production") {
+      const envError = new UnsupportedCombinationError(
+        `target-environment "${targetEnvironment}" — valid values are: preview, production`,
+      );
+      return { exitCode: envError.exitCode, output: envError.message };
+    }
+
+    safeTrack(observability, "teardown.start", { targetEnvironment });
+
+    try {
+      const yaml = await projectReader.readFile(platformYamlPath);
+
+      let manifest: PlatformManifest;
+      try {
+        manifest = platformManifestGenerator.validateManifest(yaml);
+      } catch (validationError) {
+        const invalidError = new ManifestInvalidError(
+          platformYamlPath,
+          validationError instanceof Error ? validationError.message : String(validationError),
+        );
+        safeError(observability, invalidError);
+        return { exitCode: invalidError.exitCode, output: invalidError.message };
+      }
+
+      const receipt = await teardownClient.teardown({ manifest, targetEnvironment });
+
+      safeTrack(observability, "teardown.success", {
+        name: receipt.name,
+        targetEnvironment,
+      });
+
+      return {
+        exitCode: 0,
+        output: `Tore down project "${receipt.name}" in ${receipt.targetEnvironment}. Teardown ID: ${receipt.teardownId}`,
+      };
+    } catch (error) {
+      if (error instanceof CliError) {
+        safeError(observability, error);
+        safeTrack(observability, "teardown.failure", { targetEnvironment });
         return { exitCode: error.exitCode, output: error.message };
       }
 

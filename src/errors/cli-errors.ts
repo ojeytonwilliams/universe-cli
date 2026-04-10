@@ -15,6 +15,7 @@ const EXIT_CODES = {
   SCAFFOLD_WRITE: 10,
   STATUS: 18,
   TARGET_EXISTS: 3,
+  TEARDOWN: 20,
   UNSUPPORTED_COMBINATION: 6,
   UNSUPPORTED_FRAMEWORK: 5,
   UNSUPPORTED_RUNTIME: 4,
@@ -184,6 +185,13 @@ class ListError extends CliError {
   }
 }
 
+class TeardownError extends CliError {
+  constructor(name: string, reason: string) {
+    super(`Failed to tear down project "${name}": ${reason}`, EXIT_CODES.TEARDOWN);
+    this.name = "TeardownError";
+  }
+}
+
 class DeferredCommandError extends CliError {
   constructor(command: string) {
     super(
@@ -198,20 +206,21 @@ export {
   CliError,
   DeferredCommandError,
   DeploymentError,
-  ListError,
-  LogsError,
-  PromotionError,
-  RollbackError,
-  StatusError,
   InvalidMultiSelectError,
   InvalidNameError,
   LayerConflictError,
+  ListError,
+  LogsError,
   ManifestInvalidError,
   ManifestNotFoundError,
   MissingLayerError,
+  PromotionError,
   RegistrationError,
+  RollbackError,
   ScaffoldWriteError,
+  StatusError,
   TargetDirectoryExistsError,
+  TeardownError,
   UnsupportedCombinationError,
   UnsupportedFrameworkError,
   UnsupportedRuntimeError,

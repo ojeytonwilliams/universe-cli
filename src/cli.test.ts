@@ -22,8 +22,6 @@ const client: ObservabilityClient = {
   track() {},
 };
 
-const DEFERRED_COMMANDS = ["teardown"] as const;
-
 const createPromptResult: CreateSelections = {
   confirmed: true,
   databases: ["postgresql"],
@@ -164,6 +162,12 @@ const defaultStatusClient = {
   },
 };
 
+const defaultTeardownClient = {
+  teardown(_request: { manifest: PlatformManifest; targetEnvironment: string }): Promise<never> {
+    return Promise.reject(new Error("teardownClient.teardown should not be called in this test"));
+  },
+};
+
 const createDeps = (
   promptPort: PromptPort,
   validator: { validateCreateInput(input: CreateSelections): CreateSelections },
@@ -183,6 +187,7 @@ const createDeps = (
   registrationClient: defaultRegistrationClient,
   rollbackClient: defaultRollbackClient,
   statusClient: defaultStatusClient,
+  teardownClient: defaultTeardownClient,
   validator,
 });
 
@@ -218,20 +223,6 @@ describe(runCli, () => {
         Options:
           --help      Show this help message"
       `);
-    });
-  });
-
-  describe("deferred commands", () => {
-    it.each(DEFERRED_COMMANDS)('"%s" exits non-zero', async (cmd) => {
-      const result = await runCli([cmd], createDeps(createPrompt, passThroughValidator));
-
-      expect(result.exitCode).not.toBe(0);
-    });
-
-    it.each(DEFERRED_COMMANDS)('"%s" output contains the command name', async (cmd) => {
-      const { output } = await runCli([cmd], createDeps(createPrompt, passThroughValidator));
-
-      expect(output).toContain(cmd);
     });
   });
 

@@ -52,7 +52,7 @@ const createDependencies = (cwd: string, promptPort: PromptPort) => ({
   validator: new CreateInputValidationService((path) => existsSync(join(cwd, path))),
 });
 
-describe("list e2e", () => {
+describe("teardown e2e", () => {
   const tempDirectories: string[] = [];
 
   afterEach(() => {
@@ -63,11 +63,11 @@ describe("list e2e", () => {
     tempDirectories.length = 0;
   });
 
-  it("lists deployments for a project scaffolded by universe create", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-list-e2e-"));
+  it("tears down a project scaffolded by universe create", async () => {
+    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-teardown-e2e-"));
     tempDirectories.push(rootDirectory);
 
-    const projectName = "e2e-list-app";
+    const projectName = "e2e-teardown-app";
     const deps = createDependencies(
       rootDirectory,
       createPromptPort(createNodeSelection(projectName)),
@@ -77,26 +77,26 @@ describe("list e2e", () => {
     const createResult = await runCli(["create"], deps);
     expect(createResult.exitCode).toBe(0);
 
-    const listResult = await runCli(["list", projectDir], deps);
-    expect(listResult.exitCode).toBe(0);
-    expect(listResult.output).toContain(projectName);
-    expect(listResult.output).toContain("preview");
-    expect(listResult.output).toContain("deploy-stub-001");
+    const teardownResult = await runCli(["teardown", projectDir], deps);
+    expect(teardownResult.exitCode).toBe(0);
+    expect(teardownResult.output).toContain(projectName);
+    expect(teardownResult.output).toContain("preview");
+    expect(teardownResult.output).toContain(`stub-teardown-${projectName}-preview-1`);
   });
 
-  it("exits 19 for the sentinel failure project name", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-list-e2e-"));
+  it("exits 20 for the sentinel failure project name", async () => {
+    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-teardown-e2e-"));
     tempDirectories.push(rootDirectory);
 
     const deps = createDependencies(
       rootDirectory,
-      createPromptPort(createNodeSelection("list-failure")),
+      createPromptPort(createNodeSelection("teardown-failure")),
     );
-    const projectDir = join(rootDirectory, "list-failure");
+    const projectDir = join(rootDirectory, "teardown-failure");
 
     await runCli(["create"], deps);
 
-    const result = await runCli(["list", projectDir], deps);
-    expect(result.exitCode).toBe(19);
+    const result = await runCli(["teardown", projectDir], deps);
+    expect(result.exitCode).toBe(20);
   });
 });

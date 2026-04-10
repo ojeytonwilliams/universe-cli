@@ -11,6 +11,7 @@ import { StubRegistrationClient } from "./adapters/stub-registration-client.js";
 import { StubLogsClient } from "./adapters/stub-logs-client.js";
 import { StubRollbackClient } from "./adapters/stub-rollback-client.js";
 import { StubStatusClient } from "./adapters/stub-status-client.js";
+import { StubTeardownClient } from "./adapters/stub-teardown-client.js";
 import { CreateInputValidationService } from "./services/create-input-validation-service.js";
 import { LayerCompositionService } from "./services/layer-composition-service.js";
 import { PlatformManifestService } from "./services/platform-manifest-service.js";
@@ -51,6 +52,7 @@ const createDependencies = (
   registrationClient: new StubRegistrationClient(),
   rollbackClient: new StubRollbackClient(),
   statusClient: new StubStatusClient(),
+  teardownClient: new StubTeardownClient(),
   validator: new CreateInputValidationService((path) => existsSync(join(cwd, path))),
 });
 

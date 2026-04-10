@@ -6,7 +6,7 @@
 
 ## Phase 1 — Trivial Prototype (first working `universe teardown`)
 
-- [ ] CODE: Define teardown port contract and typed teardown error
+- [x] CODE: Define teardown port contract and typed teardown error
   - Feature: Add `TeardownClient` port (request/response types) and `TeardownError` in the CLI error taxonomy.
   - Acceptance:
     - `src/ports/teardown-client.ts` exports a documented interface with one teardown method.
@@ -14,7 +14,7 @@
     - Teardown response includes project `name`, `environment`, and a deterministic result/receipt.
     - `TeardownError` has one stable user-facing message style and one stable exit code.
 
-- [ ] CODE: Implement stub teardown adapter with deterministic behavior
+- [x] CODE: Implement stub teardown adapter with deterministic behavior
   - Feature: Add `StubTeardownClient` adapter that simulates teardown without network access.
   - Acceptance:
     - Stub returns a deterministic teardown result for the same project/environment pair.
@@ -22,7 +22,7 @@
     - Adapter can simulate failure for explicit test fixtures (e.g., sentinel project names).
     - Adapter performs no external network calls.
 
-- [ ] CODE: Promote `teardown` from deferred to implemented CLI handler
+- [x] CODE: Promote `teardown` from deferred to implemented CLI handler
   - Feature: Implement `universe teardown [directory] [environment]` in `runCli` and remove `teardown` from deferred command set.
   - Acceptance:
     - `teardown` reads `platform.yaml` from `[directory]` or `cwd` when omitted.
@@ -31,7 +31,7 @@
     - Valid manifest is passed to `TeardownClient`; successful result exits `0`.
     - Success output includes project name, environment, and deterministic rendered teardown result.
 
-- [ ] TASK: Wire container and dependency graph for teardown
+- [x] TASK: Wire container and dependency graph for teardown
   - Acceptance:
     - `src/container.ts` exports `teardownClient` wired to `StubTeardownClient` in spike mode.
     - CLI dependency composition includes `teardownClient` without breaking existing commands.
