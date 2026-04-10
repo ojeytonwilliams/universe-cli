@@ -22,7 +22,7 @@ const client: ObservabilityClient = {
   track() {},
 };
 
-const DEFERRED_COMMANDS = ["list", "teardown"] as const;
+const DEFERRED_COMMANDS = ["teardown"] as const;
 
 const createPromptResult: CreateSelections = {
   confirmed: true,
@@ -115,6 +115,12 @@ const defaultRegistrationClient = {
   },
 };
 
+const defaultListClient = {
+  getList(_request: { environment: string; manifest: PlatformManifest }): Promise<never> {
+    return Promise.reject(new Error("listClient.getList should not be called in this test"));
+  },
+};
+
 const defaultLogsClient = {
   getLogs(_request: { environment: string; manifest: PlatformManifest }): Promise<{
     entries: { level: string; message: string; timestamp: string }[];
@@ -167,6 +173,7 @@ const createDeps = (
   deployClient: defaultDeployClient,
   filesystemWriter,
   layerResolver: passThroughLayerResolver,
+  listClient: defaultListClient,
   logsClient: defaultLogsClient,
   observability: client,
   platformManifestGenerator: manifestGenerator,

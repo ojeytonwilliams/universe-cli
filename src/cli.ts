@@ -7,6 +7,7 @@ import {
 } from "./errors/cli-errors.js";
 import type { DeployReceipt, DeployRequest } from "./ports/deploy-client.js";
 import type { PromoteReceipt, PromoteRequest } from "./ports/promote-client.js";
+import type { ListRequest, ListResponse } from "./ports/list-client.js";
 import type { RollbackReceipt, RollbackRequest } from "./ports/rollback-client.js";
 import type { StatusRequest, StatusResponse } from "./ports/status-client.js";
 import type { FilesystemWriter } from "./ports/filesystem-writer.js";
@@ -44,6 +45,7 @@ interface CliDependencies {
   deployClient: { deploy(request: DeployRequest): Promise<DeployReceipt> };
   filesystemWriter: FilesystemWriter;
   layerResolver: { resolveLayers(input: CreateSelections): ResolvedLayerSet };
+  listClient: { getList(request: ListRequest): Promise<ListResponse> };
   logsClient: {
     getLogs(request: { environment: string; manifest: PlatformManifest }): Promise<{
       entries: { level: string; message: string; timestamp: string }[];
@@ -67,7 +69,7 @@ interface CliDependencies {
   validator: { validateCreateInput(input: CreateSelections): CreateSelections };
 }
 
-const DEFERRED_COMMANDS = new Set(["list", "teardown"]);
+const DEFERRED_COMMANDS = new Set(["teardown"]);
 
 const runCli = async (argv: string[], deps: CliDependencies): Promise<CliResult> => {
   const {
@@ -75,6 +77,7 @@ const runCli = async (argv: string[], deps: CliDependencies): Promise<CliResult>
     deployClient,
     filesystemWriter,
     layerResolver,
+    listClient,
     logsClient,
     observability,
     platformManifestGenerator,
@@ -397,6 +400,65 @@ const runCli = async (argv: string[], deps: CliDependencies): Promise<CliResult>
       if (error instanceof CliError) {
         safeError(observability, error);
         safeTrack(observability, "logs.failure", { environment });
+        return { exitCode: error.exitCode, output: error.message };
+      }
+
+      throw error;
+    }
+  }
+
+  if (command === "list") {
+    if (argv.length > 3) {
+      return {
+        exitCode: 1,
+        output: "Too many arguments. Usage: universe list [directory] [environment]",
+      };
+    }
+
+    const platformYamlDir = argv[1] ?? cwd;
+    const environment = argv[2] ?? "preview";
+    const platformYamlPath = join(platformYamlDir, "platform.yaml");
+
+    if (environment !== "preview" && environment !== "production") {
+      const envError = new UnsupportedCombinationError(
+        `environment "${environment}" — valid values are: preview, production`,
+      );
+      return { exitCode: envError.exitCode, output: envError.message };
+    }
+
+    safeTrack(observability, "list.start", { environment });
+
+    try {
+      const yaml = await projectReader.readFile(platformYamlPath);
+
+      let manifest: PlatformManifest;
+      try {
+        manifest = platformManifestGenerator.validateManifest(yaml);
+      } catch (validationError) {
+        const invalidError = new ManifestInvalidError(
+          platformYamlPath,
+          validationError instanceof Error ? validationError.message : String(validationError),
+        );
+        safeError(observability, invalidError);
+        return { exitCode: invalidError.exitCode, output: invalidError.message };
+      }
+
+      const response = await listClient.getList({ environment, manifest });
+
+      safeTrack(observability, "list.success", { environment, name: response.name });
+
+      const renderedEntries = response.deployments
+        .map((d) => `  ${d.deploymentId} — ${d.state} (deployed: ${d.deployedAt})`)
+        .join("\n");
+
+      return {
+        exitCode: 0,
+        output: `Deployments for project "${response.name}" in ${response.environment}:\n${renderedEntries}`,
+      };
+    } catch (error) {
+      if (error instanceof CliError) {
+        safeError(observability, error);
+        safeTrack(observability, "list.failure", { environment });
         return { exitCode: error.exitCode, output: error.message };
       }
 

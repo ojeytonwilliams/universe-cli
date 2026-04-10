@@ -5,6 +5,7 @@ import {
   InvalidMultiSelectError,
   InvalidNameError,
   LayerConflictError,
+  ListError,
   ManifestInvalidError,
   ManifestNotFoundError,
   MissingLayerError,
@@ -28,6 +29,7 @@ describe("error exit codes", () => {
       new ManifestInvalidError("/projects/my-app/platform.yaml", "missing field: name"),
       new ManifestNotFoundError("/projects/my-app/platform.yaml"),
       new MissingLayerError("base/nodejs"),
+      new ListError("my-app", "unavailable"),
       new RegistrationError("my-app", "already registered"),
       new ScaffoldWriteError("/tmp/x", new Error("disk full")),
       new StatusError("my-app", "unavailable"),
@@ -197,6 +199,16 @@ describe(StatusError, () => {
 
     expect(error.message).toMatchInlineSnapshot(
       `"Failed to retrieve status for project "my-app": unavailable"`,
+    );
+  });
+});
+
+describe(ListError, () => {
+  it("includes the project name and reason in the message", () => {
+    const error = new ListError("my-app", "unavailable");
+
+    expect(error.message).toMatchInlineSnapshot(
+      `"Failed to list deployments for project "my-app": unavailable"`,
     );
   });
 });

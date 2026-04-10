@@ -4,7 +4,7 @@
 
 ## Phase 1 — Trivial Prototype (first working `universe list`)
 
-- [ ] CODE: Define list port contract and typed list error
+- [x] CODE: Define list port contract and typed list error
   - Feature: Add `ListClient` port (request/response types) and `ListError` in the CLI error taxonomy.
   - Acceptance:
     - `src/ports/list-client.ts` exports a documented interface with one list retrieval method.
@@ -12,7 +12,7 @@
     - List response includes project `name`, `environment`, and a deterministic ordered list of deployments or resources.
     - `ListError` has one stable user-facing message style and one stable exit code.
 
-- [ ] CODE: Implement stub list adapter with deterministic behavior
+- [x] CODE: Implement stub list adapter with deterministic behavior
   - Feature: Add `StubListClient` adapter that simulates project listing without network access.
   - Acceptance:
     - Stub returns a deterministic list of deployments/resources for the same project/environment pair.
@@ -20,7 +20,7 @@
     - Adapter can simulate retrieval failure for explicit test fixtures (for example, sentinel project names).
     - Adapter performs no external network calls.
 
-- [ ] CODE: Promote `list` from deferred to implemented CLI handler
+- [x] CODE: Promote `list` from deferred to implemented CLI handler
   - Feature: Implement `universe list [directory] [environment]` in `runCli` and remove `list` from deferred command set.
   - Acceptance:
     - `list` reads `platform.yaml` from `[directory]` or `cwd` when omitted.
@@ -29,7 +29,7 @@
     - Valid manifest is passed to `ListClient`; successful result exits `0`.
     - Success output includes project name, environment, and deterministic rendered list output.
 
-- [ ] TASK: Wire container and dependency graph for list
+- [x] TASK: Wire container and dependency graph for list
   - Acceptance:
     - `src/container.ts` exports `listClient` wired to `StubListClient` in spike mode.
     - CLI dependency composition includes `listClient` without breaking existing commands.

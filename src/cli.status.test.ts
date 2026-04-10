@@ -60,6 +60,11 @@ const statusDeps = (
       throw new Error("layerResolver not used in status tests");
     },
   },
+  listClient: {
+    getList(_request: never): Promise<never> {
+      return Promise.reject(new Error("listClient not used in status tests"));
+    },
+  },
   logsClient: {
     getLogs(_request: never): Promise<never> {
       return Promise.reject(new Error("logsClient not used in status tests"));

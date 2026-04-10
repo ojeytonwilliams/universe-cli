@@ -4,6 +4,7 @@ const EXIT_CODES = {
   INVALID_MULTI_SELECT: 7,
   INVALID_NAME: 2,
   LAYER_CONFLICT: 9,
+  LIST: 19,
   LOGS: 17,
   MANIFEST_INVALID: 12,
   MANIFEST_NOT_FOUND: 11,
@@ -176,6 +177,13 @@ class StatusError extends CliError {
   }
 }
 
+class ListError extends CliError {
+  constructor(name: string, reason: string) {
+    super(`Failed to list deployments for project "${name}": ${reason}`, EXIT_CODES.LIST);
+    this.name = "ListError";
+  }
+}
+
 class DeferredCommandError extends CliError {
   constructor(command: string) {
     super(
@@ -190,6 +198,7 @@ export {
   CliError,
   DeferredCommandError,
   DeploymentError,
+  ListError,
   LogsError,
   PromotionError,
   RollbackError,

@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.22.0] - 2026-04-10
+
+### Phase 1 — List Command Trivial Prototype
+
+- **`ListClient` port** (`src/ports/list-client.ts`): `getList(request): Promise<ListResponse>`; request carries `manifest` and `environment`; response carries `name`, `environment`, and ordered `deployments` array with `deploymentId`, `state`, and `deployedAt` fields.
+- **`ListError`** (`src/errors/cli-errors.ts`): typed error with exit code 19 and message `Failed to list deployments for project "<name>": <reason>`.
+- **`StubListClient` adapter** (`src/adapters/stub-list-client.ts`): deterministic stub returning two fixed deployments (`deploy-stub-001` ACTIVE, `deploy-stub-002` INACTIVE); rejects with `ListError` for sentinel project name `"list-failure"`.
+- **`list` CLI handler** (`src/cli.ts`): `universe list [directory] [environment]` promoted from deferred; reads `platform.yaml`, validates manifest, delegates to `listClient`, outputs project name, environment, and formatted deployment entries.
+- **Container wiring** (`src/container.ts`, `src/bin.ts`): `listClient` exported as `StubListClient` instance and wired into `runCli` dependency graph.
+
 ## [2.21.0] - 2026-04-10
 
 ### Phase 3 — Status Command Test Coverage, Guardrails, and Documentation

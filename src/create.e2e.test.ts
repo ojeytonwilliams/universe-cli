@@ -10,7 +10,7 @@ import { PlatformManifestService } from "./services/platform-manifest-service.js
 import { runCli } from "./cli.js";
 import type { CreateSelections, PromptPort } from "./ports/prompt-port.js";
 
-const DEFERRED_COMMANDS = ["list", "teardown"] as const;
+const DEFERRED_COMMANDS = ["teardown"] as const;
 
 const createPromptPort = (selection: CreateSelections | null): PromptPort => ({
   promptForCreateInputs() {
@@ -85,6 +85,11 @@ const createDependencies = (
   },
   filesystemWriter: new LocalFilesystemWriter(),
   layerResolver: new LayerCompositionService(layerRegistry),
+  listClient: {
+    getList(_request: never): Promise<never> {
+      return Promise.reject(new Error("listClient not exercised in create tests"));
+    },
+  },
   logsClient: {
     getLogs(_request: never): Promise<{
       entries: { level: string; message: string; timestamp: string }[];

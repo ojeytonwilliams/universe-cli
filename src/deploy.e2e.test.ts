@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { LocalFilesystemWriter } from "./adapters/local-filesystem-writer.js";
 import { LocalProjectReader } from "./adapters/local-project-reader.js";
 import { StubDeployClient } from "./adapters/stub-deploy-client.js";
+import { StubListClient } from "./adapters/stub-list-client.js";
 import { StubObservabilityClient } from "./adapters/stub-observability-client.js";
 import { StubPromoteClient } from "./adapters/stub-promote-client.js";
 import { StubRegistrationClient } from "./adapters/stub-registration-client.js";
@@ -40,6 +41,7 @@ const createDependencies = (
   deployClient,
   filesystemWriter: new LocalFilesystemWriter(),
   layerResolver: new LayerCompositionService(),
+  listClient: new StubListClient(),
   logsClient: new StubLogsClient(),
   observability: new StubObservabilityClient(),
   platformManifestGenerator: new PlatformManifestService(),
