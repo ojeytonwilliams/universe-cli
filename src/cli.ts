@@ -1,4 +1,4 @@
-import { CliError } from "./errors/cli-errors.js";
+import { BadArgumentsError, CliError } from "./errors/cli-errors.js";
 import { safeError, safeTrack } from "./ports/observability-client.js";
 import type { ObservabilityClient } from "./ports/observability-client.js";
 import {
@@ -95,18 +95,17 @@ const runCli = async (argv: string[], deps: CliDependencies): Promise<CliResult>
   }
 
   const def = COMMANDS[command];
-
-  if (!def) {
-    return {
-      exitCode: 1,
-      output: `Unknown command: "${command}". Run "universe --help" for usage.`,
-    };
-  }
-
-  const ctx = def.context?.(argv[2]) ?? {};
-  safeTrack(observability, `${command}.start`, ctx);
+  const ctx = def?.context?.(argv[2]) ?? {};
 
   try {
+    if (!def) {
+      throw new BadArgumentsError(
+        `Unknown command: "${command}". Run "universe --help" for usage.`,
+      );
+    }
+
+    safeTrack(observability, `${command}.start`, ctx);
+
     const result = await def.handler(argv, deps.cwd, deps);
     if (result.exitCode === 0) {
       safeTrack(observability, `${command}.success`, { ...ctx, ...result.meta });
