@@ -243,9 +243,9 @@ Common errors must be normalized and user-friendly.
 
 - `InvalidNameError`
 - `TargetDirectoryExistsError`
-- `UnsupportedRuntimeError`
-- `UnsupportedFrameworkError`
-- `UnsupportedCombinationError`
+- `CreateUnsupportedRuntimeError`
+- `CreateUnsupportedFrameworkError`
+- `CreateUnsupportedCombinationError`
 - `InvalidMultiSelectError`
 - `MissingLayerError`
 - `LayerConflictError`

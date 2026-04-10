@@ -63,6 +63,7 @@ Commit the changes with a conventional commit including an even briefer summary 
 Do NOT look inside node_modules. To verify a package is installed, run `pnpm list <package-name>`.
 Do NOT install packages. If you need something, ask me to install it for you.
 Do not use the tdd-unit skill.
+Do NOT look inside the dist folder.
 
 ## Missing Dependency Gate (Required)
 

@@ -49,30 +49,30 @@ class TargetDirectoryExistsError extends CliError {
   }
 }
 
-class UnsupportedRuntimeError extends CliError {
+class CreateUnsupportedRuntimeError extends CliError {
   constructor(runtime: string) {
     super(
       `Runtime "${runtime}" is not supported in this spike. Supported runtimes: Node.js (TypeScript), Static.`,
       EXIT_CODES.UNSUPPORTED,
     );
-    this.name = "UnsupportedRuntimeError";
+    this.name = "CreateUnsupportedRuntimeError";
   }
 }
 
-class UnsupportedFrameworkError extends CliError {
+class CreateUnsupportedFrameworkError extends CliError {
   constructor(framework: string, runtime: string) {
     super(
       `Framework "${framework}" is not supported for runtime "${runtime}" in this spike.`,
       EXIT_CODES.UNSUPPORTED,
     );
-    this.name = "UnsupportedFrameworkError";
+    this.name = "CreateUnsupportedFrameworkError";
   }
 }
 
-class UnsupportedCombinationError extends CliError {
+class CreateUnsupportedCombinationError extends CliError {
   constructor(description: string) {
     super(`Unsupported combination in this spike: ${description}.`, EXIT_CODES.UNSUPPORTED);
-    this.name = "UnsupportedCombinationError";
+    this.name = "CreateUnsupportedCombinationError";
   }
 }
 
@@ -202,7 +202,7 @@ export {
   StatusError,
   TargetDirectoryExistsError,
   TeardownError,
-  UnsupportedCombinationError,
-  UnsupportedFrameworkError,
-  UnsupportedRuntimeError,
+  CreateUnsupportedCombinationError,
+  CreateUnsupportedFrameworkError,
+  CreateUnsupportedRuntimeError,
 };

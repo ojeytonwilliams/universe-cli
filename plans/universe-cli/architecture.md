@@ -113,7 +113,7 @@ See `src/errors/cli-errors.ts` for canonical error classes. Exit codes:
 | 3-125 | All custom CLI errors (see below)                           |
 
 | 3 | `TargetDirectoryExistsError` |
-| 4 | **Unsupported**: `UnsupportedRuntimeError`, `UnsupportedFrameworkError`, `UnsupportedCombinationError` |
+| 4 | **Unsupported**: `CreateUnsupportedRuntimeError`, `CreateUnsupportedFrameworkError`, `CreateUnsupportedCombinationError` |
 | 5 | `InvalidMultiSelectError` |
 | 6 | **Layer**: `MissingLayerError`, `LayerConflictError` |
 | 7 | `ScaffoldWriteError` |
@@ -192,7 +192,7 @@ See `src/errors/cli-errors.ts` for canonical error classes. Exit codes:
 | 1    | `DeferredCommandError` — command not implemented in spike |
 | 2    | `InvalidNameError`                                        |
 | 3    | `TargetDirectoryExistsError`                              |
-| 4    | `UnsupportedRuntimeError`                                 |
+| 4    | `CreateUnsupportedRuntimeError`                           |
 | 5    | `InvalidMultiSelectError`                                 |
 | 6    | `MissingLayerError`, `LayerConflictError`                 |
 | 7    | `ScaffoldWriteError`                                      |

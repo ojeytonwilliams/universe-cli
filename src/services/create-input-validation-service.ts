@@ -1,10 +1,10 @@
 import {
+  CreateUnsupportedCombinationError,
+  CreateUnsupportedFrameworkError,
+  CreateUnsupportedRuntimeError,
   InvalidMultiSelectError,
   InvalidNameError,
   TargetDirectoryExistsError,
-  UnsupportedCombinationError,
-  UnsupportedFrameworkError,
-  UnsupportedRuntimeError,
 } from "../errors/cli-errors.js";
 import {
   DATABASE_OPTIONS,
@@ -100,12 +100,12 @@ class CreateInputValidationService {
       return;
     }
 
-    throw new UnsupportedRuntimeError(getRuntimeLabel(input.runtime));
+    throw new CreateUnsupportedRuntimeError(getRuntimeLabel(input.runtime));
   }
 
   private validateNodeSelections(input: CreateSelections): void {
     if (!SUPPORTED_NODE_FRAMEWORKS.includes(input.framework)) {
-      throw new UnsupportedFrameworkError(
+      throw new CreateUnsupportedFrameworkError(
         getFrameworkLabel(input.framework),
         getRuntimeLabel(input.runtime),
       );
@@ -120,21 +120,23 @@ class CreateInputValidationService {
 
   private validateStaticSelections(input: CreateSelections): void {
     if (input.framework !== FRAMEWORK_OPTIONS.NONE) {
-      throw new UnsupportedFrameworkError(
+      throw new CreateUnsupportedFrameworkError(
         getFrameworkLabel(input.framework),
         getRuntimeLabel(input.runtime),
       );
     }
 
     if (input.databases.length !== 1 || input.databases[0] !== DATABASE_OPTIONS.NONE) {
-      throw new UnsupportedCombinationError("Static projects only support databases: None");
+      throw new CreateUnsupportedCombinationError("Static projects only support databases: None");
     }
 
     if (
       input.platformServices.length !== 1 ||
       input.platformServices[0] !== PLATFORM_SERVICE_OPTIONS.NONE
     ) {
-      throw new UnsupportedCombinationError("Static projects only support platform services: None");
+      throw new CreateUnsupportedCombinationError(
+        "Static projects only support platform services: None",
+      );
     }
   }
 
@@ -151,7 +153,7 @@ class CreateInputValidationService {
   private ensureAllowedValues(values: string[], allowedValues: string[], field: string): void {
     for (const value of values) {
       if (!allowedValues.includes(value)) {
-        throw new UnsupportedCombinationError(`Unsupported ${field} value: ${value}`);
+        throw new CreateUnsupportedCombinationError(`Unsupported ${field} value: ${value}`);
       }
     }
   }

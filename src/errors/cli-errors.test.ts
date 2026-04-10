@@ -1,6 +1,9 @@
 import { range } from "lodash";
 
 import {
+  CreateUnsupportedCombinationError,
+  CreateUnsupportedFrameworkError,
+  CreateUnsupportedRuntimeError,
   CliError,
   DeploymentError,
   InvalidMultiSelectError,
@@ -15,9 +18,6 @@ import {
   StatusError,
   TargetDirectoryExistsError,
   TeardownError,
-  UnsupportedCombinationError,
-  UnsupportedFrameworkError,
-  UnsupportedRuntimeError,
 } from "./cli-errors.js";
 
 describe("error exit codes", () => {
@@ -38,9 +38,9 @@ describe("error exit codes", () => {
       new StatusError("my-app", "unavailable"),
       new TargetDirectoryExistsError("/tmp/x"),
       new TeardownError("my-app", "unavailable"),
-      new UnsupportedCombinationError("static + database"),
-      new UnsupportedFrameworkError("fastify", "nodejs"),
-      new UnsupportedRuntimeError("python"),
+      new CreateUnsupportedCombinationError("static + database"),
+      new CreateUnsupportedFrameworkError("fastify", "nodejs"),
+      new CreateUnsupportedRuntimeError("python"),
     ];
   });
 
@@ -84,9 +84,9 @@ describe(TargetDirectoryExistsError, () => {
   });
 });
 
-describe(UnsupportedRuntimeError, () => {
+describe(CreateUnsupportedRuntimeError, () => {
   it("includes the runtime name in the message", () => {
-    const error = new UnsupportedRuntimeError("python");
+    const error = new CreateUnsupportedRuntimeError("python");
 
     expect(error.message).toBe(
       'Runtime "python" is not supported in this spike. Supported runtimes: Node.js (TypeScript), Static.',
@@ -94,9 +94,9 @@ describe(UnsupportedRuntimeError, () => {
   });
 });
 
-describe(UnsupportedFrameworkError, () => {
+describe(CreateUnsupportedFrameworkError, () => {
   it("includes the framework and runtime in the message", () => {
-    const error = new UnsupportedFrameworkError("fastify", "nodejs");
+    const error = new CreateUnsupportedFrameworkError("fastify", "nodejs");
 
     expect(error.message).toBe(
       'Framework "fastify" is not supported for runtime "nodejs" in this spike.',
@@ -104,9 +104,9 @@ describe(UnsupportedFrameworkError, () => {
   });
 });
 
-describe(UnsupportedCombinationError, () => {
+describe(CreateUnsupportedCombinationError, () => {
   it("includes the combination description in the message", () => {
-    const error = new UnsupportedCombinationError("static + PostgreSQL");
+    const error = new CreateUnsupportedCombinationError("static + PostgreSQL");
 
     expect(error.message).toBe("Unsupported combination in this spike: static + PostgreSQL.");
   });

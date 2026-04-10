@@ -1,8 +1,8 @@
 import { join } from "node:path";
 import {
+  CreateUnsupportedCombinationError,
   CliError,
   ManifestInvalidError,
-  UnsupportedCombinationError,
 } from "./errors/cli-errors.js";
 import type { DeployReceipt, DeployRequest } from "./ports/deploy-client.js";
 import type { PromoteReceipt, PromoteRequest } from "./ports/promote-client.js";
@@ -190,7 +190,7 @@ const runCli = async (argv: string[], deps: CliDependencies): Promise<CliResult>
     const platformYamlPath = join(platformYamlDir, "platform.yaml");
 
     if (environment !== "preview" && environment !== "production") {
-      const envError = new UnsupportedCombinationError(
+      const envError = new CreateUnsupportedCombinationError(
         `environment "${environment}" — valid values are: preview, production`,
       );
       return { exitCode: envError.exitCode, output: envError.message };
@@ -245,7 +245,7 @@ const runCli = async (argv: string[], deps: CliDependencies): Promise<CliResult>
     const platformYamlPath = join(platformYamlDir, "platform.yaml");
 
     if (targetEnvironment !== "preview" && targetEnvironment !== "production") {
-      const envError = new UnsupportedCombinationError(
+      const envError = new CreateUnsupportedCombinationError(
         `target-environment "${targetEnvironment}" — valid values are: preview, production`,
       );
       return { exitCode: envError.exitCode, output: envError.message };
@@ -300,7 +300,7 @@ const runCli = async (argv: string[], deps: CliDependencies): Promise<CliResult>
     const platformYamlPath = join(platformYamlDir, "platform.yaml");
 
     if (targetEnvironment !== "preview" && targetEnvironment !== "production") {
-      const envError = new UnsupportedCombinationError(
+      const envError = new CreateUnsupportedCombinationError(
         `target-environment "${targetEnvironment}" — valid values are: preview, production`,
       );
       return { exitCode: envError.exitCode, output: envError.message };
@@ -355,7 +355,7 @@ const runCli = async (argv: string[], deps: CliDependencies): Promise<CliResult>
     const platformYamlPath = join(platformYamlDir, "platform.yaml");
 
     if (environment !== "preview" && environment !== "production") {
-      const envError = new UnsupportedCombinationError(
+      const envError = new CreateUnsupportedCombinationError(
         `environment "${environment}" — valid values are: preview, production`,
       );
       return { exitCode: envError.exitCode, output: envError.message };
@@ -414,7 +414,7 @@ const runCli = async (argv: string[], deps: CliDependencies): Promise<CliResult>
     const platformYamlPath = join(platformYamlDir, "platform.yaml");
 
     if (environment !== "preview" && environment !== "production") {
-      const envError = new UnsupportedCombinationError(
+      const envError = new CreateUnsupportedCombinationError(
         `environment "${environment}" — valid values are: preview, production`,
       );
       return { exitCode: envError.exitCode, output: envError.message };
@@ -473,7 +473,7 @@ const runCli = async (argv: string[], deps: CliDependencies): Promise<CliResult>
     const platformYamlPath = join(platformYamlDir, "platform.yaml");
 
     if (environment !== "preview" && environment !== "production") {
-      const envError = new UnsupportedCombinationError(
+      const envError = new CreateUnsupportedCombinationError(
         `environment "${environment}" — valid values are: preview, production`,
       );
       return { exitCode: envError.exitCode, output: envError.message };
@@ -528,7 +528,7 @@ const runCli = async (argv: string[], deps: CliDependencies): Promise<CliResult>
     const platformYamlPath = join(platformYamlDir, "platform.yaml");
 
     if (targetEnvironment !== "preview" && targetEnvironment !== "production") {
-      const envError = new UnsupportedCombinationError(
+      const envError = new CreateUnsupportedCombinationError(
         `target-environment "${targetEnvironment}" — valid values are: preview, production`,
       );
       return { exitCode: envError.exitCode, output: envError.message };

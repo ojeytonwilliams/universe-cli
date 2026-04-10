@@ -1,10 +1,10 @@
 import {
+  CreateUnsupportedCombinationError,
+  CreateUnsupportedFrameworkError,
+  CreateUnsupportedRuntimeError,
   InvalidMultiSelectError,
   InvalidNameError,
   TargetDirectoryExistsError,
-  UnsupportedCombinationError,
-  UnsupportedFrameworkError,
-  UnsupportedRuntimeError,
 } from "../errors/cli-errors.js";
 import type { CreateSelections } from "../ports/prompt-port.js";
 import { CreateInputValidationService } from "./create-input-validation-service.js";
@@ -83,7 +83,7 @@ describe(CreateInputValidationService, () => {
         runtime: "Python" as CreateSelections["runtime"],
       });
 
-    expect(act).toThrow(UnsupportedRuntimeError);
+    expect(act).toThrow(CreateUnsupportedRuntimeError);
   });
 
   it("rejects unsupported frameworks per runtime", () => {
@@ -95,7 +95,7 @@ describe(CreateInputValidationService, () => {
         framework: "Flask" as CreateSelections["framework"],
       });
 
-    expect(act).toThrow(UnsupportedFrameworkError);
+    expect(act).toThrow(CreateUnsupportedFrameworkError);
   });
 
   it("rejects unsupported Static database combinations", () => {
@@ -111,7 +111,7 @@ describe(CreateInputValidationService, () => {
         runtime: "static_web",
       });
 
-    expect(act).toThrow(UnsupportedCombinationError);
+    expect(act).toThrow(CreateUnsupportedCombinationError);
   });
 
   it("rejects unsupported Static platform service combinations", () => {
@@ -127,6 +127,6 @@ describe(CreateInputValidationService, () => {
         runtime: "static_web",
       });
 
-    expect(act).toThrow(UnsupportedCombinationError);
+    expect(act).toThrow(CreateUnsupportedCombinationError);
   });
 });

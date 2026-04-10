@@ -152,9 +152,9 @@ Universe CLI is defined in ADR-007, but the backing platform does not exist yet 
 
 - `InvalidNameError`
 - `TargetDirectoryExistsError`
-- `UnsupportedRuntimeError`
-- `UnsupportedFrameworkError`
-- `UnsupportedCombinationError`
+- `CreateUnsupportedRuntimeError`
+- `CreateUnsupportedFrameworkError`
+- `CreateUnsupportedCombinationError`
 - `InvalidMultiSelectError`
 - `MissingLayerError`
 - `LayerConflictError`
