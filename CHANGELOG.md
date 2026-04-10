@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.27.0] - 2026-04-10
+
+### Phase 3 — Teardown Command Test Coverage, Guardrails, and Documentation
+
+- **Stub adapter unit tests** (`src/adapters/stub-teardown-client.test.ts`): deterministic ID generation, per-environment counter isolation, sentinel failure raises `TeardownError`, instance state isolation.
+- **CLI integration tests** (`src/cli.teardown.test.ts`): 13 tests covering all success and error paths, argument validation, observability, and default environment (`preview`).
+- **E2E tests** (`src/teardown.e2e.test.ts`): create-then-teardown flow confirms output contains project name, environment, and stub teardown ID; sentinel failure exits 20.
+- **Container guard** (`src/container.test.ts`): asserts `teardownClient` is an instance of `StubTeardownClient`; all 9 commands now guarded.
+- **Design docs**: TDN-001–005 validated in `design/assumptions-register.md`; two new assumptions (TDN-N01 receipt shape, TDN-N02 all-implemented milestone) captured; remaining migration unknowns documented; `design/future-command-expansion.md` already listed teardown at v2.25.0.
+- **Spike complete**: all 9 CLI commands (`create`, `register`, `deploy`, `promote`, `rollback`, `logs`, `status`, `list`, `teardown`) are fully implemented with stub adapters. `DEFERRED_COMMANDS` is now empty.
+
 ## [2.26.0] - 2026-04-10
 
 ### Phase 2 — Teardown Command Behavior Hardening and UX Consistency
