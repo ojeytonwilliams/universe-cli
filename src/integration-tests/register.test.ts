@@ -72,7 +72,7 @@ describe("register", () => {
     expect(registerResult.output).toContain(`stub-${projectName}`);
   });
 
-  it("exits 13 when the same project is registered twice", async () => {
+  it("exits when the same project is registered twice", async () => {
     const rootDirectory = mkdtempSync(join(tmpdir(), "universe-register-"));
     tempDirectories.push(rootDirectory);
 

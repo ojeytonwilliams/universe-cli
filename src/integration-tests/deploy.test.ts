@@ -89,7 +89,7 @@ describe("deploy", () => {
     expect(secondResult.output).toContain(`stub-${projectName}-preview-2`);
   });
 
-  it("exits 14 for the sentinel failure project name", async () => {
+  it("exits for the sentinel failure project name", async () => {
     const rootDirectory = mkdtempSync(join(tmpdir(), "universe-deploy-e2e-"));
     tempDirectories.push(rootDirectory);
 

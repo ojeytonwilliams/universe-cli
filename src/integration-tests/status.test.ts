@@ -73,7 +73,7 @@ describe("status", () => {
     expect(statusResult.output).toContain("ACTIVE");
   });
 
-  it("exits 18 for the sentinel failure project name", async () => {
+  it("exits for the sentinel failure project name", async () => {
     const rootDirectory = mkdtempSync(join(tmpdir(), "universe-status-"));
     tempDirectories.push(rootDirectory);
 

@@ -888,7 +888,7 @@ describe(runCli, () => {
       expect(paths[0]).toBe("/some/project/platform.yaml");
     });
 
-    it("exits 11 when platform.yaml is missing", async () => {
+    it("exits when platform.yaml is missing", async () => {
       const missingReader = {
         readFile(filePath: string) {
           return Promise.reject(new ManifestNotFoundError(filePath));
@@ -900,7 +900,7 @@ describe(runCli, () => {
       expect(result.exitCode).toBe(8);
     });
 
-    it("exits 12 when platform.yaml fails validation", async () => {
+    it("exits when platform.yaml fails validation", async () => {
       const failingValidator = (_yaml: string): PlatformManifest => {
         throw new Error("invalid schema");
       };
@@ -910,7 +910,7 @@ describe(runCli, () => {
       expect(result.exitCode).toBe(8);
     });
 
-    it("exits 16 when rollback fails", async () => {
+    it("exits when rollback fails", async () => {
       const failingClient = {
         rollback(request: { manifest: PlatformManifest; targetEnvironment: string }) {
           return Promise.reject(new RollbackError(request.manifest.name, "timeout"));

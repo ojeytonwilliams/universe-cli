@@ -72,7 +72,7 @@ describe("logs", () => {
     expect(logsResult.output).toContain("preview");
   });
 
-  it("exits 17 for the sentinel failure project name", async () => {
+  it("exits for the sentinel failure project name", async () => {
     const rootDirectory = mkdtempSync(join(tmpdir(), "universe-logs-"));
     tempDirectories.push(rootDirectory);
 

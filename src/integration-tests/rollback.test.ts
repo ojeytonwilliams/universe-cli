@@ -89,7 +89,7 @@ describe("rollback", () => {
     expect(secondResult.output).toContain(`stub-rollback-${projectName}-production-2`);
   });
 
-  it("exits 16 for the sentinel failure project name", async () => {
+  it("exits for the sentinel failure project name", async () => {
     const rootDirectory = mkdtempSync(join(tmpdir(), "universe-rollback-"));
     tempDirectories.push(rootDirectory);
 

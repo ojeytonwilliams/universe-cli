@@ -73,7 +73,7 @@ describe("teardown", () => {
     expect(teardownResult.output).toContain(`stub-teardown-${projectName}-preview-1`);
   });
 
-  it("exits 20 for the sentinel failure project name", async () => {
+  it("exits for the sentinel failure project name", async () => {
     const rootDirectory = mkdtempSync(join(tmpdir(), "universe-teardown-"));
     tempDirectories.push(rootDirectory);
 

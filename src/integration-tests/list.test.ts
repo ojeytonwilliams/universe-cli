@@ -73,7 +73,7 @@ describe("list", () => {
     expect(listResult.output).toContain("deploy-stub-001");
   });
 
-  it("exits 19 for the sentinel failure project name", async () => {
+  it("exits for the sentinel failure project name", async () => {
     const rootDirectory = mkdtempSync(join(tmpdir(), "universe-list-"));
     tempDirectories.push(rootDirectory);
 

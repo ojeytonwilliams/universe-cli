@@ -89,7 +89,7 @@ describe("promote", () => {
     expect(secondResult.output).toContain(`stub-promote-${projectName}-production-2`);
   });
 
-  it("exits 15 for the sentinel failure project name", async () => {
+  it("exits for the sentinel failure project name", async () => {
     const rootDirectory = mkdtempSync(join(tmpdir(), "universe-promote-"));
     tempDirectories.push(rootDirectory);
 
