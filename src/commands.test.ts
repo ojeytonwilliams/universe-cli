@@ -112,6 +112,11 @@ const successRollbackClient = {
   },
 };
 
+// Shared failing validator fixture for manifest validation error tests
+const failingValidator: (yaml: string) => PlatformManifest = () => {
+  throw new ManifestInvalidError("/workspace/platform.yaml", "");
+};
+
 // --- handleCreate ---
 
 describe(handleCreate, () => {
@@ -372,10 +377,6 @@ describe(handleList, () => {
   });
 
   it("exits when platform.yaml fails validation", async () => {
-    const failingValidator = (_yaml: string): PlatformManifest => {
-      throw new Error("invalid schema");
-    };
-
     await expect(
       handleList(
         { projectDirectory: "/workspace" },
@@ -480,10 +481,6 @@ describe(handleLogs, () => {
   });
 
   it("exits when platform.yaml fails validation", async () => {
-    const failingValidator = (_yaml: string): PlatformManifest => {
-      throw new Error("invalid schema");
-    };
-
     await expect(
       handleLogs(
         { environment: "preview", projectDirectory: "/workspace" },
@@ -612,10 +609,6 @@ describe(handleStatus, () => {
   });
 
   it("exits when platform.yaml fails validation", async () => {
-    const failingValidator = (_yaml: string): PlatformManifest => {
-      throw new Error("invalid schema");
-    };
-
     await expect(
       handleStatus(
         { environment: "preview", projectDirectory: "/workspace" },
@@ -743,10 +736,6 @@ describe(handleTeardown, () => {
   });
 
   it("exits when platform.yaml fails validation", async () => {
-    const failingValidator = (_yaml: string): PlatformManifest => {
-      throw new Error("invalid schema");
-    };
-
     await expect(
       handleTeardown(
         { projectDirectory: "/workspace" },
@@ -843,10 +832,6 @@ describe(handleRegister, () => {
   });
 
   it("exits when platform.yaml fails validation", async () => {
-    const failingValidator = (_yaml: string): PlatformManifest => {
-      throw new Error("invalid schema");
-    };
-
     await expect(
       handleRegister(
         { projectDirectory: "/workspace" },
@@ -910,10 +895,6 @@ describe(handleDeploy, () => {
   });
 
   it("exits when platform.yaml fails validation", async () => {
-    const failingValidator = (_yaml: string): PlatformManifest => {
-      throw new Error("invalid schema");
-    };
-
     await expect(
       handleDeploy(
         { projectDirectory: "/workspace" },
@@ -1008,10 +989,6 @@ describe(handlePromote, () => {
   });
 
   it("exits when platform.yaml fails validation", async () => {
-    const failingValidator = (_yaml: string): PlatformManifest => {
-      throw new Error("invalid schema");
-    };
-
     await expect(
       handlePromote(
         { projectDirectory: "/workspace" },
@@ -1106,10 +1083,6 @@ describe(handleRollback, () => {
   });
 
   it("exits when platform.yaml fails validation", async () => {
-    const failingValidator = (_yaml: string): PlatformManifest => {
-      throw new Error("invalid schema");
-    };
-
     await expect(
       handleRollback(
         { projectDirectory: "/workspace" },

@@ -6,6 +6,7 @@ import {
   RUNTIME_OPTIONS,
 } from "../ports/prompt-port.js";
 import type { CreateSelections } from "../ports/prompt-port.js";
+import { ManifestInvalidError } from "../errors/cli-errors.js";
 
 // ---------------------------------------------------------------------------
 // Schema version
@@ -79,10 +80,14 @@ class PlatformManifestService {
     return stringifyYaml(manifest);
   }
 
-  validateManifest(yaml: string): PlatformManifest {
-    const parsed = parseYaml(yaml) as unknown;
+  validateManifest(yaml: string, yamlPath: string): PlatformManifest {
+    try {
+      const parsed = parseYaml(yaml) as unknown;
 
-    return PlatformManifestSchema.parse(parsed);
+      return PlatformManifestSchema.parse(parsed);
+    } catch (e) {
+      throw new ManifestInvalidError(yamlPath, e instanceof Error ? e.message : String(e));
+    }
   }
 
   private buildManifest(input: CreateSelections): PlatformManifest {

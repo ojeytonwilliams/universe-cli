@@ -1,5 +1,4 @@
 import { join } from "node:path";
-import { ManifestInvalidError } from "./errors/cli-errors.js";
 import type { DeployReceipt, DeployRequest } from "./ports/deploy-client.js";
 import type { FilesystemWriter } from "./ports/filesystem-writer.js";
 import type { ListRequest, ListResponse } from "./ports/list-client.js";
@@ -20,7 +19,7 @@ interface Services {
   layerResolver: { resolveLayers(input: CreateSelections): ResolvedLayerSet };
   platformManifestGenerator: {
     generatePlatformManifest(input: CreateSelections): string;
-    validateManifest(yaml: string): PlatformManifest;
+    validateManifest(yaml: string, yamlPath: string): PlatformManifest;
   };
   validator: { validateCreateInput(input: CreateSelections): CreateSelections };
 }
@@ -55,14 +54,8 @@ const readAndValidateManifest = async (
   adapters: Pick<Adapters, "projectReader">,
 ): Promise<PlatformManifest> => {
   const yaml = await adapters.projectReader.readFile(platformYamlPath);
-  try {
-    return services.platformManifestGenerator.validateManifest(yaml);
-  } catch (validationError) {
-    throw new ManifestInvalidError(
-      platformYamlPath,
-      validationError instanceof Error ? validationError.message : String(validationError),
-    );
-  }
+
+  return services.platformManifestGenerator.validateManifest(yaml, platformYamlPath);
 };
 
 const handleCreate = async (

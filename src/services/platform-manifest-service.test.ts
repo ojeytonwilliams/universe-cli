@@ -1,6 +1,7 @@
-import { ZodError, z } from "zod";
+import { z } from "zod";
 import type { CreateSelections } from "../ports/prompt-port.js";
 import { PlatformManifestSchema, PlatformManifestService } from "./platform-manifest-service.js";
+import { ManifestInvalidError } from "../errors/cli-errors.js";
 
 const nodeSelection: CreateSelections = {
   confirmed: true,
@@ -62,7 +63,7 @@ describe(PlatformManifestService, () => {
       const service = new PlatformManifestService();
       const yaml = service.generatePlatformManifest(nodeSelection);
 
-      const result = service.validateManifest(yaml);
+      const result = service.validateManifest(yaml, "");
 
       expect(result.stack).toBe("app");
     });
@@ -71,7 +72,7 @@ describe(PlatformManifestService, () => {
       const service = new PlatformManifestService();
       const yaml = service.generatePlatformManifest(staticSelection);
 
-      const result = service.validateManifest(yaml);
+      const result = service.validateManifest(yaml, "");
 
       expect(result.stack).toBe("static");
     });
@@ -79,7 +80,7 @@ describe(PlatformManifestService, () => {
     it("throws when a required field is missing", () => {
       const service = new PlatformManifestService();
 
-      expect(() => service.validateManifest("stack: app\n")).toThrow(ZodError);
+      expect(() => service.validateManifest("stack: app\n", "")).toThrow(ManifestInvalidError);
     });
 
     it("throws when schemaVersion is not recognised", () => {
@@ -97,7 +98,7 @@ environments:
     branch: main
 `;
 
-      expect(() => service.validateManifest(yaml)).toThrow(ZodError);
+      expect(() => service.validateManifest(yaml, "")).toThrow(ManifestInvalidError);
     });
   });
 });
