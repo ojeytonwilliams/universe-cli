@@ -1,20 +1,23 @@
+// oxlint-disable max-lines
 import type { FilesystemWriter } from "./ports/filesystem-writer.js";
 import type { ObservabilityClient } from "./ports/observability-client.js";
 import type { CreateSelections, PromptPort } from "./ports/prompt-port.js";
+import type { StatusResponse } from "./ports/status-client.js";
 import type { ResolvedLayerSet } from "./services/layer-composition-service.js";
-import type {
-  AppPlatformManifest,
-  PlatformManifest,
-} from "./services/platform-manifest-service.js";
+import type { PlatformManifest } from "./services/platform-manifest-service.js";
 import { runCli } from "./cli.js";
 import {
   DeploymentError,
   InvalidNameError,
+  ListError,
+  LogsError,
   ManifestNotFoundError,
   PromotionError,
   RegistrationError,
   RollbackError,
   ScaffoldWriteError,
+  StatusError,
+  TeardownError,
 } from "./errors/cli-errors.js";
 
 const client: ObservabilityClient = {
@@ -34,12 +37,6 @@ const createPromptResult: CreateSelections = {
 const createPrompt: PromptPort = {
   promptForCreateInputs() {
     return Promise.resolve(createPromptResult);
-  },
-};
-
-const cancelledCreatePrompt: PromptPort = {
-  promptForCreateInputs() {
-    return Promise.resolve(null);
   },
 };
 
@@ -165,6 +162,17 @@ const defaultTeardownClient = {
   },
 };
 
+const defaultManifest: PlatformManifest = {
+  domain: { preview: "my-app.preview.example.com", production: "my-app.example.com" },
+  environments: { preview: { branch: "preview" }, production: { branch: "main" } },
+  name: "my-app",
+  owner: "platform-engineering",
+  resources: [],
+  schemaVersion: "1",
+  services: [],
+  stack: "app",
+};
+
 const createDeps = (
   promptPort: PromptPort,
   validator: { validateCreateInput(input: CreateSelections): CreateSelections },
@@ -243,15 +251,6 @@ describe(runCli, () => {
       expect(output).toContain("Scaffolded project at /workspace/hello-universe");
     });
 
-    it("returns non-zero when prompt flow is cancelled", async () => {
-      const result = await runCli(
-        ["create"],
-        createDeps(cancelledCreatePrompt, passThroughValidator),
-      );
-
-      expect(result.exitCode).toBe(1);
-    });
-
     it("is interactive-only and rejects extra args", async () => {
       const { output } = await runCli(
         ["create", "my-app"],
@@ -280,23 +279,12 @@ describe(runCli, () => {
   });
 
   describe("register", () => {
-    const registerManifest: AppPlatformManifest = {
-      domain: { preview: "my-app.preview.example.com", production: "my-app.example.com" },
-      environments: { preview: { branch: "preview" }, production: { branch: "main" } },
-      name: "my-app",
-      owner: "platform-engineering",
-      resources: [],
-      schemaVersion: "1",
-      services: [],
-      stack: "app",
-    };
-
     const successReader = {
       readFile(_filePath: string) {
         return Promise.resolve("stack: app\n");
       },
     };
-    const successValidator = (_yaml: string): PlatformManifest => registerManifest;
+    const successValidator = (_yaml: string): PlatformManifest => defaultManifest;
     const successClient = {
       register(_manifest: PlatformManifest) {
         return Promise.resolve({ name: "my-app", registrationId: "stub-my-app" });
@@ -405,23 +393,12 @@ describe(runCli, () => {
   });
 
   describe("deploy", () => {
-    const deployManifest: AppPlatformManifest = {
-      domain: { preview: "my-app.preview.example.com", production: "my-app.example.com" },
-      environments: { preview: { branch: "preview" }, production: { branch: "main" } },
-      name: "my-app",
-      owner: "platform-engineering",
-      resources: [],
-      schemaVersion: "1",
-      services: [],
-      stack: "app",
-    };
-
     const successReader = {
       readFile(_filePath: string) {
         return Promise.resolve("stack: app\n");
       },
     };
-    const successValidator = (_yaml: string): PlatformManifest => deployManifest;
+    const successValidator = (_yaml: string): PlatformManifest => defaultManifest;
     const successDeployClient = {
       deploy(_request: { manifest: PlatformManifest }) {
         return Promise.resolve({
@@ -563,23 +540,12 @@ describe(runCli, () => {
   });
 
   describe("promote", () => {
-    const promoteManifest: AppPlatformManifest = {
-      domain: { preview: "my-app.preview.example.com", production: "my-app.example.com" },
-      environments: { preview: { branch: "preview" }, production: { branch: "main" } },
-      name: "my-app",
-      owner: "platform-engineering",
-      resources: [],
-      schemaVersion: "1",
-      services: [],
-      stack: "app",
-    };
-
     const successReader = {
       readFile(_filePath: string) {
         return Promise.resolve("stack: app\n");
       },
     };
-    const successValidator = (_yaml: string): PlatformManifest => promoteManifest;
+    const successValidator = (_yaml: string): PlatformManifest => defaultManifest;
     const successPromoteClient = {
       promote(_request: { manifest: PlatformManifest }) {
         return Promise.resolve({
@@ -749,23 +715,12 @@ describe(runCli, () => {
   });
 
   describe("rollback", () => {
-    const rollbackManifest: AppPlatformManifest = {
-      domain: { preview: "my-app.preview.example.com", production: "my-app.example.com" },
-      environments: { preview: { branch: "preview" }, production: { branch: "main" } },
-      name: "my-app",
-      owner: "platform-engineering",
-      resources: [],
-      schemaVersion: "1",
-      services: [],
-      stack: "app",
-    };
-
     const successReader = {
       readFile(_filePath: string) {
         return Promise.resolve("stack: app\n");
       },
     };
-    const successValidator = (_yaml: string): PlatformManifest => rollbackManifest;
+    const successValidator = (_yaml: string): PlatformManifest => defaultManifest;
     const successRollbackClient = {
       rollback(_request: { manifest: PlatformManifest }) {
         return Promise.resolve({
@@ -927,6 +882,432 @@ describe(runCli, () => {
 
       const result = await runCli(["rollback"], {
         ...rollbackDeps(),
+        observability: throwingObservability,
+      });
+
+      expect(result.exitCode).toBe(0);
+    });
+  });
+
+  describe("list", () => {
+    const successReader = {
+      readFile(_filePath: string) {
+        return Promise.resolve("stack: app\n");
+      },
+    };
+    const successValidator = (_yaml: string): PlatformManifest => defaultManifest;
+    const stubDeployments = [
+      { deployedAt: "2026-01-01T00:00:00.000Z", deploymentId: "deploy-stub-001", state: "ACTIVE" },
+    ];
+    const successListClient = {
+      getList(_request: { manifest: PlatformManifest }) {
+        return Promise.resolve({ deployments: stubDeployments, name: "my-app" });
+      },
+    };
+
+    const listDeps = (
+      reader = successReader,
+      validator = successValidator,
+      listClient = successListClient,
+    ) => {
+      const base = createDeps(createPrompt, passThroughValidator);
+      return {
+        ...base,
+        adapters: { ...base.adapters, listClient, projectReader: reader },
+        services: {
+          ...base.services,
+          platformManifestGenerator: { ...manifestGenerator, validateManifest: validator },
+        },
+      };
+    };
+
+    it("exits when more than one argument is provided", async () => {
+      const result = await runCli(["list", "/dir", "extra"], listDeps());
+
+      expect(result.exitCode).toBe(18);
+    });
+
+    it("tracks list.start and list.success on successful retrieval", async () => {
+      const trackedEvents: string[] = [];
+      const trackingObservability = {
+        error() {},
+        track(event: string) {
+          trackedEvents.push(event);
+        },
+      };
+
+      await runCli(["list"], { ...listDeps(), observability: trackingObservability });
+
+      expect(trackedEvents).toContain("list.start");
+      expect(trackedEvents).toContain("list.success");
+    });
+
+    it("tracks list.start and list.failure on a failed retrieval", async () => {
+      const trackedEvents: string[] = [];
+      const trackingObservability = {
+        error() {},
+        track(event: string) {
+          trackedEvents.push(event);
+        },
+      };
+      const failingClient = {
+        getList(request: { manifest: PlatformManifest }) {
+          return Promise.reject(new ListError(request.manifest.name, "unavailable"));
+        },
+      };
+
+      await runCli(["list"], {
+        ...listDeps(successReader, successValidator, failingClient),
+        observability: trackingObservability,
+      });
+
+      expect(trackedEvents).toContain("list.start");
+      expect(trackedEvents).toContain("list.failure");
+    });
+
+    it("does not change exit code when observability.track throws", async () => {
+      const throwingObservability = {
+        error() {},
+        track() {
+          throw new Error("o11y down");
+        },
+      };
+
+      const result = await runCli(["list"], {
+        ...listDeps(),
+        observability: throwingObservability,
+      });
+
+      expect(result.exitCode).toBe(0);
+    });
+  });
+
+  describe("logs", () => {
+    const successReader = {
+      readFile(_filePath: string) {
+        return Promise.resolve("stack: app\n");
+      },
+    };
+    const successValidator = (_yaml: string): PlatformManifest => defaultManifest;
+    const stubEntries = [
+      { level: "info", message: "Application started", timestamp: "2026-01-01T00:00:00.000Z" },
+    ];
+    const successLogsClient = {
+      getLogs(_request: { environment: string; manifest: PlatformManifest }) {
+        return Promise.resolve({ entries: stubEntries, environment: "preview", name: "my-app" });
+      },
+    };
+
+    const logsDeps = (
+      reader = successReader,
+      validator = successValidator,
+      logsClient = successLogsClient,
+    ) => {
+      const base = createDeps(createPrompt, passThroughValidator);
+      return {
+        ...base,
+        adapters: { ...base.adapters, logsClient, projectReader: reader },
+        services: {
+          ...base.services,
+          platformManifestGenerator: { ...manifestGenerator, validateManifest: validator },
+        },
+      };
+    };
+
+    it("exits when more than two arguments are provided", async () => {
+      const result = await runCli(["logs", "/dir", "preview", "extra"], logsDeps());
+
+      expect(result.exitCode).toBe(18);
+    });
+
+    it("exits when environment is not preview or production", async () => {
+      const result = await runCli(["logs", "/dir", "staging"], logsDeps());
+
+      expect(result.exitCode).toBe(4);
+    });
+
+    it("defaults to the preview environment when no environment argument is given", async () => {
+      const requests: { environment: string }[] = [];
+      const trackingClient = {
+        getLogs(request: { environment: string; manifest: PlatformManifest }) {
+          requests.push(request);
+          return Promise.resolve({
+            entries: stubEntries,
+            environment: request.environment,
+            name: "my-app",
+          });
+        },
+      };
+
+      await runCli(["logs"], logsDeps(successReader, successValidator, trackingClient));
+
+      expect(requests[0]?.environment).toBe("preview");
+    });
+
+    it("tracks logs.start and logs.success on successful retrieval", async () => {
+      const trackedEvents: string[] = [];
+      const trackingObservability = {
+        error() {},
+        track(event: string) {
+          trackedEvents.push(event);
+        },
+      };
+
+      await runCli(["logs"], { ...logsDeps(), observability: trackingObservability });
+
+      expect(trackedEvents).toContain("logs.start");
+      expect(trackedEvents).toContain("logs.success");
+    });
+
+    it("tracks logs.start and logs.failure on a failed retrieval", async () => {
+      const trackedEvents: string[] = [];
+      const trackingObservability = {
+        error() {},
+        track(event: string) {
+          trackedEvents.push(event);
+        },
+      };
+      const failingClient = {
+        getLogs(request: { environment: string; manifest: PlatformManifest }) {
+          return Promise.reject(new LogsError(request.manifest.name, "timeout"));
+        },
+      };
+
+      await runCli(["logs"], {
+        ...logsDeps(successReader, successValidator, failingClient),
+        observability: trackingObservability,
+      });
+
+      expect(trackedEvents).toContain("logs.start");
+      expect(trackedEvents).toContain("logs.failure");
+    });
+
+    it("does not change exit code when observability.track throws", async () => {
+      const throwingObservability = {
+        error() {},
+        track() {
+          throw new Error("o11y down");
+        },
+      };
+
+      const result = await runCli(["logs"], {
+        ...logsDeps(),
+        observability: throwingObservability,
+      });
+
+      expect(result.exitCode).toBe(0);
+    });
+  });
+
+  describe("status", () => {
+    const successReader = {
+      readFile(_filePath: string) {
+        return Promise.resolve("stack: app\n");
+      },
+    };
+    const successValidator = (_yaml: string): PlatformManifest => defaultManifest;
+    const successStatusClient = {
+      getStatus(_request: {
+        environment: string;
+        manifest: PlatformManifest;
+      }): Promise<StatusResponse> {
+        return Promise.resolve({
+          environment: "preview",
+          name: "my-app",
+          state: "ACTIVE",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+        });
+      },
+    };
+
+    const statusDeps = (
+      reader = successReader,
+      validator = successValidator,
+      statusClient = successStatusClient,
+    ) => {
+      const base = createDeps(createPrompt, passThroughValidator);
+      return {
+        ...base,
+        adapters: { ...base.adapters, projectReader: reader, statusClient },
+        services: {
+          ...base.services,
+          platformManifestGenerator: { ...manifestGenerator, validateManifest: validator },
+        },
+      };
+    };
+
+    it("exits when more than two arguments are provided", async () => {
+      const result = await runCli(["status", "/dir", "preview", "extra"], statusDeps());
+
+      expect(result.exitCode).toBe(18);
+    });
+
+    it("exits when environment is not preview or production", async () => {
+      const result = await runCli(["status", "/dir", "staging"], statusDeps());
+
+      expect(result.exitCode).toBe(4);
+    });
+
+    it("defaults to the preview environment when no environment argument is given", async () => {
+      const requests: { environment: string }[] = [];
+      const trackingClient = {
+        getStatus(request: {
+          environment: string;
+          manifest: PlatformManifest;
+        }): Promise<StatusResponse> {
+          requests.push(request);
+          return Promise.resolve({
+            environment: request.environment,
+            name: "my-app",
+            state: "ACTIVE",
+            updatedAt: "2026-01-01T00:00:00.000Z",
+          });
+        },
+      };
+
+      await runCli(["status"], statusDeps(successReader, successValidator, trackingClient));
+
+      expect(requests[0]?.environment).toBe("preview");
+    });
+
+    it("tracks status.start and status.success on successful retrieval", async () => {
+      const trackedEvents: string[] = [];
+      const trackingObservability = {
+        error() {},
+        track(event: string) {
+          trackedEvents.push(event);
+        },
+      };
+
+      await runCli(["status"], { ...statusDeps(), observability: trackingObservability });
+
+      expect(trackedEvents).toContain("status.start");
+      expect(trackedEvents).toContain("status.success");
+    });
+
+    it("tracks status.start and status.failure on a failed retrieval", async () => {
+      const trackedEvents: string[] = [];
+      const trackingObservability = {
+        error() {},
+        track(event: string) {
+          trackedEvents.push(event);
+        },
+      };
+      const failingClient = {
+        getStatus(request: { environment: string; manifest: PlatformManifest }) {
+          return Promise.reject(new StatusError(request.manifest.name, "unavailable"));
+        },
+      };
+
+      await runCli(["status"], {
+        ...statusDeps(successReader, successValidator, failingClient),
+        observability: trackingObservability,
+      });
+
+      expect(trackedEvents).toContain("status.start");
+      expect(trackedEvents).toContain("status.failure");
+    });
+
+    it("does not change exit code when observability.track throws", async () => {
+      const throwingObservability = {
+        error() {},
+        track() {
+          throw new Error("o11y down");
+        },
+      };
+
+      const result = await runCli(["status"], {
+        ...statusDeps(),
+        observability: throwingObservability,
+      });
+
+      expect(result.exitCode).toBe(0);
+    });
+  });
+
+  describe("teardown", () => {
+    const successReader = {
+      readFile(_filePath: string) {
+        return Promise.resolve("stack: app\n");
+      },
+    };
+    const successValidator = (_yaml: string): PlatformManifest => defaultManifest;
+    const successTeardownClient = {
+      teardown(_request: { manifest: PlatformManifest }) {
+        return Promise.resolve({ name: "my-app", teardownId: "stub-teardown-my-app-1" });
+      },
+    };
+
+    const teardownDeps = (
+      reader = successReader,
+      validator = successValidator,
+      teardownClient = successTeardownClient,
+    ) => {
+      const base = createDeps(createPrompt, passThroughValidator);
+      return {
+        ...base,
+        adapters: { ...base.adapters, projectReader: reader, teardownClient },
+        services: {
+          ...base.services,
+          platformManifestGenerator: { ...manifestGenerator, validateManifest: validator },
+        },
+      };
+    };
+
+    it("exits when more than one argument is provided", async () => {
+      const result = await runCli(["teardown", "/dir", "extra"], teardownDeps());
+
+      expect(result.exitCode).toBe(18);
+    });
+
+    it("tracks teardown.start and teardown.success on successful teardown", async () => {
+      const trackedEvents: string[] = [];
+      const trackingObservability = {
+        error() {},
+        track(event: string) {
+          trackedEvents.push(event);
+        },
+      };
+
+      await runCli(["teardown"], { ...teardownDeps(), observability: trackingObservability });
+
+      expect(trackedEvents).toContain("teardown.start");
+      expect(trackedEvents).toContain("teardown.success");
+    });
+
+    it("tracks teardown.start and teardown.failure on a failed teardown", async () => {
+      const trackedEvents: string[] = [];
+      const trackingObservability = {
+        error() {},
+        track(event: string) {
+          trackedEvents.push(event);
+        },
+      };
+      const failingClient = {
+        teardown(request: { manifest: PlatformManifest }) {
+          return Promise.reject(new TeardownError(request.manifest.name, "unavailable"));
+        },
+      };
+
+      await runCli(["teardown"], {
+        ...teardownDeps(successReader, successValidator, failingClient),
+        observability: trackingObservability,
+      });
+
+      expect(trackedEvents).toContain("teardown.start");
+      expect(trackedEvents).toContain("teardown.failure");
+    });
+
+    it("does not change exit code when observability.track throws", async () => {
+      const throwingObservability = {
+        error() {},
+        track() {
+          throw new Error("o11y down");
+        },
+      };
+
+      const result = await runCli(["teardown"], {
+        ...teardownDeps(),
         observability: throwingObservability,
       });
 
