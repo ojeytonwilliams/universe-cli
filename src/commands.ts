@@ -49,10 +49,11 @@ interface Adapters {
 type HandlerResult = CliResult & { meta?: Record<string, string> };
 
 const readAndValidateManifest = async (
-  platformYamlPath: string,
+  projectDirectory: string,
   services: Pick<Services, "platformManifestGenerator">,
   adapters: Pick<Adapters, "projectReader">,
 ): Promise<PlatformManifest> => {
+  const platformYamlPath = join(projectDirectory, "platform.yaml");
   const yaml = await adapters.projectReader.readFile(platformYamlPath);
 
   return services.platformManifestGenerator.validateManifest(yaml, platformYamlPath);
@@ -94,8 +95,7 @@ const handleRegister = async (
   },
 ): Promise<HandlerResult> => {
   const { services, adapters } = deps;
-  const platformYamlPath = join(projectDirectory, "platform.yaml");
-  const manifest = await readAndValidateManifest(platformYamlPath, services, adapters);
+  const manifest = await readAndValidateManifest(projectDirectory, services, adapters);
   const receipt = await adapters.registrationClient.register(manifest);
 
   return {
@@ -113,8 +113,7 @@ const handleDeploy = async (
   },
 ): Promise<HandlerResult> => {
   const { services, adapters } = deps;
-  const platformYamlPath = join(projectDirectory, "platform.yaml");
-  const manifest = await readAndValidateManifest(platformYamlPath, services, adapters);
+  const manifest = await readAndValidateManifest(projectDirectory, services, adapters);
   const receipt = await adapters.deployClient.deploy({ manifest });
 
   return {
@@ -132,8 +131,7 @@ const handlePromote = async (
   },
 ): Promise<HandlerResult> => {
   const { services, adapters } = deps;
-  const platformYamlPath = join(projectDirectory, "platform.yaml");
-  const manifest = await readAndValidateManifest(platformYamlPath, services, adapters);
+  const manifest = await readAndValidateManifest(projectDirectory, services, adapters);
   const receipt = await adapters.promoteClient.promote({ manifest });
 
   return {
@@ -151,8 +149,7 @@ const handleRollback = async (
   },
 ): Promise<HandlerResult> => {
   const { services, adapters } = deps;
-  const platformYamlPath = join(projectDirectory, "platform.yaml");
-  const manifest = await readAndValidateManifest(platformYamlPath, services, adapters);
+  const manifest = await readAndValidateManifest(projectDirectory, services, adapters);
   const receipt = await adapters.rollbackClient.rollback({ manifest });
 
   return {
@@ -170,8 +167,7 @@ const handleLogs = async (
   },
 ): Promise<HandlerResult> => {
   const { services, adapters } = deps;
-  const platformYamlPath = join(projectDirectory, "platform.yaml");
-  const manifest = await readAndValidateManifest(platformYamlPath, services, adapters);
+  const manifest = await readAndValidateManifest(projectDirectory, services, adapters);
   const response = await adapters.logsClient.getLogs({ environment, manifest });
 
   const renderedEntries = response.entries
@@ -193,8 +189,7 @@ const handleList = async (
   },
 ): Promise<HandlerResult> => {
   const { services, adapters } = deps;
-  const platformYamlPath = join(projectDirectory, "platform.yaml");
-  const manifest = await readAndValidateManifest(platformYamlPath, services, adapters);
+  const manifest = await readAndValidateManifest(projectDirectory, services, adapters);
   const response = await adapters.listClient.getList({ manifest });
 
   const renderedEntries = response.deployments
@@ -216,8 +211,7 @@ const handleStatus = async (
   },
 ): Promise<HandlerResult> => {
   const { services, adapters } = deps;
-  const platformYamlPath = join(projectDirectory, "platform.yaml");
-  const manifest = await readAndValidateManifest(platformYamlPath, services, adapters);
+  const manifest = await readAndValidateManifest(projectDirectory, services, adapters);
   const response = await adapters.statusClient.getStatus({ environment, manifest });
 
   return {
@@ -235,8 +229,7 @@ const handleTeardown = async (
   },
 ): Promise<HandlerResult> => {
   const { services, adapters } = deps;
-  const platformYamlPath = join(projectDirectory, "platform.yaml");
-  const manifest = await readAndValidateManifest(platformYamlPath, services, adapters);
+  const manifest = await readAndValidateManifest(projectDirectory, services, adapters);
   const receipt = await adapters.teardownClient.teardown({ manifest });
 
   return {
