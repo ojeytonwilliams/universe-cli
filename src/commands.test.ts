@@ -4,8 +4,6 @@ import type {
   PlatformManifest,
 } from "./services/platform-manifest-service.js";
 import {
-  BadArgumentsError,
-  CreateUnsupportedCombinationError,
   DeploymentError,
   InvalidNameError,
   ListError,
@@ -143,7 +141,7 @@ describe(handleCreate, () => {
           generatePlatformManifest(_input: CreateSelections) {
             return "name: hello-universe\n";
           },
-          validateManifest(_yaml: string): never {
+          validateManifest(_yaml: never): never {
             throw new Error("validateManifest not used in create");
           },
         },
@@ -155,7 +153,7 @@ describe(handleCreate, () => {
       },
     };
 
-    const { output } = await handleCreate(["create"], "/workspace", deps);
+    const { output } = await handleCreate("/workspace", deps);
 
     expect(writerCalls).toStrictEqual([
       {
@@ -205,53 +203,14 @@ describe(handleCreate, () => {
       },
     };
 
-    const result = await handleCreate(["create"], "/workspace", deps);
+    const result = await handleCreate("/workspace", deps);
 
     expect(result.exitCode).toBe(1);
   });
 
-  it("is interactive-only and rejects extra args", async () => {
-    await expect(
-      handleCreate(["create", "my-app"], "/workspace", {
-        adapters: {
-          filesystemWriter: {
-            writeProject(_targetDirectory: never): never {
-              throw new Error("filesystemWriter not used in this test");
-            },
-          },
-          promptPort: {
-            promptForCreateInputs(): never {
-              throw new Error("promptPort not used in this test");
-            },
-          },
-        },
-        services: {
-          layerResolver: {
-            resolveLayers(_input: never): never {
-              throw new Error("layerResolver not used in this test");
-            },
-          },
-          platformManifestGenerator: {
-            generatePlatformManifest(_input: never): never {
-              throw new Error("generatePlatformManifest not used in this test");
-            },
-            validateManifest(_yaml: never): never {
-              throw new Error("validateManifest not used in this test");
-            },
-          },
-          validator: {
-            validateCreateInput(_input: never): never {
-              throw new Error("validator not used in this test");
-            },
-          },
-        },
-      }),
-    ).rejects.toThrow(BadArgumentsError);
-  });
-
   it("returns actionable feedback for invalid input", async () => {
     await expect(
-      handleCreate(["create"], "/workspace", {
+      handleCreate("/workspace", {
         adapters: {
           filesystemWriter: {
             writeProject(_targetDirectory: never): never {
@@ -290,7 +249,7 @@ describe(handleCreate, () => {
 
   it("throws a typed write failure when scaffold output cannot be written", async () => {
     await expect(
-      handleCreate(["create"], "/workspace", {
+      handleCreate("/workspace", {
         adapters: {
           filesystemWriter: {
             writeProject(targetDirectory: string) {
@@ -345,8 +304,7 @@ const successListClient = {
 describe(handleList, () => {
   it("exits 0 on successful list retrieval", async () => {
     const result = await handleList(
-      ["list"],
-      "/workspace",
+      { projectDirectory: "/workspace" },
       getDeps({ listClient: successListClient }),
     );
 
@@ -355,8 +313,7 @@ describe(handleList, () => {
 
   it("output contains the project name, environment, and deployment entries", async () => {
     const { output } = await handleList(
-      ["list"],
-      "/workspace",
+      { projectDirectory: "/workspace" },
       getDeps({ listClient: successListClient }),
     );
 
@@ -365,7 +322,7 @@ describe(handleList, () => {
     expect(output).toContain("deploy-stub-001");
   });
 
-  it("reads platform.yaml from cwd when no directory argument is given", async () => {
+  it("reads platform.yaml from the given projectDirectory", async () => {
     const paths: string[] = [];
     const trackingReader = {
       readFile(filePath: string) {
@@ -375,8 +332,7 @@ describe(handleList, () => {
     };
 
     await handleList(
-      ["list"],
-      "/workspace",
+      { projectDirectory: "/workspace" },
       getDeps({ listClient: successListClient }, trackingReader),
     );
 
@@ -393,8 +349,7 @@ describe(handleList, () => {
     };
 
     await handleList(
-      ["list", "/some/project"],
-      "/workspace",
+      { projectDirectory: "/some/project" },
       getDeps({ listClient: successListClient }, trackingReader),
     );
 
@@ -409,7 +364,10 @@ describe(handleList, () => {
     };
 
     await expect(
-      handleList(["list"], "/workspace", getDeps({ listClient: successListClient }, missingReader)),
+      handleList(
+        { projectDirectory: "/workspace" },
+        getDeps({ listClient: successListClient }, missingReader),
+      ),
     ).rejects.toThrow(ManifestNotFoundError);
   });
 
@@ -420,8 +378,7 @@ describe(handleList, () => {
 
     await expect(
       handleList(
-        ["list"],
-        "/workspace",
+        { projectDirectory: "/workspace" },
         getDeps({ listClient: successListClient }, successReader, failingValidator),
       ),
     ).rejects.toThrow(ManifestInvalidError);
@@ -435,18 +392,8 @@ describe(handleList, () => {
     };
 
     await expect(
-      handleList(["list"], "/workspace", getDeps({ listClient: failingClient })),
+      handleList({ projectDirectory: "/workspace" }, getDeps({ listClient: failingClient })),
     ).rejects.toThrow(ListError);
-  });
-
-  it("exits when more than one argument is provided", async () => {
-    await expect(
-      handleList(
-        ["list", "/dir", "extra"],
-        "/workspace",
-        getDeps({ listClient: successListClient }),
-      ),
-    ).rejects.toThrow(BadArgumentsError);
   });
 });
 
@@ -465,8 +412,7 @@ const successLogsClient = {
 describe(handleLogs, () => {
   it("exits 0 on successful log retrieval", async () => {
     const result = await handleLogs(
-      ["logs"],
-      "/workspace",
+      { environment: "preview", projectDirectory: "/workspace" },
       getDeps({ logsClient: successLogsClient }),
     );
 
@@ -475,8 +421,7 @@ describe(handleLogs, () => {
 
   it("output contains the project name, environment, and log entries", async () => {
     const { output } = await handleLogs(
-      ["logs"],
-      "/workspace",
+      { environment: "preview", projectDirectory: "/workspace" },
       getDeps({ logsClient: successLogsClient }),
     );
 
@@ -485,7 +430,7 @@ describe(handleLogs, () => {
     expect(output).toContain("Application started");
   });
 
-  it("reads platform.yaml from cwd when no directory argument is given", async () => {
+  it("reads platform.yaml from the given projectDirectory", async () => {
     const paths: string[] = [];
     const trackingReader = {
       readFile(filePath: string) {
@@ -495,8 +440,7 @@ describe(handleLogs, () => {
     };
 
     await handleLogs(
-      ["logs"],
-      "/workspace",
+      { environment: "preview", projectDirectory: "/workspace" },
       getDeps({ logsClient: successLogsClient }, trackingReader),
     );
 
@@ -513,8 +457,7 @@ describe(handleLogs, () => {
     };
 
     await handleLogs(
-      ["logs", "/some/project"],
-      "/workspace",
+      { environment: "preview", projectDirectory: "/some/project" },
       getDeps({ logsClient: successLogsClient }, trackingReader),
     );
 
@@ -529,7 +472,10 @@ describe(handleLogs, () => {
     };
 
     await expect(
-      handleLogs(["logs"], "/workspace", getDeps({ logsClient: successLogsClient }, missingReader)),
+      handleLogs(
+        { environment: "preview", projectDirectory: "/workspace" },
+        getDeps({ logsClient: successLogsClient }, missingReader),
+      ),
     ).rejects.toThrow(ManifestNotFoundError);
   });
 
@@ -540,8 +486,7 @@ describe(handleLogs, () => {
 
     await expect(
       handleLogs(
-        ["logs"],
-        "/workspace",
+        { environment: "preview", projectDirectory: "/workspace" },
         getDeps({ logsClient: successLogsClient }, successReader, failingValidator),
       ),
     ).rejects.toThrow(ManifestInvalidError);
@@ -555,31 +500,14 @@ describe(handleLogs, () => {
     };
 
     await expect(
-      handleLogs(["logs"], "/workspace", getDeps({ logsClient: failingClient })),
+      handleLogs(
+        { environment: "preview", projectDirectory: "/workspace" },
+        getDeps({ logsClient: failingClient }),
+      ),
     ).rejects.toThrow(LogsError);
   });
 
-  it("exits when more than two arguments are provided", async () => {
-    await expect(
-      handleLogs(
-        ["logs", "/dir", "preview", "extra"],
-        "/workspace",
-        getDeps({ logsClient: successLogsClient }),
-      ),
-    ).rejects.toThrow(BadArgumentsError);
-  });
-
-  it("exits when environment is not preview or production", async () => {
-    await expect(
-      handleLogs(
-        ["logs", "/dir", "staging"],
-        "/workspace",
-        getDeps({ logsClient: successLogsClient }),
-      ),
-    ).rejects.toThrow(CreateUnsupportedCombinationError);
-  });
-
-  it("defaults to the preview environment when no environment argument is given", async () => {
+  it("passes the given environment to the logs client", async () => {
     const requests: { environment: string }[] = [];
     const trackingClient = {
       getLogs(request: { environment: string; manifest: PlatformManifest }) {
@@ -588,9 +516,12 @@ describe(handleLogs, () => {
       },
     };
 
-    await handleLogs(["logs"], "/workspace", getDeps({ logsClient: trackingClient }));
+    await handleLogs(
+      { environment: "production", projectDirectory: "/workspace" },
+      getDeps({ logsClient: trackingClient }),
+    );
 
-    expect(requests[0]?.environment).toBe("preview");
+    expect(requests[0]?.environment).toBe("production");
   });
 });
 
@@ -613,8 +544,7 @@ const successStatusClient = {
 describe(handleStatus, () => {
   it("exits 0 on successful status retrieval", async () => {
     const result = await handleStatus(
-      ["status"],
-      "/workspace",
+      { environment: "preview", projectDirectory: "/workspace" },
       getDeps({ statusClient: successStatusClient }),
     );
 
@@ -623,8 +553,7 @@ describe(handleStatus, () => {
 
   it("output contains the project name, environment, and state", async () => {
     const { output } = await handleStatus(
-      ["status"],
-      "/workspace",
+      { environment: "preview", projectDirectory: "/workspace" },
       getDeps({ statusClient: successStatusClient }),
     );
 
@@ -633,7 +562,7 @@ describe(handleStatus, () => {
     expect(output).toContain("ACTIVE");
   });
 
-  it("reads platform.yaml from cwd when no directory argument is given", async () => {
+  it("reads platform.yaml from the given projectDirectory", async () => {
     const paths: string[] = [];
     const trackingReader = {
       readFile(filePath: string) {
@@ -643,8 +572,7 @@ describe(handleStatus, () => {
     };
 
     await handleStatus(
-      ["status"],
-      "/workspace",
+      { environment: "preview", projectDirectory: "/workspace" },
       getDeps({ statusClient: successStatusClient }, trackingReader),
     );
 
@@ -661,8 +589,7 @@ describe(handleStatus, () => {
     };
 
     await handleStatus(
-      ["status", "/some/project"],
-      "/workspace",
+      { environment: "preview", projectDirectory: "/some/project" },
       getDeps({ statusClient: successStatusClient }, trackingReader),
     );
 
@@ -678,8 +605,7 @@ describe(handleStatus, () => {
 
     await expect(
       handleStatus(
-        ["status"],
-        "/workspace",
+        { environment: "preview", projectDirectory: "/workspace" },
         getDeps({ statusClient: successStatusClient }, missingReader),
       ),
     ).rejects.toThrow(ManifestNotFoundError);
@@ -692,8 +618,7 @@ describe(handleStatus, () => {
 
     await expect(
       handleStatus(
-        ["status"],
-        "/workspace",
+        { environment: "preview", projectDirectory: "/workspace" },
         getDeps({ statusClient: successStatusClient }, successReader, failingValidator),
       ),
     ).rejects.toThrow(ManifestInvalidError);
@@ -707,31 +632,14 @@ describe(handleStatus, () => {
     };
 
     await expect(
-      handleStatus(["status"], "/workspace", getDeps({ statusClient: failingClient })),
+      handleStatus(
+        { environment: "preview", projectDirectory: "/workspace" },
+        getDeps({ statusClient: failingClient }),
+      ),
     ).rejects.toThrow(StatusError);
   });
 
-  it("exits when more than two arguments are provided", async () => {
-    await expect(
-      handleStatus(
-        ["status", "/dir", "preview", "extra"],
-        "/workspace",
-        getDeps({ statusClient: successStatusClient }),
-      ),
-    ).rejects.toThrow(BadArgumentsError);
-  });
-
-  it("exits when environment is not preview or production", async () => {
-    await expect(
-      handleStatus(
-        ["status", "/dir", "staging"],
-        "/workspace",
-        getDeps({ statusClient: successStatusClient }),
-      ),
-    ).rejects.toThrow(CreateUnsupportedCombinationError);
-  });
-
-  it("defaults to the preview environment when no environment argument is given", async () => {
+  it("passes the given environment to the status client", async () => {
     const requests: { environment: string }[] = [];
     const trackingClient = {
       getStatus(request: {
@@ -748,9 +656,12 @@ describe(handleStatus, () => {
       },
     };
 
-    await handleStatus(["status"], "/workspace", getDeps({ statusClient: trackingClient }));
+    await handleStatus(
+      { environment: "production", projectDirectory: "/workspace" },
+      getDeps({ statusClient: trackingClient }),
+    );
 
-    expect(requests[0]?.environment).toBe("preview");
+    expect(requests[0]?.environment).toBe("production");
   });
 });
 
@@ -765,8 +676,7 @@ const successTeardownClient = {
 describe(handleTeardown, () => {
   it("exits 0 on successful teardown", async () => {
     const result = await handleTeardown(
-      ["teardown"],
-      "/workspace",
+      { projectDirectory: "/workspace" },
       getDeps({ teardownClient: successTeardownClient }),
     );
 
@@ -775,8 +685,7 @@ describe(handleTeardown, () => {
 
   it("output contains the project name and teardown ID", async () => {
     const { output } = await handleTeardown(
-      ["teardown"],
-      "/workspace",
+      { projectDirectory: "/workspace" },
       getDeps({ teardownClient: successTeardownClient }),
     );
 
@@ -784,7 +693,7 @@ describe(handleTeardown, () => {
     expect(output).toContain("stub-teardown-my-app-1");
   });
 
-  it("reads platform.yaml from cwd when no directory argument is given", async () => {
+  it("reads platform.yaml from the given projectDirectory", async () => {
     const paths: string[] = [];
     const trackingReader = {
       readFile(filePath: string) {
@@ -794,8 +703,7 @@ describe(handleTeardown, () => {
     };
 
     await handleTeardown(
-      ["teardown"],
-      "/workspace",
+      { projectDirectory: "/workspace" },
       getDeps({ teardownClient: successTeardownClient }, trackingReader),
     );
 
@@ -812,8 +720,7 @@ describe(handleTeardown, () => {
     };
 
     await handleTeardown(
-      ["teardown", "/some/project"],
-      "/workspace",
+      { projectDirectory: "/some/project" },
       getDeps({ teardownClient: successTeardownClient }, trackingReader),
     );
 
@@ -829,8 +736,7 @@ describe(handleTeardown, () => {
 
     await expect(
       handleTeardown(
-        ["teardown"],
-        "/workspace",
+        { projectDirectory: "/workspace" },
         getDeps({ teardownClient: successTeardownClient }, missingReader),
       ),
     ).rejects.toThrow(ManifestNotFoundError);
@@ -843,8 +749,7 @@ describe(handleTeardown, () => {
 
     await expect(
       handleTeardown(
-        ["teardown"],
-        "/workspace",
+        { projectDirectory: "/workspace" },
         getDeps({ teardownClient: successTeardownClient }, successReader, failingValidator),
       ),
     ).rejects.toThrow(ManifestInvalidError);
@@ -858,18 +763,11 @@ describe(handleTeardown, () => {
     };
 
     await expect(
-      handleTeardown(["teardown"], "/workspace", getDeps({ teardownClient: failingClient })),
-    ).rejects.toThrow(TeardownError);
-  });
-
-  it("exits when more than one argument is provided", async () => {
-    await expect(
       handleTeardown(
-        ["teardown", "/dir", "extra"],
-        "/workspace",
-        getDeps({ teardownClient: successTeardownClient }),
+        { projectDirectory: "/workspace" },
+        getDeps({ teardownClient: failingClient }),
       ),
-    ).rejects.toThrow(BadArgumentsError);
+    ).rejects.toThrow(TeardownError);
   });
 });
 
@@ -878,8 +776,7 @@ describe(handleTeardown, () => {
 describe(handleRegister, () => {
   it("exits 0 on successful registration", async () => {
     const result = await handleRegister(
-      ["register"],
-      "/workspace",
+      { projectDirectory: "/workspace" },
       getDeps({ registrationClient: successRegistrationClient }),
     );
 
@@ -888,8 +785,7 @@ describe(handleRegister, () => {
 
   it("output contains the project name and registration ID", async () => {
     const { output } = await handleRegister(
-      ["register"],
-      "/workspace",
+      { projectDirectory: "/workspace" },
       getDeps({ registrationClient: successRegistrationClient }),
     );
 
@@ -897,7 +793,7 @@ describe(handleRegister, () => {
     expect(output).toContain("stub-my-app");
   });
 
-  it("reads platform.yaml from cwd when no directory argument is given", async () => {
+  it("reads platform.yaml from the given projectDirectory", async () => {
     const paths: string[] = [];
     const trackingReader = {
       readFile(filePath: string) {
@@ -907,8 +803,7 @@ describe(handleRegister, () => {
     };
 
     await handleRegister(
-      ["register"],
-      "/workspace",
+      { projectDirectory: "/workspace" },
       getDeps({ registrationClient: successRegistrationClient }, trackingReader),
     );
 
@@ -925,8 +820,7 @@ describe(handleRegister, () => {
     };
 
     await handleRegister(
-      ["register", "/some/project"],
-      "/workspace",
+      { projectDirectory: "/some/project" },
       getDeps({ registrationClient: successRegistrationClient }, trackingReader),
     );
 
@@ -942,8 +836,7 @@ describe(handleRegister, () => {
 
     await expect(
       handleRegister(
-        ["register"],
-        "/workspace",
+        { projectDirectory: "/workspace" },
         getDeps({ registrationClient: successRegistrationClient }, missingReader),
       ),
     ).rejects.toThrow(ManifestNotFoundError);
@@ -956,8 +849,7 @@ describe(handleRegister, () => {
 
     await expect(
       handleRegister(
-        ["register"],
-        "/workspace",
+        { projectDirectory: "/workspace" },
         getDeps({ registrationClient: successRegistrationClient }, successReader, failingValidator),
       ),
     ).rejects.toThrow(ManifestInvalidError);
@@ -971,18 +863,11 @@ describe(handleRegister, () => {
     };
 
     await expect(
-      handleRegister(["register"], "/workspace", getDeps({ registrationClient: failingClient })),
-    ).rejects.toThrow(RegistrationError);
-  });
-
-  it("exits when more than one argument is provided", async () => {
-    await expect(
       handleRegister(
-        ["register", "dir1", "dir2"],
-        "/workspace",
-        getDeps({ registrationClient: successRegistrationClient }),
+        { projectDirectory: "/workspace" },
+        getDeps({ registrationClient: failingClient }),
       ),
-    ).rejects.toThrow(BadArgumentsError);
+    ).rejects.toThrow(RegistrationError);
   });
 });
 
@@ -991,8 +876,7 @@ describe(handleRegister, () => {
 describe(handleDeploy, () => {
   it("exits 0 on successful deployment", async () => {
     const result = await handleDeploy(
-      ["deploy"],
-      "/workspace",
+      { projectDirectory: "/workspace" },
       getDeps({ deployClient: successDeployClient }),
     );
 
@@ -1001,8 +885,7 @@ describe(handleDeploy, () => {
 
   it("output contains the project name, environment, and deployment ID", async () => {
     const { output } = await handleDeploy(
-      ["deploy"],
-      "/workspace",
+      { projectDirectory: "/workspace" },
       getDeps({ deployClient: successDeployClient }),
     );
 
@@ -1020,8 +903,7 @@ describe(handleDeploy, () => {
 
     await expect(
       handleDeploy(
-        ["deploy"],
-        "/workspace",
+        { projectDirectory: "/workspace" },
         getDeps({ deployClient: successDeployClient }, missingReader),
       ),
     ).rejects.toThrow(ManifestNotFoundError);
@@ -1034,8 +916,7 @@ describe(handleDeploy, () => {
 
     await expect(
       handleDeploy(
-        ["deploy"],
-        "/workspace",
+        { projectDirectory: "/workspace" },
         getDeps({ deployClient: successDeployClient }, successReader, failingValidator),
       ),
     ).rejects.toThrow(ManifestInvalidError);
@@ -1049,18 +930,8 @@ describe(handleDeploy, () => {
     };
 
     await expect(
-      handleDeploy(["deploy"], "/workspace", getDeps({ deployClient: failingClient })),
+      handleDeploy({ projectDirectory: "/workspace" }, getDeps({ deployClient: failingClient })),
     ).rejects.toThrow(DeploymentError);
-  });
-
-  it("exits when more than one argument is provided", async () => {
-    await expect(
-      handleDeploy(
-        ["deploy", "/dir", "extra"],
-        "/workspace",
-        getDeps({ deployClient: successDeployClient }),
-      ),
-    ).rejects.toThrow(BadArgumentsError);
   });
 });
 
@@ -1069,8 +940,7 @@ describe(handleDeploy, () => {
 describe(handlePromote, () => {
   it("exits 0 on successful promotion", async () => {
     const result = await handlePromote(
-      ["promote"],
-      "/workspace",
+      { projectDirectory: "/workspace" },
       getDeps({ promoteClient: successPromoteClient }),
     );
 
@@ -1079,8 +949,7 @@ describe(handlePromote, () => {
 
   it("output contains the project name, target environment, and promotion ID", async () => {
     const { output } = await handlePromote(
-      ["promote"],
-      "/workspace",
+      { projectDirectory: "/workspace" },
       getDeps({ promoteClient: successPromoteClient }),
     );
 
@@ -1089,7 +958,7 @@ describe(handlePromote, () => {
     expect(output).toContain("stub-promote-my-app-production-1");
   });
 
-  it("reads platform.yaml from cwd when no directory argument is given", async () => {
+  it("reads platform.yaml from the given projectDirectory", async () => {
     const paths: string[] = [];
     const trackingReader = {
       readFile(filePath: string) {
@@ -1099,8 +968,7 @@ describe(handlePromote, () => {
     };
 
     await handlePromote(
-      ["promote"],
-      "/workspace",
+      { projectDirectory: "/workspace" },
       getDeps({ promoteClient: successPromoteClient }, trackingReader),
     );
 
@@ -1117,8 +985,7 @@ describe(handlePromote, () => {
     };
 
     await handlePromote(
-      ["promote", "/some/project"],
-      "/workspace",
+      { projectDirectory: "/some/project" },
       getDeps({ promoteClient: successPromoteClient }, trackingReader),
     );
 
@@ -1134,8 +1001,7 @@ describe(handlePromote, () => {
 
     await expect(
       handlePromote(
-        ["promote"],
-        "/workspace",
+        { projectDirectory: "/workspace" },
         getDeps({ promoteClient: successPromoteClient }, missingReader),
       ),
     ).rejects.toThrow(ManifestNotFoundError);
@@ -1148,8 +1014,7 @@ describe(handlePromote, () => {
 
     await expect(
       handlePromote(
-        ["promote"],
-        "/workspace",
+        { projectDirectory: "/workspace" },
         getDeps({ promoteClient: successPromoteClient }, successReader, failingValidator),
       ),
     ).rejects.toThrow(ManifestInvalidError);
@@ -1163,18 +1028,8 @@ describe(handlePromote, () => {
     };
 
     await expect(
-      handlePromote(["promote"], "/workspace", getDeps({ promoteClient: failingClient })),
+      handlePromote({ projectDirectory: "/workspace" }, getDeps({ promoteClient: failingClient })),
     ).rejects.toThrow(PromotionError);
-  });
-
-  it("exits when more than one argument is provided", async () => {
-    await expect(
-      handlePromote(
-        ["promote", "/dir", "extra"],
-        "/workspace",
-        getDeps({ promoteClient: successPromoteClient }),
-      ),
-    ).rejects.toThrow(BadArgumentsError);
   });
 });
 
@@ -1183,8 +1038,7 @@ describe(handlePromote, () => {
 describe(handleRollback, () => {
   it("exits 0 on successful rollback", async () => {
     const result = await handleRollback(
-      ["rollback"],
-      "/workspace",
+      { projectDirectory: "/workspace" },
       getDeps({ rollbackClient: successRollbackClient }),
     );
 
@@ -1193,8 +1047,7 @@ describe(handleRollback, () => {
 
   it("output contains the project name, target environment, and rollback ID", async () => {
     const { output } = await handleRollback(
-      ["rollback"],
-      "/workspace",
+      { projectDirectory: "/workspace" },
       getDeps({ rollbackClient: successRollbackClient }),
     );
 
@@ -1203,7 +1056,7 @@ describe(handleRollback, () => {
     expect(output).toContain("stub-rollback-my-app-production-1");
   });
 
-  it("reads platform.yaml from cwd when no directory argument is given", async () => {
+  it("reads platform.yaml from the given projectDirectory", async () => {
     const paths: string[] = [];
     const trackingReader = {
       readFile(filePath: string) {
@@ -1213,8 +1066,7 @@ describe(handleRollback, () => {
     };
 
     await handleRollback(
-      ["rollback"],
-      "/workspace",
+      { projectDirectory: "/workspace" },
       getDeps({ rollbackClient: successRollbackClient }, trackingReader),
     );
 
@@ -1231,8 +1083,7 @@ describe(handleRollback, () => {
     };
 
     await handleRollback(
-      ["rollback", "/some/project"],
-      "/workspace",
+      { projectDirectory: "/some/project" },
       getDeps({ rollbackClient: successRollbackClient }, trackingReader),
     );
 
@@ -1248,8 +1099,7 @@ describe(handleRollback, () => {
 
     await expect(
       handleRollback(
-        ["rollback"],
-        "/workspace",
+        { projectDirectory: "/workspace" },
         getDeps({ rollbackClient: successRollbackClient }, missingReader),
       ),
     ).rejects.toThrow(ManifestNotFoundError);
@@ -1262,8 +1112,7 @@ describe(handleRollback, () => {
 
     await expect(
       handleRollback(
-        ["rollback"],
-        "/workspace",
+        { projectDirectory: "/workspace" },
         getDeps({ rollbackClient: successRollbackClient }, successReader, failingValidator),
       ),
     ).rejects.toThrow(ManifestInvalidError);
@@ -1277,17 +1126,10 @@ describe(handleRollback, () => {
     };
 
     await expect(
-      handleRollback(["rollback"], "/workspace", getDeps({ rollbackClient: failingClient })),
-    ).rejects.toThrow(RollbackError);
-  });
-
-  it("exits when more than one argument is provided", async () => {
-    await expect(
       handleRollback(
-        ["rollback", "/dir", "extra"],
-        "/workspace",
-        getDeps({ rollbackClient: successRollbackClient }),
+        { projectDirectory: "/workspace" },
+        getDeps({ rollbackClient: failingClient }),
       ),
-    ).rejects.toThrow(BadArgumentsError);
+    ).rejects.toThrow(RollbackError);
   });
 });

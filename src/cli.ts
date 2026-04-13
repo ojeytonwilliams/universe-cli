@@ -54,21 +54,98 @@ interface CommandDef {
 }
 
 const COMMANDS: Record<string, CommandDef> = {
-  create: { handler: handleCreate },
-  deploy: { handler: handleDeploy },
-  list: { handler: handleList },
+  create: {
+    handler: (argv, cwd, deps) => {
+      if (argv.length > 1) {
+        throw new BadArgumentsError(
+          'The "create" command is interactive-only in this spike. Run "universe create" with no additional arguments.',
+        );
+      }
+      return handleCreate(cwd, deps);
+    },
+  },
+  deploy: {
+    handler: (argv, cwd, deps) => {
+      if (argv.length > 2) {
+        throw new BadArgumentsError("Too many arguments. Usage: universe deploy [directory]");
+      }
+      return handleDeploy({ projectDirectory: argv[1] ?? cwd }, deps);
+    },
+  },
+  list: {
+    handler: (argv, cwd, deps) => {
+      if (argv.length > 2) {
+        throw new BadArgumentsError("Too many arguments. Usage: universe list [directory]");
+      }
+      return handleList({ projectDirectory: argv[1] ?? cwd }, deps);
+    },
+  },
   logs: {
     context: (value) => ({ environment: value ?? "preview" }),
-    handler: handleLogs,
+    handler: (argv, cwd, deps) => {
+      if (argv.length > 3) {
+        throw new BadArgumentsError(
+          "Too many arguments. Usage: universe logs [directory] [environment]",
+        );
+      }
+      const environment = argv[2] ?? "preview";
+      if (environment !== "preview" && environment !== "production") {
+        throw new BadArgumentsError(
+          `environment "${environment}" — valid values are: preview, production`,
+        );
+      }
+      return handleLogs({ environment, projectDirectory: argv[1] ?? cwd }, deps);
+    },
   },
-  promote: { handler: handlePromote },
-  register: { handler: handleRegister },
-  rollback: { handler: handleRollback },
+  promote: {
+    handler: (argv, cwd, deps) => {
+      if (argv.length > 2) {
+        throw new BadArgumentsError("Too many arguments. Usage: universe promote [directory]");
+      }
+      return handlePromote({ projectDirectory: argv[1] ?? cwd }, deps);
+    },
+  },
+  register: {
+    handler: (argv, cwd, deps) => {
+      if (argv.length > 2) {
+        throw new BadArgumentsError("Too many arguments. Usage: universe register [directory]");
+      }
+      return handleRegister({ projectDirectory: argv[1] ?? cwd }, deps);
+    },
+  },
+  rollback: {
+    handler: (argv, cwd, deps) => {
+      if (argv.length > 2) {
+        throw new BadArgumentsError("Too many arguments. Usage: universe rollback [directory]");
+      }
+      return handleRollback({ projectDirectory: argv[1] ?? cwd }, deps);
+    },
+  },
   status: {
     context: (value) => ({ environment: value ?? "preview" }),
-    handler: handleStatus,
+    handler: (argv, cwd, deps) => {
+      if (argv.length > 3) {
+        throw new BadArgumentsError(
+          "Too many arguments. Usage: universe status [directory] [environment]",
+        );
+      }
+      const environment = argv[2] ?? "preview";
+      if (environment !== "preview" && environment !== "production") {
+        throw new BadArgumentsError(
+          `environment "${environment}" — valid values are: preview, production`,
+        );
+      }
+      return handleStatus({ environment, projectDirectory: argv[1] ?? cwd }, deps);
+    },
   },
-  teardown: { handler: handleTeardown },
+  teardown: {
+    handler: (argv, cwd, deps) => {
+      if (argv.length > 2) {
+        throw new BadArgumentsError("Too many arguments. Usage: universe teardown [directory]");
+      }
+      return handleTeardown({ projectDirectory: argv[1] ?? cwd }, deps);
+    },
+  },
 };
 
 const runCli = async (argv: string[], deps: CliDependencies): Promise<CliResult> => {

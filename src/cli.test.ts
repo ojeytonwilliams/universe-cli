@@ -197,6 +197,30 @@ describe(runCli, () => {
     });
   });
 
+  describe("create", () => {
+    it("is interactive-only and rejects extra args", async () => {
+      const result = await runCli(
+        ["create", "my-app"],
+        createDeps(createPrompt, passThroughValidator),
+      );
+
+      expect(result.exitCode).toBe(18);
+      expect(result.output).toContain("interactive-only");
+    });
+  });
+
+  describe("register", () => {
+    it("exits when more than one argument is provided", async () => {
+      const result = await runCli(
+        ["register", "/dir", "extra"],
+        createDeps(createPrompt, passThroughValidator),
+      );
+
+      expect(result.exitCode).toBe(18);
+      expect(result.output).toContain("Too many arguments");
+    });
+  });
+
   describe("deploy", () => {
     const successDeployClient = {
       deploy(_request: { manifest: PlatformManifest }) {
@@ -270,6 +294,13 @@ describe(runCli, () => {
       });
 
       expect(result.exitCode).toBe(0);
+    });
+
+    it("exits when more than one argument is provided", async () => {
+      const result = await runCli(["deploy", "/dir", "extra"], deployDeps());
+
+      expect(result.exitCode).toBe(18);
+      expect(result.output).toContain("Too many arguments");
     });
   });
 
@@ -347,6 +378,13 @@ describe(runCli, () => {
 
       expect(result.exitCode).toBe(0);
     });
+
+    it("exits when more than one argument is provided", async () => {
+      const result = await runCli(["promote", "/dir", "extra"], promoteDeps());
+
+      expect(result.exitCode).toBe(18);
+      expect(result.output).toContain("Too many arguments");
+    });
   });
 
   describe("rollback", () => {
@@ -423,6 +461,13 @@ describe(runCli, () => {
 
       expect(result.exitCode).toBe(0);
     });
+
+    it("exits when more than one argument is provided", async () => {
+      const result = await runCli(["rollback", "/dir", "extra"], rollbackDeps());
+
+      expect(result.exitCode).toBe(18);
+      expect(result.output).toContain("Too many arguments");
+    });
   });
 
   describe("list", () => {
@@ -496,6 +541,13 @@ describe(runCli, () => {
 
       expect(result.exitCode).toBe(0);
     });
+
+    it("exits when more than one argument is provided", async () => {
+      const result = await runCli(["list", "/dir", "extra"], listDeps());
+
+      expect(result.exitCode).toBe(18);
+      expect(result.output).toContain("Too many arguments");
+    });
   });
 
   describe("logs", () => {
@@ -568,6 +620,38 @@ describe(runCli, () => {
       });
 
       expect(result.exitCode).toBe(0);
+    });
+
+    it("exits when more than two arguments are provided", async () => {
+      const result = await runCli(["logs", "/dir", "preview", "extra"], logsDeps());
+
+      expect(result.exitCode).toBe(18);
+      expect(result.output).toContain("Too many arguments");
+    });
+
+    it("exits when environment is not preview or production", async () => {
+      const result = await runCli(["logs", "/dir", "staging"], logsDeps());
+
+      expect(result.exitCode).toBe(18);
+      expect(result.output).toContain('"staging"');
+    });
+
+    it("defaults to the preview environment when no environment argument is given", async () => {
+      const requests: { environment: string }[] = [];
+      const trackingLogsClient = {
+        getLogs(request: { environment: string; manifest: PlatformManifest }) {
+          requests.push(request);
+          return Promise.resolve({
+            entries: [],
+            environment: request.environment,
+            name: "my-app",
+          });
+        },
+      };
+
+      await runCli(["logs"], logsDeps(trackingLogsClient));
+
+      expect(requests[0]?.environment).toBe("preview");
     });
   });
 
@@ -647,6 +731,42 @@ describe(runCli, () => {
 
       expect(result.exitCode).toBe(0);
     });
+
+    it("exits when more than two arguments are provided", async () => {
+      const result = await runCli(["status", "/dir", "preview", "extra"], statusDeps());
+
+      expect(result.exitCode).toBe(18);
+      expect(result.output).toContain("Too many arguments");
+    });
+
+    it("exits when environment is not preview or production", async () => {
+      const result = await runCli(["status", "/dir", "staging"], statusDeps());
+
+      expect(result.exitCode).toBe(18);
+      expect(result.output).toContain('"staging"');
+    });
+
+    it("defaults to the preview environment when no environment argument is given", async () => {
+      const requests: { environment: string }[] = [];
+      const trackingStatusClient = {
+        getStatus(request: {
+          environment: string;
+          manifest: PlatformManifest;
+        }): Promise<StatusResponse> {
+          requests.push(request);
+          return Promise.resolve({
+            environment: request.environment,
+            name: "my-app",
+            state: "ACTIVE",
+            updatedAt: "2026-01-01T00:00:00.000Z",
+          });
+        },
+      };
+
+      await runCli(["status"], statusDeps(trackingStatusClient));
+
+      expect(requests[0]?.environment).toBe("preview");
+    });
   });
 
   describe("teardown", () => {
@@ -716,6 +836,13 @@ describe(runCli, () => {
       });
 
       expect(result.exitCode).toBe(0);
+    });
+
+    it("exits when more than one argument is provided", async () => {
+      const result = await runCli(["teardown", "/dir", "extra"], teardownDeps());
+
+      expect(result.exitCode).toBe(18);
+      expect(result.output).toContain("Too many arguments");
     });
   });
 });

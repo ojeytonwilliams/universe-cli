@@ -81,6 +81,7 @@ class CreateUnsupportedFrameworkError extends CliError {
   }
 }
 
+/* This is for CreateInputValidationService to report invalid input */
 class CreateUnsupportedCombinationError extends CliError {
   constructor(description: string) {
     super(`Unsupported combination in this spike: ${description}.`, EXIT_CODES.UNSUPPORTED);
