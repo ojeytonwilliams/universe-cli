@@ -34,6 +34,22 @@ const successReader = {
 
 const successValidator = (_yaml: string): PlatformManifest => stubManifest;
 
+const getDeps = <T extends object>(
+  adapters: T,
+  reader = successReader,
+  validator = successValidator,
+) => ({
+  adapters: { projectReader: reader, ...adapters },
+  services: {
+    platformManifestGenerator: {
+      generatePlatformManifest(_input: never): never {
+        throw new Error("generatePlatformManifest not used");
+      },
+      validateManifest: validator,
+    },
+  },
+});
+
 // --- handleCreate ---
 
 describe(handleCreate, () => {
@@ -91,31 +107,23 @@ const successListClient = {
   },
 };
 
-const listDeps = (
-  reader = successReader,
-  validator = successValidator,
-  listClient = successListClient,
-) => ({
-  adapters: { listClient, projectReader: reader },
-  services: {
-    platformManifestGenerator: {
-      generatePlatformManifest(_input: never): never {
-        throw new Error("generatePlatformManifest not used in list tests");
-      },
-      validateManifest: validator,
-    },
-  },
-});
-
 describe(handleList, () => {
   it("exits 0 on successful list retrieval", async () => {
-    const result = await handleList(["list"], "/workspace", listDeps());
+    const result = await handleList(
+      ["list"],
+      "/workspace",
+      getDeps({ listClient: successListClient }),
+    );
 
     expect(result.exitCode).toBe(0);
   });
 
   it("output contains the project name, environment, and deployment entries", async () => {
-    const { output } = await handleList(["list"], "/workspace", listDeps());
+    const { output } = await handleList(
+      ["list"],
+      "/workspace",
+      getDeps({ listClient: successListClient }),
+    );
 
     expect(output).toContain("my-app");
     expect(output).toContain("preview");
@@ -131,7 +139,11 @@ describe(handleList, () => {
       },
     };
 
-    await handleList(["list"], "/workspace", listDeps(trackingReader));
+    await handleList(
+      ["list"],
+      "/workspace",
+      getDeps({ listClient: successListClient }, trackingReader),
+    );
 
     expect(paths[0]).toBe("/workspace/platform.yaml");
   });
@@ -145,7 +157,11 @@ describe(handleList, () => {
       },
     };
 
-    await handleList(["list", "/some/project"], "/workspace", listDeps(trackingReader));
+    await handleList(
+      ["list", "/some/project"],
+      "/workspace",
+      getDeps({ listClient: successListClient }, trackingReader),
+    );
 
     expect(paths[0]).toBe("/some/project/platform.yaml");
   });
@@ -157,9 +173,9 @@ describe(handleList, () => {
       },
     };
 
-    await expect(handleList(["list"], "/workspace", listDeps(missingReader))).rejects.toThrow(
-      ManifestNotFoundError,
-    );
+    await expect(
+      handleList(["list"], "/workspace", getDeps({ listClient: successListClient }, missingReader)),
+    ).rejects.toThrow(ManifestNotFoundError);
   });
 
   it("exits when platform.yaml fails validation", async () => {
@@ -168,7 +184,11 @@ describe(handleList, () => {
     };
 
     await expect(
-      handleList(["list"], "/workspace", listDeps(successReader, failingValidator)),
+      handleList(
+        ["list"],
+        "/workspace",
+        getDeps({ listClient: successListClient }, successReader, failingValidator),
+      ),
     ).rejects.toThrow(ManifestInvalidError);
   });
 
@@ -180,7 +200,7 @@ describe(handleList, () => {
     };
 
     await expect(
-      handleList(["list"], "/workspace", listDeps(successReader, successValidator, failingClient)),
+      handleList(["list"], "/workspace", getDeps({ listClient: failingClient })),
     ).rejects.toThrow(ListError);
   });
 });
@@ -197,31 +217,23 @@ const successLogsClient = {
   },
 };
 
-const logsDeps = (
-  reader = successReader,
-  validator = successValidator,
-  logsClient = successLogsClient,
-) => ({
-  adapters: { logsClient, projectReader: reader },
-  services: {
-    platformManifestGenerator: {
-      generatePlatformManifest(_input: never): never {
-        throw new Error("generatePlatformManifest not used in logs tests");
-      },
-      validateManifest: validator,
-    },
-  },
-});
-
 describe(handleLogs, () => {
   it("exits 0 on successful log retrieval", async () => {
-    const result = await handleLogs(["logs"], "/workspace", logsDeps());
+    const result = await handleLogs(
+      ["logs"],
+      "/workspace",
+      getDeps({ logsClient: successLogsClient }),
+    );
 
     expect(result.exitCode).toBe(0);
   });
 
   it("output contains the project name, environment, and log entries", async () => {
-    const { output } = await handleLogs(["logs"], "/workspace", logsDeps());
+    const { output } = await handleLogs(
+      ["logs"],
+      "/workspace",
+      getDeps({ logsClient: successLogsClient }),
+    );
 
     expect(output).toContain("my-app");
     expect(output).toContain("preview");
@@ -237,7 +249,11 @@ describe(handleLogs, () => {
       },
     };
 
-    await handleLogs(["logs"], "/workspace", logsDeps(trackingReader));
+    await handleLogs(
+      ["logs"],
+      "/workspace",
+      getDeps({ logsClient: successLogsClient }, trackingReader),
+    );
 
     expect(paths[0]).toBe("/workspace/platform.yaml");
   });
@@ -251,7 +267,11 @@ describe(handleLogs, () => {
       },
     };
 
-    await handleLogs(["logs", "/some/project"], "/workspace", logsDeps(trackingReader));
+    await handleLogs(
+      ["logs", "/some/project"],
+      "/workspace",
+      getDeps({ logsClient: successLogsClient }, trackingReader),
+    );
 
     expect(paths[0]).toBe("/some/project/platform.yaml");
   });
@@ -263,9 +283,9 @@ describe(handleLogs, () => {
       },
     };
 
-    await expect(handleLogs(["logs"], "/workspace", logsDeps(missingReader))).rejects.toThrow(
-      ManifestNotFoundError,
-    );
+    await expect(
+      handleLogs(["logs"], "/workspace", getDeps({ logsClient: successLogsClient }, missingReader)),
+    ).rejects.toThrow(ManifestNotFoundError);
   });
 
   it("exits when platform.yaml fails validation", async () => {
@@ -274,7 +294,11 @@ describe(handleLogs, () => {
     };
 
     await expect(
-      handleLogs(["logs"], "/workspace", logsDeps(successReader, failingValidator)),
+      handleLogs(
+        ["logs"],
+        "/workspace",
+        getDeps({ logsClient: successLogsClient }, successReader, failingValidator),
+      ),
     ).rejects.toThrow(ManifestInvalidError);
   });
 
@@ -286,7 +310,7 @@ describe(handleLogs, () => {
     };
 
     await expect(
-      handleLogs(["logs"], "/workspace", logsDeps(successReader, successValidator, failingClient)),
+      handleLogs(["logs"], "/workspace", getDeps({ logsClient: failingClient })),
     ).rejects.toThrow(LogsError);
   });
 });
@@ -307,31 +331,23 @@ const successStatusClient = {
   },
 };
 
-const statusDeps = (
-  reader = successReader,
-  validator = successValidator,
-  statusClient = successStatusClient,
-) => ({
-  adapters: { projectReader: reader, statusClient },
-  services: {
-    platformManifestGenerator: {
-      generatePlatformManifest(_input: never): never {
-        throw new Error("generatePlatformManifest not used in status tests");
-      },
-      validateManifest: validator,
-    },
-  },
-});
-
 describe(handleStatus, () => {
   it("exits 0 on successful status retrieval", async () => {
-    const result = await handleStatus(["status"], "/workspace", statusDeps());
+    const result = await handleStatus(
+      ["status"],
+      "/workspace",
+      getDeps({ statusClient: successStatusClient }),
+    );
 
     expect(result.exitCode).toBe(0);
   });
 
   it("output contains the project name, environment, and state", async () => {
-    const { output } = await handleStatus(["status"], "/workspace", statusDeps());
+    const { output } = await handleStatus(
+      ["status"],
+      "/workspace",
+      getDeps({ statusClient: successStatusClient }),
+    );
 
     expect(output).toContain("my-app");
     expect(output).toContain("preview");
@@ -347,7 +363,11 @@ describe(handleStatus, () => {
       },
     };
 
-    await handleStatus(["status"], "/workspace", statusDeps(trackingReader));
+    await handleStatus(
+      ["status"],
+      "/workspace",
+      getDeps({ statusClient: successStatusClient }, trackingReader),
+    );
 
     expect(paths[0]).toBe("/workspace/platform.yaml");
   });
@@ -361,7 +381,11 @@ describe(handleStatus, () => {
       },
     };
 
-    await handleStatus(["status", "/some/project"], "/workspace", statusDeps(trackingReader));
+    await handleStatus(
+      ["status", "/some/project"],
+      "/workspace",
+      getDeps({ statusClient: successStatusClient }, trackingReader),
+    );
 
     expect(paths[0]).toBe("/some/project/platform.yaml");
   });
@@ -373,9 +397,13 @@ describe(handleStatus, () => {
       },
     };
 
-    await expect(handleStatus(["status"], "/workspace", statusDeps(missingReader))).rejects.toThrow(
-      ManifestNotFoundError,
-    );
+    await expect(
+      handleStatus(
+        ["status"],
+        "/workspace",
+        getDeps({ statusClient: successStatusClient }, missingReader),
+      ),
+    ).rejects.toThrow(ManifestNotFoundError);
   });
 
   it("exits when platform.yaml fails validation", async () => {
@@ -384,7 +412,11 @@ describe(handleStatus, () => {
     };
 
     await expect(
-      handleStatus(["status"], "/workspace", statusDeps(successReader, failingValidator)),
+      handleStatus(
+        ["status"],
+        "/workspace",
+        getDeps({ statusClient: successStatusClient }, successReader, failingValidator),
+      ),
     ).rejects.toThrow(ManifestInvalidError);
   });
 
@@ -396,11 +428,7 @@ describe(handleStatus, () => {
     };
 
     await expect(
-      handleStatus(
-        ["status"],
-        "/workspace",
-        statusDeps(successReader, successValidator, failingClient),
-      ),
+      handleStatus(["status"], "/workspace", getDeps({ statusClient: failingClient })),
     ).rejects.toThrow(StatusError);
   });
 });
@@ -413,31 +441,23 @@ const successTeardownClient = {
   },
 };
 
-const teardownDeps = (
-  reader = successReader,
-  validator = successValidator,
-  teardownClient = successTeardownClient,
-) => ({
-  adapters: { projectReader: reader, teardownClient },
-  services: {
-    platformManifestGenerator: {
-      generatePlatformManifest(_input: never): never {
-        throw new Error("generatePlatformManifest not used in teardown tests");
-      },
-      validateManifest: validator,
-    },
-  },
-});
-
 describe(handleTeardown, () => {
   it("exits 0 on successful teardown", async () => {
-    const result = await handleTeardown(["teardown"], "/workspace", teardownDeps());
+    const result = await handleTeardown(
+      ["teardown"],
+      "/workspace",
+      getDeps({ teardownClient: successTeardownClient }),
+    );
 
     expect(result.exitCode).toBe(0);
   });
 
   it("output contains the project name and teardown ID", async () => {
-    const { output } = await handleTeardown(["teardown"], "/workspace", teardownDeps());
+    const { output } = await handleTeardown(
+      ["teardown"],
+      "/workspace",
+      getDeps({ teardownClient: successTeardownClient }),
+    );
 
     expect(output).toContain("my-app");
     expect(output).toContain("stub-teardown-my-app-1");
@@ -452,7 +472,11 @@ describe(handleTeardown, () => {
       },
     };
 
-    await handleTeardown(["teardown"], "/workspace", teardownDeps(trackingReader));
+    await handleTeardown(
+      ["teardown"],
+      "/workspace",
+      getDeps({ teardownClient: successTeardownClient }, trackingReader),
+    );
 
     expect(paths[0]).toBe("/workspace/platform.yaml");
   });
@@ -466,7 +490,11 @@ describe(handleTeardown, () => {
       },
     };
 
-    await handleTeardown(["teardown", "/some/project"], "/workspace", teardownDeps(trackingReader));
+    await handleTeardown(
+      ["teardown", "/some/project"],
+      "/workspace",
+      getDeps({ teardownClient: successTeardownClient }, trackingReader),
+    );
 
     expect(paths[0]).toBe("/some/project/platform.yaml");
   });
@@ -479,7 +507,11 @@ describe(handleTeardown, () => {
     };
 
     await expect(
-      handleTeardown(["teardown"], "/workspace", teardownDeps(missingReader)),
+      handleTeardown(
+        ["teardown"],
+        "/workspace",
+        getDeps({ teardownClient: successTeardownClient }, missingReader),
+      ),
     ).rejects.toThrow(ManifestNotFoundError);
   });
 
@@ -489,7 +521,11 @@ describe(handleTeardown, () => {
     };
 
     await expect(
-      handleTeardown(["teardown"], "/workspace", teardownDeps(successReader, failingValidator)),
+      handleTeardown(
+        ["teardown"],
+        "/workspace",
+        getDeps({ teardownClient: successTeardownClient }, successReader, failingValidator),
+      ),
     ).rejects.toThrow(ManifestInvalidError);
   });
 
@@ -501,11 +537,7 @@ describe(handleTeardown, () => {
     };
 
     await expect(
-      handleTeardown(
-        ["teardown"],
-        "/workspace",
-        teardownDeps(successReader, successValidator, failingClient),
-      ),
+      handleTeardown(["teardown"], "/workspace", getDeps({ teardownClient: failingClient })),
     ).rejects.toThrow(TeardownError);
   });
 });
