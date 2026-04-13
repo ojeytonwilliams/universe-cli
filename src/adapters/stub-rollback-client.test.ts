@@ -14,72 +14,44 @@ const appManifest: AppPlatformManifest = {
 };
 
 describe(StubRollbackClient, () => {
-  it("returns rollbackId stub-rollback-<name>-<target>-1 on the first rollback", async () => {
+  it("returns rollbackId stub-rollback-<name>-production-1 on the first rollback", async () => {
     const client = new StubRollbackClient();
 
-    const receipt = await client.rollback({
-      manifest: appManifest,
-      targetEnvironment: "production",
-    });
+    const receipt = await client.rollback({ manifest: appManifest });
 
     expect(receipt.rollbackId).toBe("stub-rollback-my-app-production-1");
   });
 
-  it("returns the project name and targetEnvironment in the receipt", async () => {
+  it("returns the project name in the receipt", async () => {
     const client = new StubRollbackClient();
 
-    const receipt = await client.rollback({
-      manifest: appManifest,
-      targetEnvironment: "production",
-    });
+    const receipt = await client.rollback({ manifest: appManifest });
 
     expect(receipt.name).toBe("my-app");
-    expect(receipt.targetEnvironment).toBe("production");
   });
 
-  it("increments the sequence number on repeated rollbacks for the same project and target", async () => {
+  it("increments the sequence number on repeated rollbacks for the same project", async () => {
     const client = new StubRollbackClient();
 
-    await client.rollback({ manifest: appManifest, targetEnvironment: "production" });
-    const second = await client.rollback({
-      manifest: appManifest,
-      targetEnvironment: "production",
-    });
+    await client.rollback({ manifest: appManifest });
+    const second = await client.rollback({ manifest: appManifest });
 
     expect(second.rollbackId).toBe("stub-rollback-my-app-production-2");
-  });
-
-  it("maintains independent counters per target environment", async () => {
-    const client = new StubRollbackClient();
-
-    const preview = await client.rollback({ manifest: appManifest, targetEnvironment: "preview" });
-    const production = await client.rollback({
-      manifest: appManifest,
-      targetEnvironment: "production",
-    });
-
-    expect(preview.rollbackId).toBe("stub-rollback-my-app-preview-1");
-    expect(production.rollbackId).toBe("stub-rollback-my-app-production-1");
   });
 
   it("rejects with RollbackError for the sentinel failure project name", async () => {
     const client = new StubRollbackClient();
     const failureManifest = { ...appManifest, name: "rollback-failure" };
 
-    await expect(
-      client.rollback({ manifest: failureManifest, targetEnvironment: "production" }),
-    ).rejects.toThrow(RollbackError);
+    await expect(client.rollback({ manifest: failureManifest })).rejects.toThrow(RollbackError);
   });
 
   it("resets state between instances", async () => {
     const first = new StubRollbackClient();
-    await first.rollback({ manifest: appManifest, targetEnvironment: "production" });
+    await first.rollback({ manifest: appManifest });
 
     const second = new StubRollbackClient();
-    const receipt = await second.rollback({
-      manifest: appManifest,
-      targetEnvironment: "production",
-    });
+    const receipt = await second.rollback({ manifest: appManifest });
 
     expect(receipt.rollbackId).toBe("stub-rollback-my-app-production-1");
   });

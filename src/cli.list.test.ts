@@ -30,10 +30,9 @@ const successReader = {
 const successValidator = (_yaml: string): PlatformManifest => listManifest;
 
 const successListClient = {
-  getList(_request: { environment: string; manifest: PlatformManifest }): Promise<ListResponse> {
+  getList(_request: { manifest: PlatformManifest }): Promise<ListResponse> {
     return Promise.resolve({
       deployments: stubDeployments,
-      environment: "preview",
       name: "my-app",
     });
   },
@@ -46,9 +45,7 @@ const listDeps = (
 ) => ({
   adapters: {
     deployClient: {
-      deploy(
-        _request: never,
-      ): Promise<{ deploymentId: string; environment: string; name: string }> {
+      deploy(_request: never): Promise<{ deploymentId: string; name: string }> {
         return Promise.reject(new Error("deployClient not used in list tests"));
       },
     },
@@ -65,9 +62,7 @@ const listDeps = (
     },
     projectReader: reader,
     promoteClient: {
-      promote(
-        _request: never,
-      ): Promise<{ name: string; promotionId: string; targetEnvironment: string }> {
+      promote(_request: never): Promise<{ name: string; promotionId: string }> {
         return Promise.reject(new Error("promoteClient not used in list tests"));
       },
     },
@@ -82,9 +77,7 @@ const listDeps = (
       },
     },
     rollbackClient: {
-      rollback(
-        _request: never,
-      ): Promise<{ name: string; rollbackId: string; targetEnvironment: string }> {
+      rollback(_request: never): Promise<{ name: string; rollbackId: string }> {
         return Promise.reject(new Error("rollbackClient not used in list tests"));
       },
     },
@@ -191,7 +184,7 @@ describe("list", () => {
 
   it("exits when list retrieval fails", async () => {
     const failingClient = {
-      getList(request: { environment: string; manifest: PlatformManifest }) {
+      getList(request: { manifest: PlatformManifest }) {
         return Promise.reject(new ListError(request.manifest.name, "unavailable"));
       },
     };
@@ -201,34 +194,10 @@ describe("list", () => {
     expect(result.exitCode).toBe(15);
   });
 
-  it("exits when more than two arguments are provided", async () => {
-    const result = await runCli(["list", "/dir", "preview", "extra"], listDeps());
+  it("exits when more than one argument is provided", async () => {
+    const result = await runCli(["list", "/dir", "extra"], listDeps());
 
     expect(result.exitCode).toBe(18);
-  });
-
-  it("exits when environment is not preview or production", async () => {
-    const result = await runCli(["list", "/dir", "staging"], listDeps());
-
-    expect(result.exitCode).toBe(4);
-  });
-
-  it("defaults to the preview environment when no environment argument is given", async () => {
-    const requests: { environment: string }[] = [];
-    const trackingClient = {
-      getList(request: { environment: string; manifest: PlatformManifest }): Promise<ListResponse> {
-        requests.push(request);
-        return Promise.resolve({
-          deployments: stubDeployments,
-          environment: request.environment,
-          name: "my-app",
-        });
-      },
-    };
-
-    await runCli(["list"], listDeps(successReader, successValidator, trackingClient));
-
-    expect(requests[0]?.environment).toBe("preview");
   });
 
   it("tracks list.start and list.success on successful retrieval", async () => {
@@ -255,7 +224,7 @@ describe("list", () => {
       },
     };
     const failingClient = {
-      getList(request: { environment: string; manifest: PlatformManifest }) {
+      getList(request: { manifest: PlatformManifest }) {
         return Promise.reject(new ListError(request.manifest.name, "unavailable"));
       },
     };

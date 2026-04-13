@@ -137,29 +137,19 @@ const handleDeploy = async (
   },
 ): Promise<HandlerResult> => {
   const { services, adapters } = deps;
-  if (argv.length > 3) {
-    throw new BadArgumentsError(
-      "Too many arguments. Usage: universe deploy [directory] [environment]",
-    );
+  if (argv.length > 2) {
+    throw new BadArgumentsError("Too many arguments. Usage: universe deploy [directory]");
   }
 
   const platformYamlDir = argv[1] ?? cwd;
-  const environment = argv[2] ?? "preview";
-
-  if (environment !== "preview" && environment !== "production") {
-    throw new CreateUnsupportedCombinationError(
-      `environment "${environment}" — valid values are: preview, production`,
-    );
-  }
-
   const platformYamlPath = join(platformYamlDir, "platform.yaml");
   const manifest = await readAndValidateManifest(platformYamlPath, services, adapters);
-  const receipt = await adapters.deployClient.deploy({ environment, manifest });
+  const receipt = await adapters.deployClient.deploy({ manifest });
 
   return {
     exitCode: 0,
     meta: { name: receipt.name },
-    output: `Deployed project "${receipt.name}" to ${receipt.environment}. Deployment ID: ${receipt.deploymentId}`,
+    output: `Deployed project "${receipt.name}" to preview. Deployment ID: ${receipt.deploymentId}`,
   };
 };
 
@@ -172,29 +162,19 @@ const handlePromote = async (
   },
 ): Promise<HandlerResult> => {
   const { services, adapters } = deps;
-  if (argv.length > 3) {
-    throw new BadArgumentsError(
-      "Too many arguments. Usage: universe promote [directory] [target-environment]",
-    );
+  if (argv.length > 2) {
+    throw new BadArgumentsError("Too many arguments. Usage: universe promote [directory]");
   }
 
   const platformYamlDir = argv[1] ?? cwd;
-  const targetEnvironment = argv[2] ?? "production";
-
-  if (targetEnvironment !== "preview" && targetEnvironment !== "production") {
-    throw new CreateUnsupportedCombinationError(
-      `target-environment "${targetEnvironment}" — valid values are: preview, production`,
-    );
-  }
-
   const platformYamlPath = join(platformYamlDir, "platform.yaml");
   const manifest = await readAndValidateManifest(platformYamlPath, services, adapters);
-  const receipt = await adapters.promoteClient.promote({ manifest, targetEnvironment });
+  const receipt = await adapters.promoteClient.promote({ manifest });
 
   return {
     exitCode: 0,
     meta: { name: receipt.name },
-    output: `Promoted project "${receipt.name}" to ${receipt.targetEnvironment}. Promotion ID: ${receipt.promotionId}`,
+    output: `Promoted project "${receipt.name}" to production. Promotion ID: ${receipt.promotionId}`,
   };
 };
 
@@ -207,29 +187,19 @@ const handleRollback = async (
   },
 ): Promise<HandlerResult> => {
   const { services, adapters } = deps;
-  if (argv.length > 3) {
-    throw new BadArgumentsError(
-      "Too many arguments. Usage: universe rollback [directory] [target-environment]",
-    );
+  if (argv.length > 2) {
+    throw new BadArgumentsError("Too many arguments. Usage: universe rollback [directory]");
   }
 
   const platformYamlDir = argv[1] ?? cwd;
-  const targetEnvironment = argv[2] ?? "production";
-
-  if (targetEnvironment !== "preview" && targetEnvironment !== "production") {
-    throw new CreateUnsupportedCombinationError(
-      `target-environment "${targetEnvironment}" — valid values are: preview, production`,
-    );
-  }
-
   const platformYamlPath = join(platformYamlDir, "platform.yaml");
   const manifest = await readAndValidateManifest(platformYamlPath, services, adapters);
-  const receipt = await adapters.rollbackClient.rollback({ manifest, targetEnvironment });
+  const receipt = await adapters.rollbackClient.rollback({ manifest });
 
   return {
     exitCode: 0,
     meta: { name: receipt.name },
-    output: `Rolled back project "${receipt.name}" to ${receipt.targetEnvironment}. Rollback ID: ${receipt.rollbackId}`,
+    output: `Rolled back project "${receipt.name}" to production. Rollback ID: ${receipt.rollbackId}`,
   };
 };
 
@@ -281,24 +251,14 @@ const handleList = async (
   },
 ): Promise<HandlerResult> => {
   const { services, adapters } = deps;
-  if (argv.length > 3) {
-    throw new BadArgumentsError(
-      "Too many arguments. Usage: universe list [directory] [environment]",
-    );
+  if (argv.length > 2) {
+    throw new BadArgumentsError("Too many arguments. Usage: universe list [directory]");
   }
 
   const platformYamlDir = argv[1] ?? cwd;
-  const environment = argv[2] ?? "preview";
-
-  if (environment !== "preview" && environment !== "production") {
-    throw new CreateUnsupportedCombinationError(
-      `environment "${environment}" — valid values are: preview, production`,
-    );
-  }
-
   const platformYamlPath = join(platformYamlDir, "platform.yaml");
   const manifest = await readAndValidateManifest(platformYamlPath, services, adapters);
-  const response = await adapters.listClient.getList({ environment, manifest });
+  const response = await adapters.listClient.getList({ manifest });
 
   const renderedEntries = response.deployments
     .map((d) => `  ${d.deploymentId} — ${d.state} (deployed: ${d.deployedAt})`)
@@ -307,7 +267,7 @@ const handleList = async (
   return {
     exitCode: 0,
     meta: { name: response.name },
-    output: `Deployments for project "${response.name}" in ${response.environment}:\n${renderedEntries}`,
+    output: `Deployments for project "${response.name}" in preview:\n${renderedEntries}`,
   };
 };
 
@@ -355,29 +315,19 @@ const handleTeardown = async (
   },
 ): Promise<HandlerResult> => {
   const { services, adapters } = deps;
-  if (argv.length > 3) {
-    throw new BadArgumentsError(
-      "Too many arguments. Usage: universe teardown [directory] [target-environment]",
-    );
+  if (argv.length > 2) {
+    throw new BadArgumentsError("Too many arguments. Usage: universe teardown [directory]");
   }
 
   const platformYamlDir = argv[1] ?? cwd;
-  const targetEnvironment = argv[2] ?? "preview";
-
-  if (targetEnvironment !== "preview" && targetEnvironment !== "production") {
-    throw new CreateUnsupportedCombinationError(
-      `target-environment "${targetEnvironment}" — valid values are: preview, production`,
-    );
-  }
-
   const platformYamlPath = join(platformYamlDir, "platform.yaml");
   const manifest = await readAndValidateManifest(platformYamlPath, services, adapters);
-  const receipt = await adapters.teardownClient.teardown({ manifest, targetEnvironment });
+  const receipt = await adapters.teardownClient.teardown({ manifest });
 
   return {
     exitCode: 0,
     meta: { name: receipt.name },
-    output: `Tore down project "${receipt.name}" in ${receipt.targetEnvironment}. Teardown ID: ${receipt.teardownId}`,
+    output: `Tore down project "${receipt.name}". Teardown ID: ${receipt.teardownId}`,
   };
 };
 

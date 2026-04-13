@@ -69,8 +69,7 @@ describe("teardown", () => {
     const teardownResult = await runCli(["teardown", projectDir], deps);
     expect(teardownResult.exitCode).toBe(0);
     expect(teardownResult.output).toContain(projectName);
-    expect(teardownResult.output).toContain("preview");
-    expect(teardownResult.output).toContain(`stub-teardown-${projectName}-preview-1`);
+    expect(teardownResult.output).toContain(`stub-teardown-${projectName}-1`);
   });
 
   it("exits for the sentinel failure project name", async () => {

@@ -14,19 +14,18 @@ const appManifest: AppPlatformManifest = {
 };
 
 describe(StubListClient, () => {
-  it("returns the project name and environment in the response", async () => {
+  it("returns the project name in the response", async () => {
     const client = new StubListClient();
 
-    const response = await client.getList({ environment: "preview", manifest: appManifest });
+    const response = await client.getList({ manifest: appManifest });
 
     expect(response.name).toBe("my-app");
-    expect(response.environment).toBe("preview");
   });
 
   it("returns a non-empty deterministic list of deployments", async () => {
     const client = new StubListClient();
 
-    const response = await client.getList({ environment: "preview", manifest: appManifest });
+    const response = await client.getList({ manifest: appManifest });
 
     expect(response.deployments.length).toBeGreaterThan(0);
   });
@@ -34,7 +33,7 @@ describe(StubListClient, () => {
   it("returns deployments with deploymentId, state, and deployedAt fields", async () => {
     const client = new StubListClient();
 
-    const response = await client.getList({ environment: "preview", manifest: appManifest });
+    const response = await client.getList({ manifest: appManifest });
     const [entry] = response.deployments;
 
     expect(entry).toBeDefined();
@@ -46,8 +45,8 @@ describe(StubListClient, () => {
   it("returns the same deployments for repeated calls", async () => {
     const client = new StubListClient();
 
-    const first = await client.getList({ environment: "preview", manifest: appManifest });
-    const second = await client.getList({ environment: "preview", manifest: appManifest });
+    const first = await client.getList({ manifest: appManifest });
+    const second = await client.getList({ manifest: appManifest });
 
     expect(first.deployments).toStrictEqual(second.deployments);
   });
@@ -56,17 +55,15 @@ describe(StubListClient, () => {
     const client = new StubListClient();
     const failureManifest = { ...appManifest, name: "list-failure" };
 
-    await expect(
-      client.getList({ environment: "preview", manifest: failureManifest }),
-    ).rejects.toThrow(ListError);
+    await expect(client.getList({ manifest: failureManifest })).rejects.toThrow(ListError);
   });
 
   it("returns the same deployments from separate instances", async () => {
     const first = new StubListClient();
     const second = new StubListClient();
 
-    const firstResponse = await first.getList({ environment: "preview", manifest: appManifest });
-    const secondResponse = await second.getList({ environment: "preview", manifest: appManifest });
+    const firstResponse = await first.getList({ manifest: appManifest });
+    const secondResponse = await second.getList({ manifest: appManifest });
 
     expect(firstResponse.deployments).toStrictEqual(secondResponse.deployments);
   });

@@ -1,4 +1,3 @@
-// oxlint-disable max-lines
 import type { FilesystemWriter } from "./ports/filesystem-writer.js";
 import type { ObservabilityClient } from "./ports/observability-client.js";
 import type { CreateSelections, PromptPort } from "./ports/prompt-port.js";
@@ -115,7 +114,7 @@ const defaultRegistrationClient = {
 };
 
 const defaultListClient = {
-  getList(_request: { environment: string; manifest: PlatformManifest }): Promise<never> {
+  getList(_request: { manifest: PlatformManifest }): Promise<never> {
     return Promise.reject(new Error("listClient.getList should not be called in this test"));
   },
 };
@@ -132,9 +131,8 @@ const defaultLogsClient = {
 
 const defaultDeployClient = {
   deploy(_request: {
-    environment: string;
     manifest: PlatformManifest;
-  }): Promise<{ deploymentId: string; environment: string; name: string }> {
+  }): Promise<{ deploymentId: string; name: string }> {
     return Promise.reject(new Error("deployClient.deploy should not be called in this test"));
   },
 };
@@ -142,8 +140,7 @@ const defaultDeployClient = {
 const defaultPromoteClient = {
   promote(_request: {
     manifest: PlatformManifest;
-    targetEnvironment: string;
-  }): Promise<{ name: string; promotionId: string; targetEnvironment: string }> {
+  }): Promise<{ name: string; promotionId: string }> {
     return Promise.reject(new Error("promoteClient.promote should not be called in this test"));
   },
 };
@@ -151,8 +148,7 @@ const defaultPromoteClient = {
 const defaultRollbackClient = {
   rollback(_request: {
     manifest: PlatformManifest;
-    targetEnvironment: string;
-  }): Promise<{ name: string; rollbackId: string; targetEnvironment: string }> {
+  }): Promise<{ name: string; rollbackId: string }> {
     return Promise.reject(new Error("rollbackClient.rollback should not be called in this test"));
   },
 };
@@ -164,7 +160,7 @@ const defaultStatusClient = {
 };
 
 const defaultTeardownClient = {
-  teardown(_request: { manifest: PlatformManifest; targetEnvironment: string }): Promise<never> {
+  teardown(_request: { manifest: PlatformManifest }): Promise<never> {
     return Promise.reject(new Error("teardownClient.teardown should not be called in this test"));
   },
 };
@@ -427,10 +423,9 @@ describe(runCli, () => {
     };
     const successValidator = (_yaml: string): PlatformManifest => deployManifest;
     const successDeployClient = {
-      deploy(_request: { environment: string; manifest: PlatformManifest }) {
+      deploy(_request: { manifest: PlatformManifest }) {
         return Promise.resolve({
           deploymentId: "stub-my-app-preview-1",
-          environment: "preview",
           name: "my-app",
         });
       },
@@ -466,24 +461,6 @@ describe(runCli, () => {
       expect(output).toContain("stub-my-app-preview-1");
     });
 
-    it("defaults to the preview environment when no environment argument is given", async () => {
-      const requests: { environment: string }[] = [];
-      const trackingClient = {
-        deploy(request: { environment: string; manifest: PlatformManifest }) {
-          requests.push(request);
-          return Promise.resolve({
-            deploymentId: "stub-my-app-preview-1",
-            environment: request.environment,
-            name: "my-app",
-          });
-        },
-      };
-
-      await runCli(["deploy"], deployDeps(successReader, successValidator, trackingClient));
-
-      expect(requests[0]?.environment).toBe("preview");
-    });
-
     it("exits when platform.yaml is missing", async () => {
       const missingReader = {
         readFile(filePath: string) {
@@ -508,7 +485,7 @@ describe(runCli, () => {
 
     it("exits when deployment fails", async () => {
       const failingClient = {
-        deploy(request: { environment: string; manifest: PlatformManifest }) {
+        deploy(request: { manifest: PlatformManifest }) {
           return Promise.reject(new DeploymentError(request.manifest.name, "timeout"));
         },
       };
@@ -521,16 +498,10 @@ describe(runCli, () => {
       expect(result.exitCode).toBe(10);
     });
 
-    it("exits when more than two arguments are provided", async () => {
-      const result = await runCli(["deploy", "/dir", "preview", "extra"], deployDeps());
+    it("exits when more than one argument is provided", async () => {
+      const result = await runCli(["deploy", "/dir", "extra"], deployDeps());
 
       expect(result.exitCode).toBe(18);
-    });
-
-    it("exits 6 when environment is not preview or production", async () => {
-      const result = await runCli(["deploy", "/dir", "staging"], deployDeps());
-
-      expect(result.exitCode).toBe(4);
     });
 
     it("tracks deploy.start and deploy.success on a successful deployment", async () => {
@@ -560,7 +531,7 @@ describe(runCli, () => {
         },
       };
       const failingClient = {
-        deploy(request: { environment: string; manifest: PlatformManifest }) {
+        deploy(request: { manifest: PlatformManifest }) {
           return Promise.reject(new DeploymentError(request.manifest.name, "timeout"));
         },
       };
@@ -610,11 +581,10 @@ describe(runCli, () => {
     };
     const successValidator = (_yaml: string): PlatformManifest => promoteManifest;
     const successPromoteClient = {
-      promote(_request: { manifest: PlatformManifest; targetEnvironment: string }) {
+      promote(_request: { manifest: PlatformManifest }) {
         return Promise.resolve({
           name: "my-app",
           promotionId: "stub-promote-my-app-production-1",
-          targetEnvironment: "production",
         });
       },
     };
@@ -701,7 +671,7 @@ describe(runCli, () => {
 
     it("exits when promotion fails", async () => {
       const failingClient = {
-        promote(request: { manifest: PlatformManifest; targetEnvironment: string }) {
+        promote(request: { manifest: PlatformManifest }) {
           return Promise.reject(new PromotionError(request.manifest.name, "timeout"));
         },
       };
@@ -714,34 +684,10 @@ describe(runCli, () => {
       expect(result.exitCode).toBe(11);
     });
 
-    it("exits when more than two arguments are provided", async () => {
-      const result = await runCli(["promote", "/dir", "production", "extra"], promoteDeps());
+    it("exits when more than one argument is provided", async () => {
+      const result = await runCli(["promote", "/dir", "extra"], promoteDeps());
 
       expect(result.exitCode).toBe(18);
-    });
-
-    it("exits when target environment is not preview or production", async () => {
-      const result = await runCli(["promote", "/dir", "staging"], promoteDeps());
-
-      expect(result.exitCode).toBe(4);
-    });
-
-    it("defaults to the production target environment when no target argument is given", async () => {
-      const requests: { targetEnvironment: string }[] = [];
-      const trackingClient = {
-        promote(request: { manifest: PlatformManifest; targetEnvironment: string }) {
-          requests.push(request);
-          return Promise.resolve({
-            name: "my-app",
-            promotionId: "stub-promote-my-app-production-1",
-            targetEnvironment: request.targetEnvironment,
-          });
-        },
-      };
-
-      await runCli(["promote"], promoteDeps(successReader, successValidator, trackingClient));
-
-      expect(requests[0]?.targetEnvironment).toBe("production");
     });
 
     it("tracks promote.start and promote.success on a successful promotion", async () => {
@@ -771,7 +717,7 @@ describe(runCli, () => {
         },
       };
       const failingClient = {
-        promote(request: { manifest: PlatformManifest; targetEnvironment: string }) {
+        promote(request: { manifest: PlatformManifest }) {
           return Promise.reject(new PromotionError(request.manifest.name, "timeout"));
         },
       };
@@ -821,11 +767,10 @@ describe(runCli, () => {
     };
     const successValidator = (_yaml: string): PlatformManifest => rollbackManifest;
     const successRollbackClient = {
-      rollback(_request: { manifest: PlatformManifest; targetEnvironment: string }) {
+      rollback(_request: { manifest: PlatformManifest }) {
         return Promise.resolve({
           name: "my-app",
           rollbackId: "stub-rollback-my-app-production-1",
-          targetEnvironment: "production",
         });
       },
     };
@@ -912,7 +857,7 @@ describe(runCli, () => {
 
     it("exits when rollback fails", async () => {
       const failingClient = {
-        rollback(request: { manifest: PlatformManifest; targetEnvironment: string }) {
+        rollback(request: { manifest: PlatformManifest }) {
           return Promise.reject(new RollbackError(request.manifest.name, "timeout"));
         },
       };
@@ -925,34 +870,10 @@ describe(runCli, () => {
       expect(result.exitCode).toBe(12);
     });
 
-    it("exits 1 when more than two arguments are provided", async () => {
-      const result = await runCli(["rollback", "/dir", "production", "extra"], rollbackDeps());
+    it("exits when more than one argument is provided", async () => {
+      const result = await runCli(["rollback", "/dir", "extra"], rollbackDeps());
 
       expect(result.exitCode).toBe(18);
-    });
-
-    it("exits 6 when target environment is not preview or production", async () => {
-      const result = await runCli(["rollback", "/dir", "staging"], rollbackDeps());
-
-      expect(result.exitCode).toBe(4);
-    });
-
-    it("defaults to the production target environment when no target argument is given", async () => {
-      const requests: { targetEnvironment: string }[] = [];
-      const trackingClient = {
-        rollback(request: { manifest: PlatformManifest; targetEnvironment: string }) {
-          requests.push(request);
-          return Promise.resolve({
-            name: "my-app",
-            rollbackId: "stub-rollback-my-app-production-1",
-            targetEnvironment: request.targetEnvironment,
-          });
-        },
-      };
-
-      await runCli(["rollback"], rollbackDeps(successReader, successValidator, trackingClient));
-
-      expect(requests[0]?.targetEnvironment).toBe("production");
     });
 
     it("tracks rollback.start and rollback.success on a successful rollback", async () => {
@@ -982,7 +903,7 @@ describe(runCli, () => {
         },
       };
       const failingClient = {
-        rollback(request: { manifest: PlatformManifest; targetEnvironment: string }) {
+        rollback(request: { manifest: PlatformManifest }) {
           return Promise.reject(new RollbackError(request.manifest.name, "timeout"));
         },
       };

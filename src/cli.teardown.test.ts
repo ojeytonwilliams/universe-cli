@@ -26,14 +26,10 @@ const successReader = {
 const successValidator = (_yaml: string): PlatformManifest => teardownManifest;
 
 const successTeardownClient = {
-  teardown(_request: {
-    manifest: PlatformManifest;
-    targetEnvironment: string;
-  }): Promise<TeardownReceipt> {
+  teardown(_request: { manifest: PlatformManifest }): Promise<TeardownReceipt> {
     return Promise.resolve({
       name: "my-app",
-      targetEnvironment: "preview",
-      teardownId: "stub-teardown-my-app-preview-1",
+      teardownId: "stub-teardown-my-app-1",
     });
   },
 };
@@ -45,9 +41,7 @@ const teardownDeps = (
 ) => ({
   adapters: {
     deployClient: {
-      deploy(
-        _request: never,
-      ): Promise<{ deploymentId: string; environment: string; name: string }> {
+      deploy(_request: never): Promise<{ deploymentId: string; name: string }> {
         return Promise.reject(new Error("deployClient not used in teardown tests"));
       },
     },
@@ -68,9 +62,7 @@ const teardownDeps = (
     },
     projectReader: reader,
     promoteClient: {
-      promote(
-        _request: never,
-      ): Promise<{ name: string; promotionId: string; targetEnvironment: string }> {
+      promote(_request: never): Promise<{ name: string; promotionId: string }> {
         return Promise.reject(new Error("promoteClient not used in teardown tests"));
       },
     },
@@ -85,9 +77,7 @@ const teardownDeps = (
       },
     },
     rollbackClient: {
-      rollback(
-        _request: never,
-      ): Promise<{ name: string; rollbackId: string; targetEnvironment: string }> {
+      rollback(_request: never): Promise<{ name: string; rollbackId: string }> {
         return Promise.reject(new Error("rollbackClient not used in teardown tests"));
       },
     },
@@ -130,12 +120,11 @@ describe("teardown", () => {
     expect(result.exitCode).toBe(0);
   });
 
-  it("output contains the project name, environment, and teardown ID", async () => {
+  it("output contains the project name and teardown ID", async () => {
     const { output } = await runCli(["teardown"], teardownDeps());
 
     expect(output).toContain("my-app");
-    expect(output).toContain("preview");
-    expect(output).toContain("stub-teardown-my-app-preview-1");
+    expect(output).toContain("stub-teardown-my-app-1");
   });
 
   it("reads platform.yaml from cwd when no directory argument is given", async () => {
@@ -190,7 +179,7 @@ describe("teardown", () => {
 
   it("exits when teardown fails", async () => {
     const failingClient = {
-      teardown(request: { manifest: PlatformManifest; targetEnvironment: string }) {
+      teardown(request: { manifest: PlatformManifest }) {
         return Promise.reject(new TeardownError(request.manifest.name, "unavailable"));
       },
     };
@@ -203,37 +192,10 @@ describe("teardown", () => {
     expect(result.exitCode).toBe(16);
   });
 
-  it("exits when more than two arguments are provided", async () => {
-    const result = await runCli(["teardown", "/dir", "preview", "extra"], teardownDeps());
+  it("exits when more than one argument is provided", async () => {
+    const result = await runCli(["teardown", "/dir", "extra"], teardownDeps());
 
     expect(result.exitCode).toBe(18);
-  });
-
-  it("exits when environment is not preview or production", async () => {
-    const result = await runCli(["teardown", "/dir", "staging"], teardownDeps());
-
-    expect(result.exitCode).toBe(4);
-  });
-
-  it("defaults to the preview environment when no environment argument is given", async () => {
-    const requests: { targetEnvironment: string }[] = [];
-    const trackingClient = {
-      teardown(request: {
-        manifest: PlatformManifest;
-        targetEnvironment: string;
-      }): Promise<TeardownReceipt> {
-        requests.push(request);
-        return Promise.resolve({
-          name: "my-app",
-          targetEnvironment: request.targetEnvironment,
-          teardownId: `stub-teardown-my-app-${request.targetEnvironment}-1`,
-        });
-      },
-    };
-
-    await runCli(["teardown"], teardownDeps(successReader, successValidator, trackingClient));
-
-    expect(requests[0]?.targetEnvironment).toBe("preview");
   });
 
   it("tracks teardown.start and teardown.success on successful teardown", async () => {
@@ -260,7 +222,7 @@ describe("teardown", () => {
       },
     };
     const failingClient = {
-      teardown(request: { manifest: PlatformManifest; targetEnvironment: string }) {
+      teardown(request: { manifest: PlatformManifest }) {
         return Promise.reject(new TeardownError(request.manifest.name, "unavailable"));
       },
     };

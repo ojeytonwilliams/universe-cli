@@ -15,7 +15,7 @@ const STUB_DEPLOYMENTS: DeploymentEntry[] = [
 
 class StubListClient implements ListClient {
   getList(request: ListRequest): Promise<ListResponse> {
-    const { environment, manifest } = request;
+    const { manifest } = request;
 
     if (manifest.name === SENTINEL_FAILURE_NAME) {
       return Promise.reject(
@@ -25,7 +25,6 @@ class StubListClient implements ListClient {
 
     return Promise.resolve({
       deployments: STUB_DEPLOYMENTS,
-      environment,
       name: manifest.name,
     });
   }

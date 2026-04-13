@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.0.0] - 2026-04-13
+
+### Remove explicit environment arguments from deploy, list, promote, rollback, and teardown
+
+**Breaking change:** `deploy`, `list`, `promote`, `rollback`, and `teardown` no longer accept an environment or target-environment argument. Each command's target environment is now implicit in its semantics: `deploy` and `list` always operate against preview; `promote` and `rollback` always target production; `teardown` carries no environment selector.
+
+- **Port contracts** (`src/ports/deploy-client.ts`, `list-client.ts`, `promote-client.ts`, `rollback-client.ts`, `teardown-client.ts`): request types simplified to `{ manifest: PlatformManifest }`; `environment`/`targetEnvironment` fields removed from all receipt and response types.
+- **Command handlers** (`src/commands.ts`): `argv[2]` environment parsing and preview/production validation removed from all five handlers; too-many-args guard tightened from `> 3` to `> 2`; user-facing output now hard-codes the fixed environment string rather than reading it from the adapter receipt.
+- **CLI wiring** (`src/cli.ts`): `context` removed from the `deploy`, `list`, `promote`, `rollback`, and `teardown` command definitions; observability tracks those commands with empty context (`{}`); `logs` and `status` retain their environment context wiring unchanged.
+- **Stub adapters** (`src/adapters/stub-{deploy,list,promote,rollback,teardown}-client.ts`): per-environment counter keys replaced with project-scoped counters; generated IDs embed the fixed environment string where appropriate (`-preview-` for deploy, `-production-` for promote/rollback); teardown IDs drop the environment segment entirely.
+- **Tests updated**: adapter unit tests, CLI unit tests, and integration tests all updated to use manifest-only request contracts and the new receipt shapes; invalid-environment and default-environment test cases removed; too-many-args fixtures updated to three-element argv arrays.
+
 ## [2.27.0] - 2026-04-10
 
 ### Phase 3 — Teardown Command Test Coverage, Guardrails, and Documentation

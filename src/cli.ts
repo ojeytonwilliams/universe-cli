@@ -55,35 +55,20 @@ interface CommandDef {
 
 const COMMANDS: Record<string, CommandDef> = {
   create: { handler: handleCreate },
-  deploy: {
-    context: (value) => ({ environment: value ?? "preview" }),
-    handler: handleDeploy,
-  },
-  list: {
-    context: (value) => ({ environment: value ?? "preview" }),
-    handler: handleList,
-  },
+  deploy: { handler: handleDeploy },
+  list: { handler: handleList },
   logs: {
     context: (value) => ({ environment: value ?? "preview" }),
     handler: handleLogs,
   },
-  promote: {
-    context: (value) => ({ targetEnvironment: value ?? "production" }),
-    handler: handlePromote,
-  },
+  promote: { handler: handlePromote },
   register: { handler: handleRegister },
-  rollback: {
-    context: (value) => ({ targetEnvironment: value ?? "production" }),
-    handler: handleRollback,
-  },
+  rollback: { handler: handleRollback },
   status: {
     context: (value) => ({ environment: value ?? "preview" }),
     handler: handleStatus,
   },
-  teardown: {
-    context: (value) => ({ targetEnvironment: value ?? "preview" }),
-    handler: handleTeardown,
-  },
+  teardown: { handler: handleTeardown },
 };
 
 const runCli = async (argv: string[], deps: CliDependencies): Promise<CliResult> => {

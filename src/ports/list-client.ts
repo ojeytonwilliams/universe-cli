@@ -12,13 +12,11 @@ interface DeploymentEntry {
 }
 
 interface ListRequest {
-  environment: string;
   manifest: PlatformManifest;
 }
 
 interface ListResponse {
   deployments: DeploymentEntry[];
-  environment: string;
   name: string;
 }
 

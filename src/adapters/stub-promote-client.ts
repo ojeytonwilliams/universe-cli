@@ -7,7 +7,7 @@ class StubPromoteClient implements PromoteClient {
   private readonly promoteCounts = new Map<string, number>();
 
   promote(request: PromoteRequest): Promise<PromoteReceipt> {
-    const { manifest, targetEnvironment } = request;
+    const { manifest } = request;
 
     if (manifest.name === SENTINEL_FAILURE_NAME) {
       return Promise.reject(
@@ -15,14 +15,12 @@ class StubPromoteClient implements PromoteClient {
       );
     }
 
-    const key = `${manifest.name}-${targetEnvironment}`;
-    const count = (this.promoteCounts.get(key) ?? 0) + 1;
-    this.promoteCounts.set(key, count);
+    const count = (this.promoteCounts.get(manifest.name) ?? 0) + 1;
+    this.promoteCounts.set(manifest.name, count);
 
     return Promise.resolve({
       name: manifest.name,
-      promotionId: `stub-promote-${manifest.name}-${targetEnvironment}-${count}`,
-      targetEnvironment,
+      promotionId: `stub-promote-${manifest.name}-production-${count}`,
     });
   }
 }

@@ -8,12 +8,10 @@ interface PromoteClient {
 interface PromoteReceipt {
   name: string;
   promotionId: string;
-  targetEnvironment: string;
 }
 
 interface PromoteRequest {
   manifest: PlatformManifest;
-  targetEnvironment: string;
 }
 
 export type { PromoteClient, PromoteReceipt, PromoteRequest };

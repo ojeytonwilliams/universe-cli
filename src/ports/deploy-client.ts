@@ -7,12 +7,10 @@ interface DeployClient {
 
 interface DeployReceipt {
   deploymentId: string;
-  environment: string;
   name: string;
 }
 
 interface DeployRequest {
-  environment: string;
   manifest: PlatformManifest;
 }
 

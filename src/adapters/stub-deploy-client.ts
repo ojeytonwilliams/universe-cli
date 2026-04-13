@@ -7,7 +7,7 @@ class StubDeployClient implements DeployClient {
   private readonly deployCounts = new Map<string, number>();
 
   deploy(request: DeployRequest): Promise<DeployReceipt> {
-    const { environment, manifest } = request;
+    const { manifest } = request;
 
     if (manifest.name === SENTINEL_FAILURE_NAME) {
       return Promise.reject(
@@ -15,13 +15,11 @@ class StubDeployClient implements DeployClient {
       );
     }
 
-    const key = `${manifest.name}-${environment}`;
-    const count = (this.deployCounts.get(key) ?? 0) + 1;
-    this.deployCounts.set(key, count);
+    const count = (this.deployCounts.get(manifest.name) ?? 0) + 1;
+    this.deployCounts.set(manifest.name, count);
 
     return Promise.resolve({
-      deploymentId: `stub-${manifest.name}-${environment}-${count}`,
-      environment,
+      deploymentId: `stub-${manifest.name}-preview-${count}`,
       name: manifest.name,
     });
   }

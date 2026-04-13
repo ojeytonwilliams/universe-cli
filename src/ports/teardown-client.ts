@@ -7,13 +7,11 @@ interface TeardownClient {
 
 interface TeardownReceipt {
   name: string;
-  targetEnvironment: string;
   teardownId: string;
 }
 
 interface TeardownRequest {
   manifest: PlatformManifest;
-  targetEnvironment: string;
 }
 
 export type { TeardownClient, TeardownReceipt, TeardownRequest };
