@@ -73,17 +73,20 @@ const ENVIRONMENTS = {
   production: { branch: "main" },
 } as const;
 
-class PlatformManifestService {
+interface PlatformManifestGenerator {
+  generatePlatformManifest(input: CreateSelections): string;
+  validateManifest(yaml: string, yamlPath: string): PlatformManifest;
+}
+
+class PlatformManifestService implements PlatformManifestGenerator {
   generatePlatformManifest(input: CreateSelections): string {
     const manifest = this.buildManifest(input);
-
     return stringifyYaml(manifest);
   }
 
   validateManifest(yaml: string, yamlPath: string): PlatformManifest {
     try {
       const parsed = parseYaml(yaml) as unknown;
-
       return PlatformManifestSchema.parse(parsed);
     } catch (e) {
       throw new ManifestInvalidError(yamlPath, e instanceof Error ? e.message : String(e));
@@ -104,7 +107,6 @@ class PlatformManifestService {
         schemaVersion: SCHEMA_VERSION,
         stack: "static",
       };
-
       return manifest;
     }
 
@@ -124,10 +126,14 @@ class PlatformManifestService {
       services,
       stack: "app",
     };
-
     return manifest;
   }
 }
 
 export { PlatformManifestSchema, PlatformManifestService };
-export type { AppPlatformManifest, PlatformManifest, StaticPlatformManifest };
+export type {
+  AppPlatformManifest,
+  PlatformManifest,
+  StaticPlatformManifest,
+  PlatformManifestGenerator,
+};

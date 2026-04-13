@@ -1,6 +1,6 @@
 import type { CreateSelections } from "../ports/prompt-port.js";
 import { LayerConflictError, MissingLayerError } from "../errors/cli-errors.js";
-import { LayerCompositionService } from "./layer-composition-service.js";
+import { LayerCompositionService, LayerTemplateRenderer } from "./layer-composition-service.js";
 
 // ---------------------------------------------------------------------------
 // Combination coverage helpers
@@ -388,5 +388,48 @@ describe(LayerCompositionService, () => {
         );
       },
     );
+  });
+});
+
+const rendererContext = {
+  framework: "Express",
+  name: "my-app",
+  runtime: "Node.js (TypeScript)",
+};
+
+describe(LayerTemplateRenderer, () => {
+  it("substitutes all defined variables in a template string", () => {
+    const renderer = new LayerTemplateRenderer();
+
+    const result = renderer.render(
+      "name={{name}} runtime={{runtime}} framework={{framework}}",
+      rendererContext,
+    );
+
+    expect(result).toBe("name=my-app runtime=Node.js (TypeScript) framework=Express");
+  });
+
+  it("leaves unknown placeholders unchanged", () => {
+    const renderer = new LayerTemplateRenderer();
+
+    const result = renderer.render("hello={{unknown}} name={{name}}", rendererContext);
+
+    expect(result).toBe("hello={{unknown}} name=my-app");
+  });
+
+  it("substitutes multiple occurrences of the same variable", () => {
+    const renderer = new LayerTemplateRenderer();
+
+    const result = renderer.render("{{name}}/{{name}}.ts", rendererContext);
+
+    expect(result).toBe("my-app/my-app.ts");
+  });
+
+  it("returns the template unchanged when given an empty context", () => {
+    const renderer = new LayerTemplateRenderer();
+
+    const result = renderer.render("hello={{name}}", { framework: "", name: "", runtime: "" });
+
+    expect(result).toBe("hello=");
   });
 });

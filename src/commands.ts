@@ -1,14 +1,21 @@
 import { join } from "node:path";
-import type { DeployReceipt, DeployRequest } from "./ports/deploy-client.js";
+import type { DeployClient } from "./ports/deploy-client.js";
 import type { FilesystemWriter } from "./ports/filesystem-writer.js";
-import type { ListRequest, ListResponse } from "./ports/list-client.js";
-import type { PromoteReceipt, PromoteRequest } from "./ports/promote-client.js";
-import type { CreateSelections, PromptPort } from "./ports/prompt-port.js";
-import type { RollbackReceipt, RollbackRequest } from "./ports/rollback-client.js";
-import type { StatusRequest, StatusResponse } from "./ports/status-client.js";
-import type { TeardownReceipt, TeardownRequest } from "./ports/teardown-client.js";
-import type { ResolvedLayerSet } from "./services/layer-composition-service.js";
-import type { PlatformManifest } from "./services/platform-manifest-service.js";
+import type { ListClient } from "./ports/list-client.js";
+import type { PromoteClient } from "./ports/promote-client.js";
+import type { PromptPort } from "./ports/prompt-port.js";
+import type { RollbackClient } from "./ports/rollback-client.js";
+import type { StatusClient } from "./ports/status-client.js";
+import type { TeardownClient } from "./ports/teardown-client.js";
+import type { LogsClient } from "./ports/logs-client.js";
+import type { ProjectReaderPort } from "./ports/project-reader.js";
+import type { RegistrationClient } from "./ports/registration-client.js";
+import type { LayerComposer } from "./services/layer-composition-service.js";
+import type {
+  PlatformManifest,
+  PlatformManifestGenerator,
+} from "./services/platform-manifest-service.js";
+import type { CreateInputValidator } from "./services/create-input-validation-service.js";
 
 interface CliResult {
   exitCode: number;
@@ -16,34 +23,23 @@ interface CliResult {
 }
 
 interface Services {
-  layerResolver: { resolveLayers(input: CreateSelections): ResolvedLayerSet };
-  platformManifestGenerator: {
-    generatePlatformManifest(input: CreateSelections): string;
-    validateManifest(yaml: string, yamlPath: string): PlatformManifest;
-  };
-  validator: { validateCreateInput(input: CreateSelections): CreateSelections };
+  layerResolver: LayerComposer;
+  platformManifestGenerator: PlatformManifestGenerator;
+  validator: CreateInputValidator;
 }
 
 interface Adapters {
-  deployClient: { deploy(request: DeployRequest): Promise<DeployReceipt> };
+  deployClient: DeployClient;
   filesystemWriter: FilesystemWriter;
-  listClient: { getList(request: ListRequest): Promise<ListResponse> };
-  logsClient: {
-    getLogs(request: { environment: string; manifest: PlatformManifest }): Promise<{
-      entries: { level: string; message: string; timestamp: string }[];
-      environment: string;
-      name: string;
-    }>;
-  };
-  projectReader: { readFile(filePath: string): Promise<string> };
-  promoteClient: { promote(request: PromoteRequest): Promise<PromoteReceipt> };
+  listClient: ListClient;
+  logsClient: LogsClient;
+  projectReader: ProjectReaderPort;
+  promoteClient: PromoteClient;
   promptPort: PromptPort;
-  registrationClient: {
-    register(manifest: PlatformManifest): Promise<{ name: string; registrationId: string }>;
-  };
-  rollbackClient: { rollback(request: RollbackRequest): Promise<RollbackReceipt> };
-  statusClient: { getStatus(request: StatusRequest): Promise<StatusResponse> };
-  teardownClient: { teardown(request: TeardownRequest): Promise<TeardownReceipt> };
+  registrationClient: RegistrationClient;
+  rollbackClient: RollbackClient;
+  statusClient: StatusClient;
+  teardownClient: TeardownClient;
 }
 
 type HandlerResult = CliResult & { meta?: Record<string, string> };

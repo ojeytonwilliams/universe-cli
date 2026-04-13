@@ -62,7 +62,11 @@ const getFrameworkLabel = (framework: string): string => {
   return framework;
 };
 
-class CreateInputValidationService {
+interface CreateInputValidator {
+  validateCreateInput(input: CreateSelections): CreateSelections;
+}
+
+class CreateInputValidationService implements CreateInputValidator {
   private readonly pathExists: PathExists;
 
   constructor(pathExists: PathExists) {
@@ -160,4 +164,4 @@ class CreateInputValidationService {
 }
 
 export { CreateInputValidationService };
-export type { PathExists };
+export type { PathExists, CreateInputValidator };

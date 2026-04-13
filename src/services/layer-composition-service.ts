@@ -8,12 +8,15 @@ import {
   RUNTIME_OPTIONS,
 } from "../ports/prompt-port.js";
 import type { CreateSelections } from "../ports/prompt-port.js";
-import { defaultLayerRegistry } from "./default-layer-registry.js";
-import type { LayerRegistry } from "./default-layer-registry.js";
-import { LayerTemplateRenderer } from "./layer-template-renderer.js";
+import { alwaysLayer } from "./layers/always-layer.js";
+import { baseNodeJsTypescriptLayer } from "./layers/base-node-js-typescript-layer.js";
+import { baseStaticLayer } from "./layers/base-static-layer.js";
+import { frameworksLayer } from "./layers/frameworks-layer.js";
+import { servicesLayer } from "./layers/services-layer.js";
 
 type LayerStage = "always" | "base" | "frameworks" | "services";
 type JsonValue = boolean | JsonObject | JsonValue[] | null | number | string;
+type LayerRegistry = Record<string, Record<string, string> | undefined>;
 
 interface JsonObject {
   [key: string]: JsonValue;
@@ -35,12 +38,39 @@ interface FileOwner {
   stage: LayerStage;
 }
 
+interface TemplateContext {
+  framework: string;
+  name: string;
+  runtime: string;
+}
+
 const CONFIG_EXTENSIONS = new Set([".json", ".yaml", ".yml"]);
 const NONE_VALUE = DATABASE_OPTIONS.NONE;
 const NODE_RUNTIME_LAYER = "base/node-js-typescript";
 const STATIC_RUNTIME_LAYER = "base/static";
 
-class LayerCompositionService {
+const defaultLayerRegistry: LayerRegistry = {
+  always: alwaysLayer,
+  "base/node-js-typescript": baseNodeJsTypescriptLayer,
+  "base/static": baseStaticLayer,
+  ...frameworksLayer,
+  ...servicesLayer,
+};
+
+interface LayerComposer {
+  resolveLayers(input: CreateSelections): ResolvedLayerSet;
+}
+
+class LayerTemplateRenderer {
+  render(template: string, context: TemplateContext): string {
+    return template
+      .replaceAll("{{name}}", context.name)
+      .replaceAll("{{runtime}}", context.runtime)
+      .replaceAll("{{framework}}", context.framework);
+  }
+}
+
+class LayerCompositionService implements LayerComposer {
   private readonly layers: LayerRegistry;
 
   constructor(layers: LayerRegistry = defaultLayerRegistry) {
@@ -235,5 +265,5 @@ class LayerCompositionService {
   }
 }
 
-export { defaultLayerRegistry, LayerCompositionService };
-export type { LayerRegistry, ResolvedLayer, ResolvedLayerSet };
+export { defaultLayerRegistry, LayerCompositionService, LayerTemplateRenderer };
+export type { LayerRegistry, ResolvedLayer, ResolvedLayerSet, LayerComposer, TemplateContext };
