@@ -1,3 +1,5 @@
+import { DEPENDENCY_VERSIONS } from "./dependency-versions.js";
+
 const baseNodeJsTypescriptLayer = {
   Procfile: "web: node dist/index.js\n",
   "docker-compose.dev.yml": [
@@ -7,14 +9,14 @@ const baseNodeJsTypescriptLayer = {
     "    working_dir: /app",
     "    volumes:",
     "      - ./:/app",
-    '    command: sh -c "npm install && npm run dev"',
+    '    command: sh -c "pnpm install && pnpm dev"',
     "    ports:",
     '      - "3000:3000"',
     "",
   ].join("\n"),
   "package.json": JSON.stringify({
     devDependencies: {
-      typescript: "5.9.3",
+      typescript: DEPENDENCY_VERSIONS.typescript,
     },
     name: "{{name}}",
     private: true,

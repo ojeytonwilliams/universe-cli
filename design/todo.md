@@ -6,7 +6,7 @@ Requirements reference: `plans/universe-cli/create-extension-prd.md`
 
 ## Phase 1 — Centralize dependency versions and update to major ranges (FR-13, FR-14 partial)
 
-- [ ] CODE: Extract dependency versions to a centralized config and update docker-compose to use pnpm
+- [x] CODE: Extract dependency versions to a centralized config and update docker-compose to use pnpm
   - Feature: all version intent strings live in one file as major-version ranges; `docker-compose.dev.yml` uses pnpm
   - Files: `src/services/layers/dependency-versions.ts` (new), `src/services/layers/base-node-js-typescript-layer.ts`, `src/services/layers/frameworks-layer.ts`
   - Acceptance:

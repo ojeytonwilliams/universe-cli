@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.0.2] - 2026-04-14
+
+### Centralize dependency versions and switch docker-compose to pnpm
+
+Dependency version strings were scattered across layer files as exact pinned values. A new `dependency-versions.ts` config centralises them as major-version ranges (e.g. `"^5"`), so updating a dependency requires changing one line rather than hunting across layer files. The `docker-compose.dev.yml` template is also updated to use `pnpm install && pnpm dev` in preparation for pnpm-first scaffolding.
+
 ## [3.0.1] - 2026-04-14
 
 ### Consolidate observability best-effort policy into a shared base class
