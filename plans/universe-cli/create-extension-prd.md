@@ -142,7 +142,7 @@ Steps 1–5 as above; step 6 is skipped; step 7 runs.
 - Failure in step 6 throws `PackageInstallError` and does not proceed to step 7.
 - Failure in step 7 throws `RepoInitialisationError`.
 - The success output message is unchanged (the new steps are silent on success).
-- Integration tests cover the full extended flow for both Node.js and Static scaffolds using null adapters.
+- Integration tests cover the full extended flow for both Node.js and Static scaffolds using inline test doubles for `PackageManager` and `RepoInitialiser`.
 
 ---
 
@@ -161,7 +161,7 @@ Exit codes must be distinct from all existing codes defined in `design/prd.md`.
 
 ## Non-Functional Requirements
 
-- `PnpmPackageManagerAdapter` and `GitRepoInitialiserAdapter` must not be called in any unit test that does not explicitly test those adapters — null adapters are injected everywhere else.
+- `PnpmPackageManagerAdapter` and `GitRepoInitialiserAdapter` must not be called in any unit test that does not explicitly test those adapters — inline test doubles are used everywhere else.
 - No new direct dependency on `child_process` in the application layer (`src/commands.ts`, `src/cli.ts`).
 - All version strings in generated scaffolds are sourced from `dependency-versions.ts` — no regression to hardcoded strings.
 
