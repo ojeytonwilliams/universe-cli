@@ -30,7 +30,7 @@ handler may import a concrete adapter directly.
 │            Ports (external boundaries)              │
 │  src/ports/                                         │
 │  · observability-client.ts  ObservabilityClient     │
-│  · prompt-port.ts           PromptPort              │
+│  · prompt.ts                Prompt               │
 │  · filesystem-writer.ts     FilesystemWriter        │
 └──────┬──────────────────────────────────────────────┘
        │ implemented by
@@ -77,7 +77,7 @@ application layer, not by the adapters that implement them.
 | Port                  | Boundary                    |
 | --------------------- | --------------------------- |
 | `ObservabilityClient` | telemetry / error reporting |
-| `PromptPort`          | interactive terminal input  |
+| `Prompt`              | interactive terminal input  |
 | `FilesystemWriter`    | project-folder writes       |
 
 ### Adapters (`src/adapters/`)
@@ -160,7 +160,7 @@ pure create-flow policy and are owned by the application layer.
 
 The corresponding port interfaces (`CreateInputValidator`, `LayerResolver`,
 `PlatformManifestGenerator`) are deleted — they modelled no real external boundary.
-`PromptPort`, `FilesystemWriter`, and `ObservabilityClient` remain ports because they
+`Prompt`, `FilesystemWriter`, and `ObservabilityClient` remain ports because they
 represent genuine infrastructure boundaries (terminal I/O, disk writes, telemetry).
 
 **Migration strategy:** imports are updated in a single pass per class. No

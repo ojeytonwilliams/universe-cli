@@ -9,9 +9,9 @@ import { CreateInputValidationService } from "../services/create-input-validatio
 import { LocalFilesystemWriter } from "../adapters/local-filesystem-writer.js";
 import { LocalProjectReader } from "../adapters/local-project-reader.js";
 import { runCli } from "../cli.js";
-import type { CreateSelections, PromptPort } from "../ports/prompt-port.js";
+import type { CreateSelections, Prompt } from "../ports/prompt.js";
 
-const createPromptPort = (selection: CreateSelections | null): PromptPort => ({
+const createPromptPort = (selection: CreateSelections | null): Prompt => ({
   promptForCreateInputs() {
     return Promise.resolve(selection);
   },
@@ -71,14 +71,14 @@ const collectGeneratedFiles = (directory: string): Record<string, string> => {
   );
 };
 
-const makeDeps = (cwd: string, promptPort: PromptPort, layerRegistry?: LayerRegistry) => {
+const makeDeps = (cwd: string, prompt: Prompt, layerRegistry?: LayerRegistry) => {
   const { observability, ...adapters } = createAdapterStubs();
   return {
     adapters: {
       ...adapters,
       filesystemWriter: new LocalFilesystemWriter(),
       projectReader: new LocalProjectReader(),
-      promptPort,
+      prompt,
     },
     cwd,
     observability,

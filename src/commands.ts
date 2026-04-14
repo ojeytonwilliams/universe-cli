@@ -3,7 +3,7 @@ import type { DeployClient } from "./ports/deploy-client.js";
 import type { FilesystemWriter } from "./ports/filesystem-writer.js";
 import type { ListClient } from "./ports/list-client.js";
 import type { PromoteClient } from "./ports/promote-client.js";
-import type { PromptPort } from "./ports/prompt-port.js";
+import type { Prompt } from "./ports/prompt.js";
 import type { RollbackClient } from "./ports/rollback-client.js";
 import type { StatusClient } from "./ports/status-client.js";
 import type { TeardownClient } from "./ports/teardown-client.js";
@@ -35,7 +35,7 @@ interface Adapters {
   logsClient: LogsClient;
   projectReader: ProjectReaderPort;
   promoteClient: PromoteClient;
-  promptPort: PromptPort;
+  prompt: Prompt;
   registrationClient: RegistrationClient;
   rollbackClient: RollbackClient;
   statusClient: StatusClient;
@@ -59,12 +59,12 @@ const handleCreate = async (
   cwd: string,
   deps: {
     services: Pick<Services, "layerResolver" | "platformManifestGenerator" | "validator">;
-    adapters: Pick<Adapters, "filesystemWriter" | "promptPort">;
+    adapters: Pick<Adapters, "filesystemWriter" | "prompt">;
   },
 ): Promise<HandlerResult> => {
   const { services, adapters } = deps;
 
-  const promptResult = await adapters.promptPort.promptForCreateInputs();
+  const promptResult = await adapters.prompt.promptForCreateInputs();
 
   if (promptResult === null || !promptResult.confirmed) {
     return { exitCode: 1, output: "Create cancelled before writing files." };

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { CreateSelections } from "../ports/prompt-port.js";
+import type { CreateSelections } from "../ports/prompt.js";
 import { PlatformManifestSchema, PlatformManifestService } from "./platform-manifest-service.js";
 import { ManifestInvalidError } from "../errors/cli-errors.js";
 

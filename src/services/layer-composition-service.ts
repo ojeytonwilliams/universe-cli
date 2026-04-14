@@ -6,8 +6,8 @@ import {
   FRAMEWORK_OPTIONS,
   RUNTIME_LABELS,
   RUNTIME_OPTIONS,
-} from "../ports/prompt-port.js";
-import type { CreateSelections } from "../ports/prompt-port.js";
+} from "../ports/prompt.js";
+import type { CreateSelections } from "../ports/prompt.js";
 import { alwaysLayer } from "./layers/always-layer.js";
 import { baseNodeJsTypescriptLayer } from "./layers/base-node-js-typescript-layer.js";
 import { baseStaticLayer } from "./layers/base-static-layer.js";

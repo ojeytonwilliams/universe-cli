@@ -278,7 +278,7 @@ Port contracts are the implementation gate for each command. A command may not b
 
 **Ports defined for `create` (current)**
 
-- `PromptPort` — interactive terminal input
+- `Prompt` — interactive terminal input
 - `FilesystemWriter` — project-folder writes with rollback-on-failure
 - `ObservabilityClient` — non-blocking stub telemetry
 

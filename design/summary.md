@@ -140,7 +140,7 @@ Universe CLI is defined in ADR-007, but the backing platform does not exist yet 
 
 ### Port interfaces in scope
 
-- `PromptPort` for interactive selection collection
+- `Prompt` for interactive selection collection
 - `FilesystemWriter` for scaffold creation with rollback-on-failure behavior
 - `ObservabilityClient` for non-blocking stub telemetry
 

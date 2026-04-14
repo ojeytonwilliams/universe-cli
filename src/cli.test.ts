@@ -1,6 +1,6 @@
 import type { FilesystemWriter } from "./ports/filesystem-writer.js";
 import type { ObservabilityClient } from "./ports/observability-client.js";
-import type { CreateSelections, PromptPort } from "./ports/prompt-port.js";
+import type { CreateSelections, Prompt } from "./ports/prompt.js";
 import type { StatusResponse } from "./ports/status-client.js";
 import type { ResolvedLayerSet } from "./services/layer-composition-service.js";
 import type { PlatformManifest } from "./services/platform-manifest-service.js";
@@ -29,7 +29,7 @@ const createPromptResult: CreateSelections = {
   runtime: "node_ts",
 };
 
-const createPrompt: PromptPort = {
+const createPrompt: Prompt = {
   promptForCreateInputs() {
     return Promise.resolve(createPromptResult);
   },
@@ -140,7 +140,7 @@ const defaultManifest: PlatformManifest = {
 };
 
 const createDeps = (
-  promptPort: PromptPort,
+  prompt: Prompt,
   validator: { validateCreateInput(input: CreateSelections): CreateSelections },
   filesystemWriter: FilesystemWriter = recordingWriter,
 ) => ({
@@ -151,7 +151,7 @@ const createDeps = (
     logsClient: defaultLogsClient,
     projectReader: defaultProjectReader,
     promoteClient: defaultPromoteClient,
-    promptPort,
+    prompt,
     registrationClient: defaultRegistrationClient,
     rollbackClient: defaultRollbackClient,
     statusClient: defaultStatusClient,

@@ -22,7 +22,7 @@ const filesystemWriter = new LocalFilesystemWriter();
 const layerResolver = new LayerCompositionService();
 const manifestGenerator = new PlatformManifestService();
 const projectReader = new LocalProjectReader();
-const promptPort = new ClackPromptAdapter();
+const prompt = new ClackPromptAdapter();
 const inputValidator = new CreateInputValidationService((path) => existsSync(path));
 const { exitCode, output } = await runCli(process.argv.slice(2), {
   adapters: {
@@ -32,7 +32,7 @@ const { exitCode, output } = await runCli(process.argv.slice(2), {
     logsClient: new StubLogsClient(),
     projectReader,
     promoteClient: new StubPromoteClient(),
-    promptPort,
+    prompt,
     registrationClient: new StubRegistrationClient(),
     rollbackClient: new StubRollbackClient(),
     statusClient: new StubStatusClient(),

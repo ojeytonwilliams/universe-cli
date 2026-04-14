@@ -8,7 +8,7 @@ import { CreateInputValidationService } from "../services/create-input-validatio
 import { LayerCompositionService } from "../services/layer-composition-service.js";
 import { PlatformManifestService } from "../services/platform-manifest-service.js";
 import { runCli } from "../cli.js";
-import type { CreateSelections, PromptPort } from "../ports/prompt-port.js";
+import type { CreateSelections, Prompt } from "../ports/prompt.js";
 
 const createNodeSelection = (name: string): CreateSelections => ({
   confirmed: true,
@@ -19,20 +19,20 @@ const createNodeSelection = (name: string): CreateSelections => ({
   runtime: "node_ts",
 });
 
-const createPromptPort = (selection: CreateSelections | null): PromptPort => ({
+const createPromptPort = (selection: CreateSelections | null): Prompt => ({
   promptForCreateInputs() {
     return Promise.resolve(selection);
   },
 });
 
-const makeDeps = (cwd: string, promptPort: PromptPort) => {
+const makeDeps = (cwd: string, prompt: Prompt) => {
   const { observability, ...adapters } = createAdapterStubs();
   return {
     adapters: {
       ...adapters,
       filesystemWriter: new LocalFilesystemWriter(),
       projectReader: new LocalProjectReader(),
-      promptPort,
+      prompt,
     },
     cwd,
     observability,

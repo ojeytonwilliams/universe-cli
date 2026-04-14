@@ -1,4 +1,4 @@
-import type { CreateSelections, PromptPort } from "../ports/prompt-port.js";
+import type { CreateSelections, Prompt } from "../ports/prompt.js";
 import { ClackPromptAdapter } from "./clack-prompt-adapter.js";
 import type { ClackPromptApi } from "./clack-prompt-adapter.js";
 
@@ -143,7 +143,7 @@ describe(ClackPromptAdapter, () => {
       ],
     );
 
-    const adapter: PromptPort = new ClackPromptAdapter(mockApi);
+    const adapter: Prompt = new ClackPromptAdapter(mockApi);
 
     const result = await adapter.promptForCreateInputs();
 

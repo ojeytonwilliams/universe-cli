@@ -13,14 +13,14 @@ import {
   PLATFORM_SERVICE_OPTIONS,
   RUNTIME_LABELS,
   RUNTIME_OPTIONS,
-} from "../ports/prompt-port.js";
+} from "../ports/prompt.js";
 import type {
   CreateSelections,
   DatabaseOption,
   FrameworkOption,
   PlatformServiceOption,
   RuntimeOption,
-} from "../ports/prompt-port.js";
+} from "../ports/prompt.js";
 
 type PathExists = (path: string) => boolean;
 

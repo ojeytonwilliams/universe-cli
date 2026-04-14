@@ -1,4 +1,4 @@
-import type { CreateSelections } from "../ports/prompt-port.js";
+import type { CreateSelections } from "../ports/prompt.js";
 import { LayerConflictError, MissingLayerError } from "../errors/cli-errors.js";
 import { LayerCompositionService, LayerTemplateRenderer } from "./layer-composition-service.js";
 

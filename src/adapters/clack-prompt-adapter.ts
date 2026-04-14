@@ -8,15 +8,15 @@ import {
   PLATFORM_SERVICE_OPTIONS,
   RUNTIME_LABELS,
   RUNTIME_OPTIONS,
-} from "../ports/prompt-port.js";
+} from "../ports/prompt.js";
 import type {
   CreateSelections,
   DatabaseOption,
   FrameworkOption,
   PlatformServiceOption,
-  PromptPort,
+  Prompt,
   RuntimeOption,
-} from "../ports/prompt-port.js";
+} from "../ports/prompt.js";
 
 interface ClackPromptApi {
   confirm(options: { message: string }): Promise<boolean | symbol>;
@@ -114,7 +114,7 @@ const getServiceOptions = (runtime: RuntimeOption): PlatformServiceOption[] => {
   return STATIC_SERVICE_OPTIONS;
 };
 
-class ClackPromptAdapter implements PromptPort {
+class ClackPromptAdapter implements Prompt {
   private readonly api: ClackPromptApi;
 
   constructor(api: ClackPromptApi = defaultClackApi) {

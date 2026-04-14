@@ -62,7 +62,7 @@ interface CreateSelections {
   confirmed: boolean;
 }
 
-interface PromptPort {
+interface Prompt {
   promptForCreateInputs(): Promise<CreateSelections | null>;
 }
 
@@ -81,6 +81,6 @@ export type {
   DatabaseOption,
   FrameworkOption,
   PlatformServiceOption,
-  PromptPort,
+  Prompt,
   RuntimeOption,
 };

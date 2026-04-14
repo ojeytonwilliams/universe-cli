@@ -18,7 +18,7 @@ import {
   TeardownError,
 } from "./errors/cli-errors.js";
 import type { ListResponse } from "./ports/list-client.js";
-import type { CreateSelections } from "./ports/prompt-port.js";
+import type { CreateSelections } from "./ports/prompt.js";
 import type { StatusResponse } from "./ports/status-client.js";
 import type { TeardownReceipt } from "./ports/teardown-client.js";
 import type { ResolvedLayerSet } from "./services/layer-composition-service.js";
@@ -130,7 +130,7 @@ describe(handleCreate, () => {
             return Promise.resolve();
           },
         },
-        promptPort: {
+        prompt: {
           promptForCreateInputs() {
             return Promise.resolve(createPromptResult);
           },
@@ -180,7 +180,7 @@ describe(handleCreate, () => {
             return Promise.reject(new Error("filesystemWriter not used in this test"));
           },
         },
-        promptPort: {
+        prompt: {
           promptForCreateInputs() {
             return Promise.resolve(null);
           },
@@ -222,7 +222,7 @@ describe(handleCreate, () => {
               throw new Error("filesystemWriter not used in this test");
             },
           },
-          promptPort: {
+          prompt: {
             promptForCreateInputs() {
               return Promise.resolve(createPromptResult);
             },
@@ -263,7 +263,7 @@ describe(handleCreate, () => {
               );
             },
           },
-          promptPort: {
+          prompt: {
             promptForCreateInputs() {
               return Promise.resolve(createPromptResult);
             },
