@@ -1,4 +1,7 @@
+import { execFile } from "node:child_process";
+import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { promisify } from "node:util";
 import { PackageInstallError } from "../errors/cli-errors.js";
 import type { PackageManager } from "../ports/package-manager.js";
 
@@ -23,6 +26,18 @@ interface PackageJson {
   devDependencies?: Record<string, string>;
   [key: string]: unknown;
 }
+
+const execFileAsync = promisify(execFile);
+
+const defaultRun: RunCommand = async (command, args, cwd) => {
+  const { stdout } = await execFileAsync(command, args, { cwd, encoding: "utf8" });
+  return stdout;
+};
+
+const defaultFilesystemApi: FilesystemApi = {
+  readFile: (path) => readFile(path, "utf8"),
+  writeFile: (path, content) => writeFile(path, content, "utf8"),
+};
 
 const extractVersions = (listOutput: string): Record<string, string> => {
   const packages = JSON.parse(listOutput) as ListedPackage[];
@@ -64,7 +79,7 @@ class PnpmPackageManagerAdapter implements PackageManager {
   private readonly run: RunCommand;
   private readonly filesystem: FilesystemApi;
 
-  constructor(run: RunCommand, filesystem: FilesystemApi) {
+  constructor(run: RunCommand = defaultRun, filesystem: FilesystemApi = defaultFilesystemApi) {
     this.run = run;
     this.filesystem = filesystem;
   }

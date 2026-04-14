@@ -1,12 +1,20 @@
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { RepoInitialisationError } from "../errors/cli-errors.js";
 import type { RepoInitialiser } from "../ports/repo-initialiser.js";
 
 type RunCommand = (command: string, args: string[], cwd: string) => Promise<void>;
 
+const execFileAsync = promisify(execFile);
+
+const defaultRun: RunCommand = async (command, args, cwd) => {
+  await execFileAsync(command, args, { cwd });
+};
+
 class GitRepoInitialiserAdapter implements RepoInitialiser {
   private readonly run: RunCommand;
 
-  constructor(run: RunCommand) {
+  constructor(run: RunCommand = defaultRun) {
     this.run = run;
   }
 

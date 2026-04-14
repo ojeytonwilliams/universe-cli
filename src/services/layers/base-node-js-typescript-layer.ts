@@ -35,6 +35,7 @@ const baseNodeJsTypescriptLayer = {
     },
     type: "module",
   }),
+  "pnpm-workspace.yaml": "",
   "src/index.ts": [
     'import { createServer } from "node:http";',
     "",

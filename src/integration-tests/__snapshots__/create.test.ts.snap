@@ -48,6 +48,7 @@ services:
   - email
 stack: app
 ",
+  "pnpm-workspace.yaml": "",
   "src/index.ts": "import { createServer } from "node:http";
 
 const server = createServer((_request, response) => {

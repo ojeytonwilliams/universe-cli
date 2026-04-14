@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.0.6] - 2026-04-14
+
+### Move subprocess defaults into adapters and add pnpm-workspace.yaml to Node.js scaffold
+
+`PnpmPackageManagerAdapter` and `GitRepoInitialiserAdapter` now own their production subprocess and filesystem wiring as default constructor parameter values. Previously these helpers lived in `bin.ts` and were passed in explicitly; now `bin.ts` just calls `new PnpmPackageManagerAdapter()` and `new GitRepoInitialiserAdapter()`. Injectable parameters remain for test doubles.
+
+The Node.js scaffold now includes an empty `pnpm-workspace.yaml`. Without it, pnpm treats the project as part of any parent workspace that contains it; the empty file declares the project as a standalone workspace root.
+
 ## [3.0.5] - 2026-04-14
 
 ### Add RepoInitialiser port and GitRepoInitialiserAdapter
