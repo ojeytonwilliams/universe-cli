@@ -139,6 +139,9 @@ describe(handleCreate, () => {
             return Promise.resolve(createPromptResult);
           },
         },
+        repoInitialiser: {
+          initialise: (_dir: string) => Promise.resolve(),
+        },
       },
       services: {
         layerResolver: {
@@ -197,6 +200,11 @@ describe(handleCreate, () => {
             return Promise.resolve(null);
           },
         },
+        repoInitialiser: {
+          initialise: (_dir: never): never => {
+            throw new Error("repoInitialiser not used in this test");
+          },
+        },
       },
       services: {
         layerResolver: {
@@ -247,6 +255,11 @@ describe(handleCreate, () => {
               return Promise.resolve(createPromptResult);
             },
           },
+          repoInitialiser: {
+            initialise: (_dir: never): never => {
+              throw new Error("repoInitialiser not used in this test");
+            },
+          },
         },
         services: {
           layerResolver: {
@@ -294,6 +307,11 @@ describe(handleCreate, () => {
           prompt: {
             promptForCreateInputs() {
               return Promise.resolve(createPromptResult);
+            },
+          },
+          repoInitialiser: {
+            initialise: (_dir: never): never => {
+              throw new Error("repoInitialiser not used in this test");
             },
           },
         },

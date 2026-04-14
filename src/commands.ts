@@ -3,6 +3,7 @@ import type { DeployClient } from "./ports/deploy-client.js";
 import type { FilesystemWriter } from "./ports/filesystem-writer.js";
 import type { ListClient } from "./ports/list-client.js";
 import type { PackageManager } from "./ports/package-manager.js";
+import type { RepoInitialiser } from "./ports/repo-initialiser.js";
 import type { PromoteClient } from "./ports/promote-client.js";
 import type { Prompt } from "./ports/prompt.js";
 import type { ProjectReaderPort } from "./ports/project-reader.js";
@@ -36,6 +37,7 @@ interface Adapters {
   logsClient: LogsClient;
   packageManager: PackageManager;
   projectReader: ProjectReaderPort;
+  repoInitialiser: RepoInitialiser;
   promoteClient: PromoteClient;
   prompt: Prompt;
   registrationClient: RegistrationClient;
@@ -61,7 +63,7 @@ const handleCreate = async (
   cwd: string,
   deps: {
     services: Pick<Services, "layerResolver" | "platformManifestGenerator" | "validator">;
-    adapters: Pick<Adapters, "filesystemWriter" | "packageManager" | "prompt">;
+    adapters: Pick<Adapters, "filesystemWriter" | "packageManager" | "prompt" | "repoInitialiser">;
   },
 ): Promise<HandlerResult> => {
   const { services, adapters } = deps;
@@ -86,6 +88,8 @@ const handleCreate = async (
     await adapters.packageManager.specifyDeps(targetDirectory);
     await adapters.packageManager.install(targetDirectory);
   }
+
+  await adapters.repoInitialiser.initialise(targetDirectory);
 
   return { exitCode: 0, output: `Scaffolded project at ${targetDirectory}` };
 };

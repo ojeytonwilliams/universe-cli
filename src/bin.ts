@@ -7,6 +7,7 @@ import { promisify } from "node:util";
 import { ClackPromptAdapter } from "./adapters/clack-prompt-adapter.js";
 import { LocalFilesystemWriter } from "./adapters/local-filesystem-writer.js";
 import { LocalProjectReader } from "./adapters/local-project-reader.js";
+import { GitRepoInitialiserAdapter } from "./adapters/git-repo-initialiser-adapter.js";
 import { PnpmPackageManagerAdapter } from "./adapters/pnpm-package-manager-adapter.js";
 import { CreateInputValidationService } from "./services/create-input-validation-service.js";
 import { LayerCompositionService } from "./services/layer-composition-service.js";
@@ -24,6 +25,10 @@ import { runCli } from "./cli.js";
 
 const execFileAsync = promisify(execFile);
 
+const runCommandVoid = async (command: string, args: string[], cwd: string): Promise<void> => {
+  await execFileAsync(command, args, { cwd });
+};
+
 const runCommand = async (command: string, args: string[], cwd: string): Promise<string> => {
   const { stdout } = await execFileAsync(command, args, { cwd, encoding: "utf8" });
   return stdout;
@@ -38,6 +43,7 @@ const filesystemWriter = new LocalFilesystemWriter();
 const layerResolver = new LayerCompositionService();
 const manifestGenerator = new PlatformManifestService();
 const packageManager = new PnpmPackageManagerAdapter(runCommand, filesystemApi);
+const repoInitialiser = new GitRepoInitialiserAdapter(runCommandVoid);
 const projectReader = new LocalProjectReader();
 const prompt = new ClackPromptAdapter();
 const inputValidator = new CreateInputValidationService((path) => existsSync(path));
@@ -52,6 +58,7 @@ const { exitCode, output } = await runCli(process.argv.slice(2), {
     promoteClient: new StubPromoteClient(),
     prompt,
     registrationClient: new StubRegistrationClient(),
+    repoInitialiser,
     rollbackClient: new StubRollbackClient(),
     statusClient: new StubStatusClient(),
     teardownClient: new StubTeardownClient(),

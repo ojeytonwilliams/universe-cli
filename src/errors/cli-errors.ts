@@ -10,6 +10,7 @@ const EXIT_CODES = {
   PACKAGE_INSTALL: 19,
   PROMOTION: 11,
   REGISTRATION: 9,
+  REPO_INITIALISATION: 20,
   ROLLBACK: 12,
   SCAFFOLD_WRITE: 7,
   STATUS: 14,
@@ -198,6 +199,13 @@ class TeardownError extends CliError {
   }
 }
 
+class RepoInitialisationError extends CliError {
+  constructor(reason: string) {
+    super(`Repository initialisation failed: ${reason}`, EXIT_CODES.REPO_INITIALISATION);
+    this.name = "RepoInitialisationError";
+  }
+}
+
 class PackageInstallError extends CliError {
   constructor(reason: string) {
     super(`Package installation failed: ${reason}`, EXIT_CODES.PACKAGE_INSTALL);
@@ -223,6 +231,7 @@ export {
   PackageInstallError,
   PromotionError,
   RegistrationError,
+  RepoInitialisationError,
   RollbackError,
   ScaffoldWriteError,
   StatusError,

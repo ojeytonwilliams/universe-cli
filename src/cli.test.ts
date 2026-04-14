@@ -146,6 +146,10 @@ const defaultPackageManager = {
   specifyDeps: (_dir: string) => Promise.resolve(),
 };
 
+const defaultRepoInitialiser = {
+  initialise: (_dir: string) => Promise.resolve(),
+};
+
 const createDeps = (
   prompt: Prompt,
   validator: { validateCreateInput(input: CreateSelections): CreateSelections },
@@ -161,6 +165,7 @@ const createDeps = (
     promoteClient: defaultPromoteClient,
     prompt,
     registrationClient: defaultRegistrationClient,
+    repoInitialiser: defaultRepoInitialiser,
     rollbackClient: defaultRollbackClient,
     statusClient: defaultStatusClient,
     teardownClient: defaultTeardownClient,

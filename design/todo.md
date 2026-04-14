@@ -65,7 +65,7 @@ Requirements reference: `plans/universe-cli/create-extension-prd.md`
 
 ## Phase 4 — RepoInitialiser port and git adapter (FR-16)
 
-- [ ] CODE: Define RepoInitialiser port and error type
+- [x] CODE: Define RepoInitialiser port and error type
   - Feature: typed port interface for repository initialisation
   - Files: `src/ports/repo-initialiser.ts`, `src/errors/cli-errors.ts`
   - Acceptance:
@@ -73,7 +73,7 @@ Requirements reference: `plans/universe-cli/create-extension-prd.md`
     - `RepoInitialisationError` exported from `src/errors/cli-errors.ts` as a `CliError` subclass with a unique exit code not used by any existing error (including `PackageInstallError`)
     - `pnpm test` and `pnpm lint` pass
 
-- [ ] CODE: Implement GitRepoInitialiserAdapter
+- [x] CODE: Implement GitRepoInitialiserAdapter
   - Feature: git-backed repo initialiser adapter
   - Files: `src/adapters/git-repo-initialiser-adapter.ts`, `src/adapters/git-repo-initialiser-adapter.test.ts`
   - Acceptance:
@@ -82,7 +82,7 @@ Requirements reference: `plans/universe-cli/create-extension-prd.md`
     - Unit tests verify correct command sequence and that any non-zero exit produces `RepoInitialisationError` (using a test double for subprocess, not a real git call)
     - `pnpm test` and `pnpm lint` pass
 
-- [ ] CODE: Wire RepoInitialiser into bin and create handler
+- [x] CODE: Wire RepoInitialiser into bin and create handler
   - Feature: create handler calls `repoInitialiser.initialise` for all scaffold types
   - Files: `src/bin.ts`, `src/commands.ts`
   - Acceptance:

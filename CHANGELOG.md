@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.0.5] - 2026-04-14
+
+### Add RepoInitialiser port and GitRepoInitialiserAdapter
+
+The `create` command now initialises a git repository after scaffolding files. `GitRepoInitialiserAdapter` runs `git init`, `git add .`, and `git commit -m "chore: initial commit"` in sequence — any non-zero exit rejects with `RepoInitialisationError`. For Node.js scaffolds, git init follows both `specifyDeps` and `install`; for static scaffolds it follows the filesystem write directly. The adapter takes an injectable subprocess runner so it can be tested without a real git installation.
+
 ## [3.0.4] - 2026-04-14
 
 ### Add PackageManager port and PnpmPackageManagerAdapter
