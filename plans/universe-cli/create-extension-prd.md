@@ -8,51 +8,74 @@ This document extends `design/prd.md` with two new functional requirements: supp
 
 ## User Stories
 
-| As a…             | I want to…                                             | So that…                                                                   |
-| ----------------- | ------------------------------------------------------ | -------------------------------------------------------------------------- |
-| platform engineer | scaffold a Node.js project with pnpm already installed | I can run `pnpm dev` immediately without a manual install step             |
-| platform engineer | have `.npmrc` security settings generated for me       | I don't have to remember to configure supply chain protections myself      |
-| platform engineer | see major-version ranges in `package.json`             | I can apply minor and patch updates without touching the scaffold template |
-| platform engineer | update all scaffolded dependency versions in one place | A single file change propagates to every scaffold variant                  |
-| platform engineer | scaffold a project that is already a git repository    | I can commit my first real change without a manual `git init`              |
-| platform engineer | swap pnpm for another package manager in future        | The CLI is not hard-coupled to pnpm at the application layer               |
+| As a…             | I want to…                                                     | So that…                                                                   |
+| ----------------- | -------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| platform engineer | scaffold a Node.js project with pnpm already installed         | I can run `pnpm dev` immediately without a manual install step             |
+| platform engineer | have pnpm security settings generated in `pnpm-workspace.yaml` | I don't have to remember to configure supply chain protections myself      |
+| platform engineer | see major-version ranges in `package.json`                     | I can apply minor and patch updates without touching the scaffold template |
+| platform engineer | update all scaffolded dependency versions in one place         | A single file change propagates to every scaffold variant                  |
+| platform engineer | scaffold a project that is already a git repository            | I can commit my first real change without a manual `git init`              |
+| platform engineer | swap pnpm for another package manager in future                | The CLI is not hard-coupled to pnpm at the application layer               |
 
 ---
 
-## FR-13 — Centralized Dependency Version Configuration
+## FR-13 — Per-Layer Dependency Version Constants
 
-Dependency version strings must not be scattered across layer files. A single TypeScript configuration object must be the sole source of truth for version intent.
+Dependency version strings must not be hardcoded inline in layer objects. Each layer file owns its own version constants as named constants defined at the top of that file.
+
+**Version ownership**
+
+Each layer file declares only the versions relevant to that layer. For example, `frameworks-layer.ts` defines `EXPRESS_VERSION = "^5"`, and `base-node-js-typescript-layer.ts` defines `TYPESCRIPT_VERSION = "^5"`. There is no shared cross-layer version file: a future React layer would define its own `REACT_VERSION` without touching any Express-related file.
 
 **Version strategy**
 
-`dependency-versions.ts` holds major-version ranges (e.g. `"express": "^5"`) as human-readable intent. These ranges flow into the initial scaffold `package.json`. After `PackageManager.install()` runs (FR-15), `package.json` is updated with the exact versions pnpm resolved from the registry, constrained by `minimumReleaseAge` in `.npmrc`. The lockfile and `package.json` therefore agree on exact versions.
+Version constants hold major-version ranges (e.g. `"^5"`) as human-readable intent. These ranges flow into the initial scaffold `package.json`. After `PackageManager.specifyDeps()` runs (FR-15), `package.json` is updated with the exact versions pnpm resolved from the registry, constrained by `minimumReleaseAge` in `pnpm-workspace.yaml`. The lockfile and `package.json` therefore agree on exact versions.
 
 **Acceptance Criteria**
 
-- A file `src/services/layers/dependency-versions.ts` exports an object mapping each dependency name to a major-version range string (e.g. `"express": "^5"`).
-- No layer file (`base-node-js-typescript-layer.ts`, `frameworks-layer.ts`, etc.) contains a hardcoded version string.
-- All layer files import version strings from `dependency-versions.ts`.
-- Changing a version range in `dependency-versions.ts` is reflected in the initial scaffold `package.json` of every affected scaffold without any other file changes.
+- Each layer file that references a version range defines a named constant at the top of that file (e.g. `const EXPRESS_VERSION = "^5"`).
+- No cross-layer version constant sharing: adding a new framework layer requires no changes to any existing layer file's version constants.
+- No inline version string literals remain anywhere in a layer object — all version references go through a named constant.
 - Versions target current LTS/latest major releases at the time of implementation.
-- After `PackageManager.install()` completes, `package.json` contains exact resolved versions (e.g. `"5.1.2"`), not the original ranges.
+- After `PackageManager.specifyDeps()` completes, `package.json` contains exact resolved versions (e.g. `"5.1.2"`), not the original ranges.
 
 ---
 
 ## FR-14 — pnpm Supply Chain Security Artefacts
 
-Every Node.js scaffold must include pnpm security hardening files. Static scaffolds are unaffected.
+Every Node.js scaffold must include pnpm security hardening configuration and enforce pnpm-only usage. Static scaffolds receive an empty `pnpm-workspace.yaml` (workspace marker only) and no pnpm-specific scripts.
+
+**Configuration location**
+
+pnpm project settings belong in `pnpm-workspace.yaml`, not `.npmrc`. No `.npmrc` file is generated for any scaffold type.
+
+**pnpm-workspace.yaml settings (Node.js only)**
+
+The four security settings are written as top-level camelCase keys (pnpm v10 format):
+
+```yaml
+blockExoticSubdeps: true
+minimumReleaseAge: 1440
+trustPolicy: no-downgrade
+engineStrict: true
+```
+
+**package.json scripts**
+
+All scripts that invoke other scripts must use `pnpm run`, not `npm run`:
+
+- `"dev": "pnpm run build && pnpm run start"`
+- `"preinstall": "npx only-allow pnpm"` enforces pnpm as the only permitted package manager.
 
 **Acceptance Criteria**
 
-- Generated `.npmrc` includes all of the following settings:
-  - `blockExoticSubdeps=true`
-  - `minimumReleaseAge=1440`
-  - `trustPolicy=no-downgrade`
-  - `engine-strict=true`
+- `pnpm-workspace.yaml` for Node.js scaffolds contains `blockExoticSubdeps: true`, `minimumReleaseAge: 1440`, `trustPolicy: no-downgrade`, and `engineStrict: true` as top-level keys.
+- `pnpm-workspace.yaml` for Static scaffolds is an empty file (workspace root marker only; no security settings, since static has no pnpm-managed deps).
+- No `.npmrc` file is generated for any scaffold type.
 - Generated `package.json` includes `"preinstall": "npx only-allow pnpm"` in its `scripts`.
-- `docker-compose.dev.yml` uses `pnpm install && pnpm dev` instead of npm equivalents.
-- Static scaffolds do not receive `.npmrc` or pnpm-specific `package.json` scripts.
-- Integration test snapshots reflect the new artefacts.
+- The `dev` script uses `pnpm run build && pnpm run start`, not `npm run`.
+- `docker-compose.dev.yml` uses `pnpm install && pnpm dev`.
+- Integration test snapshots reflect the updated artefacts.
 
 ---
 
@@ -73,22 +96,23 @@ PackageManager
 
 **Version pinning behavior**
 
-`PnpmPackageManagerAdapter.install()` performs three steps internally:
+`PnpmPackageManagerAdapter.specifyDeps()` performs three steps internally:
 
-1. Runs `pnpm install`, which resolves ranges to exact versions respecting `minimumReleaseAge` from `.npmrc` and generates `pnpm-lock.yaml`.
-2. Reads the resolved exact versions of all direct dependencies from `pnpm-lock.yaml`.
+1. Runs `pnpm install --lockfile-only`, which resolves ranges to exact versions respecting `minimumReleaseAge` from `pnpm-workspace.yaml` and generates `pnpm-lock.yaml` without populating `node_modules`.
+2. Reads the resolved exact versions of all direct dependencies via `pnpm list --json --depth=0 --lockfile-only`.
 3. Overwrites the version fields in `package.json` with the exact resolved versions.
+
+`PnpmPackageManagerAdapter.install()` then runs `pnpm install` to populate `node_modules` from the pinned `package.json`.
 
 The result is a `package.json` and `pnpm-lock.yaml` that agree on exact versions. The initial git commit (FR-16) therefore captures exact versions in version control.
 
 **Acceptance Criteria**
 
-- `src/ports/package-manager.ts` exports the `PackageManager` interface and `PackageInstallError`.
+- `src/ports/package-manager.ts` exports the `PackageManager` interface with `specifyDeps` and `install` methods.
 - `PackageInstallError` is a typed `CliError` subclass with a distinct exit code.
-- `src/adapters/pnpm-package-manager-adapter.ts` implements `PackageManager` by running `pnpm install`, then reading the lockfile and updating `package.json` with exact resolved versions.
-- Unit tests for `PnpmPackageManagerAdapter` verify that the correct command is invoked, that `package.json` is updated with exact versions after install, and that failures surface as `PackageInstallError`.
-- `PnpmPackageManagerAdapter` is wired into `src/container.ts`; the spike-guard test is updated to include it.
-- The create handler calls `packageManager.install(targetDirectory)` for Node.js scaffolds only; static scaffolds skip this step.
+- `src/adapters/pnpm-package-manager-adapter.ts` implements `PackageManager` with `specifyDeps` (lockfile generation + version pinning) and `install` (node_modules population) as described above.
+- Unit tests for `PnpmPackageManagerAdapter` verify that the correct commands are invoked in order, that `package.json` is updated with exact versions after `specifyDeps`, and that failures surface as `PackageInstallError`.
+- The create handler calls `packageManager.specifyDeps(targetDirectory)` then `packageManager.install(targetDirectory)` for Node.js scaffolds only; static scaffolds skip both steps.
 - `package.json` in a Node.js scaffold contains no range specifiers after `universe create` completes.
 
 ---
@@ -173,4 +197,4 @@ Exit codes must be distinct from all existing codes defined in `design/prd.md`.
 - `--no-git` flag to skip repo initialisation (deferred pending feedback).
 - `git config` management — developer's global config is assumed.
 - Lockfile generation without running `pnpm install`.
-- pnpm `allowBuilds` configuration (can be added to `.npmrc` template later as trusted packages are identified).
+- pnpm `allowedDeprecatedVersions` or `allowBuilds` configuration (can be added to `pnpm-workspace.yaml` later as trusted packages are identified).
