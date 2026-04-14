@@ -130,6 +130,10 @@ describe(handleCreate, () => {
             return Promise.resolve();
           },
         },
+        packageManager: {
+          install: (_dir: string) => Promise.resolve(),
+          specifyDeps: (_dir: string) => Promise.resolve(),
+        },
         prompt: {
           promptForCreateInputs() {
             return Promise.resolve(createPromptResult);
@@ -180,6 +184,14 @@ describe(handleCreate, () => {
             return Promise.reject(new Error("filesystemWriter not used in this test"));
           },
         },
+        packageManager: {
+          install: (_dir: never): never => {
+            throw new Error("packageManager not used in this test");
+          },
+          specifyDeps: (_dir: never): never => {
+            throw new Error("packageManager not used in this test");
+          },
+        },
         prompt: {
           promptForCreateInputs() {
             return Promise.resolve(null);
@@ -222,6 +234,14 @@ describe(handleCreate, () => {
               throw new Error("filesystemWriter not used in this test");
             },
           },
+          packageManager: {
+            install: (_dir: never): never => {
+              throw new Error("packageManager not used in this test");
+            },
+            specifyDeps: (_dir: never): never => {
+              throw new Error("packageManager not used in this test");
+            },
+          },
           prompt: {
             promptForCreateInputs() {
               return Promise.resolve(createPromptResult);
@@ -261,6 +281,14 @@ describe(handleCreate, () => {
               return Promise.reject(
                 new ScaffoldWriteError(targetDirectory, new Error("disk full")),
               );
+            },
+          },
+          packageManager: {
+            install: (_dir: never): never => {
+              throw new Error("packageManager not used in this test");
+            },
+            specifyDeps: (_dir: never): never => {
+              throw new Error("packageManager not used in this test");
             },
           },
           prompt: {

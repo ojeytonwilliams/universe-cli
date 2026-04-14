@@ -2,6 +2,7 @@ import { StubDeployClient } from "../adapters/stub-deploy-client.js";
 import { StubListClient } from "../adapters/stub-list-client.js";
 import { StubLogsClient } from "../adapters/stub-logs-client.js";
 import { StubObservabilityClient } from "../adapters/stub-observability-client.js";
+import { StubPackageManagerAdapter } from "../adapters/stub-package-manager-adapter.js";
 import { StubPromoteClient } from "../adapters/stub-promote-client.js";
 import { StubRegistrationClient } from "../adapters/stub-registration-client.js";
 import { StubRollbackClient } from "../adapters/stub-rollback-client.js";
@@ -16,6 +17,7 @@ export const createAdapterStubs = () => ({
   listClient: new StubListClient(),
   logsClient: new StubLogsClient(),
   observability: new StubObservabilityClient(),
+  packageManager: new StubPackageManagerAdapter(),
   promoteClient: new StubPromoteClient(),
   registrationClient: new StubRegistrationClient(),
   rollbackClient: new StubRollbackClient(),

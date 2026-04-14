@@ -2,14 +2,15 @@ import { join } from "node:path";
 import type { DeployClient } from "./ports/deploy-client.js";
 import type { FilesystemWriter } from "./ports/filesystem-writer.js";
 import type { ListClient } from "./ports/list-client.js";
+import type { PackageManager } from "./ports/package-manager.js";
 import type { PromoteClient } from "./ports/promote-client.js";
 import type { Prompt } from "./ports/prompt.js";
+import type { ProjectReaderPort } from "./ports/project-reader.js";
+import type { RegistrationClient } from "./ports/registration-client.js";
 import type { RollbackClient } from "./ports/rollback-client.js";
 import type { StatusClient } from "./ports/status-client.js";
 import type { TeardownClient } from "./ports/teardown-client.js";
 import type { LogsClient } from "./ports/logs-client.js";
-import type { ProjectReaderPort } from "./ports/project-reader.js";
-import type { RegistrationClient } from "./ports/registration-client.js";
 import type { LayerComposer } from "./services/layer-composition-service.js";
 import type {
   PlatformManifest,
@@ -33,6 +34,7 @@ interface Adapters {
   filesystemWriter: FilesystemWriter;
   listClient: ListClient;
   logsClient: LogsClient;
+  packageManager: PackageManager;
   projectReader: ProjectReaderPort;
   promoteClient: PromoteClient;
   prompt: Prompt;
@@ -59,7 +61,7 @@ const handleCreate = async (
   cwd: string,
   deps: {
     services: Pick<Services, "layerResolver" | "platformManifestGenerator" | "validator">;
-    adapters: Pick<Adapters, "filesystemWriter" | "prompt">;
+    adapters: Pick<Adapters, "filesystemWriter" | "packageManager" | "prompt">;
   },
 ): Promise<HandlerResult> => {
   const { services, adapters } = deps;
@@ -79,6 +81,11 @@ const handleCreate = async (
   };
 
   await adapters.filesystemWriter.writeProject(targetDirectory, projectFiles);
+
+  if (validatedInput.runtime === "node_ts") {
+    await adapters.packageManager.specifyDeps(targetDirectory);
+    await adapters.packageManager.install(targetDirectory);
+  }
 
   return { exitCode: 0, output: `Scaffolded project at ${targetDirectory}` };
 };

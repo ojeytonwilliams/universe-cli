@@ -33,32 +33,32 @@ Requirements reference: `plans/universe-cli/create-extension-prd.md`
 
 ## Phase 3 — PackageManager port and pnpm adapter (FR-15)
 
-- [ ] CODE: Define PackageManager port and error type
-  - Feature: typed port interface for package manager install operations
+- [x] CODE: Define PackageManager port and error type
+  - Feature: typed port interface for package manager operations
   - Files: `src/ports/package-manager.ts`, `src/errors/cli-errors.ts`
   - Acceptance:
-    - `PackageManager` interface exported from `src/ports/package-manager.ts` with method `install(projectDirectory: string): Promise<void>`
+    - `PackageManager` interface exported from `src/ports/package-manager.ts` with two methods: `specifyDeps(projectDirectory: string): Promise<void>` and `install(projectDirectory: string): Promise<void>`
     - `PackageInstallError` exported from `src/errors/cli-errors.ts` as a `CliError` subclass with a unique exit code not used by any existing error
     - `pnpm test` and `pnpm lint` pass
 
-- [ ] CODE: Implement PnpmPackageManagerAdapter
-  - Feature: pnpm-backed install adapter that pins exact versions into `package.json` after install
+- [x] CODE: Implement PnpmPackageManagerAdapter
+  - Feature: pnpm-backed adapter that pins exact versions and installs dependencies
   - Files: `src/adapters/pnpm-package-manager-adapter.ts`, `src/adapters/pnpm-package-manager-adapter.test.ts`
   - Acceptance:
-    - `PnpmPackageManagerAdapter.install(dir)` performs three steps in sequence: (1) runs `pnpm install` in `dir`, (2) reads exact resolved versions of all direct dependencies from the generated `pnpm-lock.yaml`, (3) overwrites the version values in `package.json` with the exact resolved versions (e.g. `"^5"` becomes `"5.1.2"`)
-    - After `install` completes, `package.json` contains no range specifiers — all dependency versions are exact
-    - When any step exits non-zero or fails, `install` rejects with `PackageInstallError`
-    - Unit tests verify: correct pnpm command is invoked; `package.json` is updated with versions read from the lockfile; a non-zero exit from pnpm produces `PackageInstallError` (using a test double for the subprocess mechanism and filesystem reads, not a real pnpm call)
+    - `PnpmPackageManagerAdapter.specifyDeps(dir)` performs three steps in sequence: (1) runs `pnpm install --lockfile-only` in `dir` (resolves versions respecting `.npmrc` constraints including `minimumReleaseAge`, writes lockfile, no `node_modules`), (2) runs `pnpm list --json --depth=0 --lockfile-only` to read exact resolved versions of all direct dependencies, (3) overwrites the version values in `package.json` with the exact resolved versions (e.g. `"^5"` becomes `"5.1.2"`)
+    - `PnpmPackageManagerAdapter.install(dir)` runs `pnpm install` in `dir` (populates `node_modules` from the already-pinned `package.json`)
+    - When any command exits non-zero or fails, the method rejects with `PackageInstallError`
+    - Unit tests verify: correct pnpm commands are invoked for each method; `package.json` is updated with versions read from `pnpm list` output; a non-zero exit from pnpm produces `PackageInstallError` (using a test double for the subprocess mechanism and filesystem reads, not a real pnpm call)
     - `pnpm test` and `pnpm lint` pass
 
-- [ ] CODE: Wire PackageManager into container and create handler
-  - Feature: create handler calls `packageManager.install` for Node.js scaffolds
-  - Files: `src/container.ts`, `src/commands.ts`
+- [x] CODE: Wire PackageManager into bin and create handler
+  - Feature: create handler calls `packageManager.specifyDeps` then `packageManager.install` for Node.js scaffolds
+  - Files: `src/bin.ts`, `src/commands.ts`
   - Acceptance:
-    - `PnpmPackageManagerAdapter` is wired in `src/container.ts` and the spike-guard test asserts it
+    - `PnpmPackageManagerAdapter` is wired in `src/bin.ts`
     - `Adapters` type in `src/commands.ts` includes `packageManager: PackageManager`
-    - The create handler calls `packageManager.install(targetDirectory)` after `filesystemWriter.writeProject` and only when the selected runtime is Node.js (not static)
-    - Integration tests inject an inline `PackageManager` test double and still pass
+    - The create handler calls `packageManager.specifyDeps(targetDirectory)` then `packageManager.install(targetDirectory)` after `filesystemWriter.writeProject` and only when the selected runtime is Node.js (not static)
+    - `commands.test.ts` injects an inline `PackageManager` test double and still passes
     - `pnpm test` passes
 
 ---
@@ -82,11 +82,11 @@ Requirements reference: `plans/universe-cli/create-extension-prd.md`
     - Unit tests verify correct command sequence and that any non-zero exit produces `RepoInitialisationError` (using a test double for subprocess, not a real git call)
     - `pnpm test` and `pnpm lint` pass
 
-- [ ] CODE: Wire RepoInitialiser into container and create handler
+- [ ] CODE: Wire RepoInitialiser into bin and create handler
   - Feature: create handler calls `repoInitialiser.initialise` for all scaffold types
-  - Files: `src/container.ts`, `src/commands.ts`
+  - Files: `src/bin.ts`, `src/commands.ts`
   - Acceptance:
-    - `GitRepoInitialiserAdapter` is wired in `src/container.ts` and the spike-guard test asserts it
+    - `GitRepoInitialiserAdapter` is wired in `src/bin.ts`
     - `Adapters` type includes `repoInitialiser: RepoInitialiser`
     - The create handler calls `repoInitialiser.initialise(targetDirectory)` after `packageManager.install` (for Node.js) or after `filesystemWriter.writeProject` (for static)
     - `PackageInstallError` propagates without calling `repoInitialiser.initialise`

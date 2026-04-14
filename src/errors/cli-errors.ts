@@ -7,6 +7,7 @@ const EXIT_CODES = {
   LIST: 15,
   LOGS: 13,
   MANIFEST: 8,
+  PACKAGE_INSTALL: 19,
   PROMOTION: 11,
   REGISTRATION: 9,
   ROLLBACK: 12,
@@ -197,8 +198,19 @@ class TeardownError extends CliError {
   }
 }
 
+class PackageInstallError extends CliError {
+  constructor(reason: string) {
+    super(`Package installation failed: ${reason}`, EXIT_CODES.PACKAGE_INSTALL);
+    this.name = "PackageInstallError";
+  }
+}
+
 export {
+  BadArgumentsError,
   CliError,
+  CreateUnsupportedCombinationError,
+  CreateUnsupportedFrameworkError,
+  CreateUnsupportedRuntimeError,
   DeploymentError,
   InvalidMultiSelectError,
   InvalidNameError,
@@ -206,9 +218,9 @@ export {
   ListError,
   LogsError,
   ManifestInvalidError,
-  BadArgumentsError,
   ManifestNotFoundError,
   MissingLayerError,
+  PackageInstallError,
   PromotionError,
   RegistrationError,
   RollbackError,
@@ -216,7 +228,4 @@ export {
   StatusError,
   TargetDirectoryExistsError,
   TeardownError,
-  CreateUnsupportedCombinationError,
-  CreateUnsupportedFrameworkError,
-  CreateUnsupportedRuntimeError,
 };

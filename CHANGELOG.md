@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.0.4] - 2026-04-14
+
+### Add PackageManager port and PnpmPackageManagerAdapter
+
+The `create` command now manages Node.js dependencies via a `PackageManager` port with two methods: `specifyDeps` and `install`. `specifyDeps` runs `pnpm install --lockfile-only` (respecting `.npmrc` constraints including `minimumReleaseAge`), reads the exact resolved versions with `pnpm list --json --depth=0 --lockfile-only`, and pins them into `package.json` — replacing `^major` ranges with exact versions. `install` then populates `node_modules` from the pinned manifest. The separation makes installation optional without affecting version pinning. `PnpmPackageManagerAdapter` wires these commands via an injectable subprocess runner, tested with synchronous test doubles without invoking real pnpm.
+
 ## [3.0.3] - 2026-04-14
 
 ### Add pnpm supply chain security artefacts to Node.js scaffold

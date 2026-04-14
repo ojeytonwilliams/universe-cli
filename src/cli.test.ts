@@ -141,6 +141,11 @@ const defaultManifest: PlatformManifest = {
   stack: "app",
 };
 
+const defaultPackageManager = {
+  install: (_dir: string) => Promise.resolve(),
+  specifyDeps: (_dir: string) => Promise.resolve(),
+};
+
 const createDeps = (
   prompt: Prompt,
   validator: { validateCreateInput(input: CreateSelections): CreateSelections },
@@ -151,6 +156,7 @@ const createDeps = (
     filesystemWriter,
     listClient: defaultListClient,
     logsClient: defaultLogsClient,
+    packageManager: defaultPackageManager,
     projectReader: defaultProjectReader,
     promoteClient: defaultPromoteClient,
     prompt,
