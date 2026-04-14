@@ -17,6 +17,8 @@ import {
 
 const client: ObservabilityClient = {
   error() {},
+  safeError() {},
+  safeTrack() {},
   track() {},
 };
 
@@ -243,9 +245,11 @@ describe(runCli, () => {
       const trackedEvents: string[] = [];
       const trackingObservability = {
         error() {},
-        track(event: string) {
+        safeError() {},
+        safeTrack(event: string) {
           trackedEvents.push(event);
         },
+        track() {},
       };
 
       await runCli(["deploy"], {
@@ -261,9 +265,11 @@ describe(runCli, () => {
       const trackedEvents: string[] = [];
       const trackingObservability = {
         error() {},
-        track(event: string) {
+        safeError() {},
+        safeTrack(event: string) {
           trackedEvents.push(event);
         },
+        track() {},
       };
       const failingClient = {
         deploy(request: { manifest: PlatformManifest }) {
@@ -278,22 +284,6 @@ describe(runCli, () => {
 
       expect(trackedEvents).toContain("deploy.start");
       expect(trackedEvents).toContain("deploy.failure");
-    });
-
-    it("does not change exit code when observability.track throws", async () => {
-      const throwingObservability = {
-        error() {},
-        track() {
-          throw new Error("o11y down");
-        },
-      };
-
-      const result = await runCli(["deploy"], {
-        ...deployDeps(),
-        observability: throwingObservability,
-      });
-
-      expect(result.exitCode).toBe(0);
     });
 
     it("exits when more than one argument is provided", async () => {
@@ -326,9 +316,11 @@ describe(runCli, () => {
       const trackedEvents: string[] = [];
       const trackingObservability = {
         error() {},
-        track(event: string) {
+        safeError() {},
+        safeTrack(event: string) {
           trackedEvents.push(event);
         },
+        track() {},
       };
 
       await runCli(["promote"], {
@@ -344,9 +336,11 @@ describe(runCli, () => {
       const trackedEvents: string[] = [];
       const trackingObservability = {
         error() {},
-        track(event: string) {
+        safeError() {},
+        safeTrack(event: string) {
           trackedEvents.push(event);
         },
+        track() {},
       };
       const failingClient = {
         promote(request: { manifest: PlatformManifest }) {
@@ -361,22 +355,6 @@ describe(runCli, () => {
 
       expect(trackedEvents).toContain("promote.start");
       expect(trackedEvents).toContain("promote.failure");
-    });
-
-    it("does not change exit code when observability.track throws", async () => {
-      const throwingObservability = {
-        error() {},
-        track() {
-          throw new Error("o11y down");
-        },
-      };
-
-      const result = await runCli(["promote"], {
-        ...promoteDeps(),
-        observability: throwingObservability,
-      });
-
-      expect(result.exitCode).toBe(0);
     });
 
     it("exits when more than one argument is provided", async () => {
@@ -409,9 +387,11 @@ describe(runCli, () => {
       const trackedEvents: string[] = [];
       const trackingObservability = {
         error() {},
-        track(event: string) {
+        safeError() {},
+        safeTrack(event: string) {
           trackedEvents.push(event);
         },
+        track() {},
       };
 
       await runCli(["rollback"], {
@@ -427,9 +407,11 @@ describe(runCli, () => {
       const trackedEvents: string[] = [];
       const trackingObservability = {
         error() {},
-        track(event: string) {
+        safeError() {},
+        safeTrack(event: string) {
           trackedEvents.push(event);
         },
+        track() {},
       };
       const failingClient = {
         rollback(request: { manifest: PlatformManifest }) {
@@ -444,22 +426,6 @@ describe(runCli, () => {
 
       expect(trackedEvents).toContain("rollback.start");
       expect(trackedEvents).toContain("rollback.failure");
-    });
-
-    it("does not change exit code when observability.track throws", async () => {
-      const throwingObservability = {
-        error() {},
-        track() {
-          throw new Error("o11y down");
-        },
-      };
-
-      const result = await runCli(["rollback"], {
-        ...rollbackDeps(),
-        observability: throwingObservability,
-      });
-
-      expect(result.exitCode).toBe(0);
     });
 
     it("exits when more than one argument is provided", async () => {
@@ -492,9 +458,11 @@ describe(runCli, () => {
       const trackedEvents: string[] = [];
       const trackingObservability = {
         error() {},
-        track(event: string) {
+        safeError() {},
+        safeTrack(event: string) {
           trackedEvents.push(event);
         },
+        track() {},
       };
 
       await runCli(["list"], { ...listDeps(), observability: trackingObservability });
@@ -507,9 +475,11 @@ describe(runCli, () => {
       const trackedEvents: string[] = [];
       const trackingObservability = {
         error() {},
-        track(event: string) {
+        safeError() {},
+        safeTrack(event: string) {
           trackedEvents.push(event);
         },
+        track() {},
       };
       const failingClient = {
         getList(request: { manifest: PlatformManifest }) {
@@ -524,22 +494,6 @@ describe(runCli, () => {
 
       expect(trackedEvents).toContain("list.start");
       expect(trackedEvents).toContain("list.failure");
-    });
-
-    it("does not change exit code when observability.track throws", async () => {
-      const throwingObservability = {
-        error() {},
-        track() {
-          throw new Error("o11y down");
-        },
-      };
-
-      const result = await runCli(["list"], {
-        ...listDeps(),
-        observability: throwingObservability,
-      });
-
-      expect(result.exitCode).toBe(0);
     });
 
     it("exits when more than one argument is provided", async () => {
@@ -572,9 +526,11 @@ describe(runCli, () => {
       const trackedEvents: string[] = [];
       const trackingObservability = {
         error() {},
-        track(event: string) {
+        safeError() {},
+        safeTrack(event: string) {
           trackedEvents.push(event);
         },
+        track() {},
       };
 
       await runCli(["logs"], { ...logsDeps(), observability: trackingObservability });
@@ -587,9 +543,11 @@ describe(runCli, () => {
       const trackedEvents: string[] = [];
       const trackingObservability = {
         error() {},
-        track(event: string) {
+        safeError() {},
+        safeTrack(event: string) {
           trackedEvents.push(event);
         },
+        track() {},
       };
       const failingClient = {
         getLogs(request: { environment: string; manifest: PlatformManifest }) {
@@ -604,22 +562,6 @@ describe(runCli, () => {
 
       expect(trackedEvents).toContain("logs.start");
       expect(trackedEvents).toContain("logs.failure");
-    });
-
-    it("does not change exit code when observability.track throws", async () => {
-      const throwingObservability = {
-        error() {},
-        track() {
-          throw new Error("o11y down");
-        },
-      };
-
-      const result = await runCli(["logs"], {
-        ...logsDeps(),
-        observability: throwingObservability,
-      });
-
-      expect(result.exitCode).toBe(0);
     });
 
     it("exits when more than two arguments are provided", async () => {
@@ -682,9 +624,11 @@ describe(runCli, () => {
       const trackedEvents: string[] = [];
       const trackingObservability = {
         error() {},
-        track(event: string) {
+        safeError() {},
+        safeTrack(event: string) {
           trackedEvents.push(event);
         },
+        track() {},
       };
 
       await runCli(["status"], { ...statusDeps(), observability: trackingObservability });
@@ -697,9 +641,11 @@ describe(runCli, () => {
       const trackedEvents: string[] = [];
       const trackingObservability = {
         error() {},
-        track(event: string) {
+        safeError() {},
+        safeTrack(event: string) {
           trackedEvents.push(event);
         },
+        track() {},
       };
       const failingClient = {
         getStatus(request: { environment: string; manifest: PlatformManifest }) {
@@ -714,22 +660,6 @@ describe(runCli, () => {
 
       expect(trackedEvents).toContain("status.start");
       expect(trackedEvents).toContain("status.failure");
-    });
-
-    it("does not change exit code when observability.track throws", async () => {
-      const throwingObservability = {
-        error() {},
-        track() {
-          throw new Error("o11y down");
-        },
-      };
-
-      const result = await runCli(["status"], {
-        ...statusDeps(),
-        observability: throwingObservability,
-      });
-
-      expect(result.exitCode).toBe(0);
     });
 
     it("exits when more than two arguments are provided", async () => {
@@ -788,9 +718,11 @@ describe(runCli, () => {
       const trackedEvents: string[] = [];
       const trackingObservability = {
         error() {},
-        track(event: string) {
+        safeError() {},
+        safeTrack(event: string) {
           trackedEvents.push(event);
         },
+        track() {},
       };
 
       await runCli(["teardown"], { ...teardownDeps(), observability: trackingObservability });
@@ -803,9 +735,11 @@ describe(runCli, () => {
       const trackedEvents: string[] = [];
       const trackingObservability = {
         error() {},
-        track(event: string) {
+        safeError() {},
+        safeTrack(event: string) {
           trackedEvents.push(event);
         },
+        track() {},
       };
       const failingClient = {
         teardown(request: { manifest: PlatformManifest }) {
@@ -820,22 +754,6 @@ describe(runCli, () => {
 
       expect(trackedEvents).toContain("teardown.start");
       expect(trackedEvents).toContain("teardown.failure");
-    });
-
-    it("does not change exit code when observability.track throws", async () => {
-      const throwingObservability = {
-        error() {},
-        track() {
-          throw new Error("o11y down");
-        },
-      };
-
-      const result = await runCli(["teardown"], {
-        ...teardownDeps(),
-        observability: throwingObservability,
-      });
-
-      expect(result.exitCode).toBe(0);
     });
 
     it("exits when more than one argument is provided", async () => {

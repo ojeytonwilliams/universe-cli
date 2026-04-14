@@ -1,5 +1,4 @@
 import { BadArgumentsError, CliError } from "./errors/cli-errors.js";
-import { safeError, safeTrack } from "./ports/observability-client.js";
 import type { ObservabilityClient } from "./ports/observability-client.js";
 import {
   handleCreate,
@@ -166,17 +165,17 @@ const runCli = async (argv: string[], deps: CliDependencies): Promise<CliResult>
       );
     }
 
-    safeTrack(observability, `${command}.start`, ctx);
+    observability.safeTrack(`${command}.start`, ctx);
 
     const result = await def.handler(argv, deps.cwd, deps);
     if (result.exitCode === 0) {
-      safeTrack(observability, `${command}.success`, { ...ctx, ...result.meta });
+      observability.safeTrack(`${command}.success`, { ...ctx, ...result.meta });
     }
     return { exitCode: result.exitCode, output: result.output };
   } catch (error) {
     if (error instanceof CliError) {
-      safeError(observability, error);
-      safeTrack(observability, `${command}.failure`, ctx);
+      observability.safeError(error);
+      observability.safeTrack(`${command}.failure`, ctx);
       return { exitCode: error.exitCode, output: error.message };
     }
     throw error;

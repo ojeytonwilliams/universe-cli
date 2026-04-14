@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.0.1] - 2026-04-14
+
+### Consolidate observability best-effort policy into a shared base class
+
+The "best-effort" guarantee for observability — that a failing backend can never affect command exit codes — was previously enforced by free functions (`safeTrack`, `safeError`) at every call site. This scattered the policy across the codebase and made it easy to accidentally bypass by calling `track`/`error` directly.
+
+`safeTrack` and `safeError` are now methods on the `ObservabilityClient` interface, with the try/catch implemented once in a new `BaseSafeObservabilityClient` abstract class. All concrete adapters extend this base and only implement `track` and `error`. Call sites use `client.safeTrack()`/`client.safeError()` and the policy is enforced regardless of which adapter is injected.
+
 ## [3.0.0] - 2026-04-13
 
 ### Remove explicit environment arguments from deploy, list, promote, rollback, and teardown

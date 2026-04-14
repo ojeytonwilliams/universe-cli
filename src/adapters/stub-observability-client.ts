@@ -1,6 +1,6 @@
-import type { ObservabilityClient } from "../ports/observability-client.js";
+import { BaseSafeObservabilityClient } from "./base-safe-observability-client.js";
 
-class StubObservabilityClient implements ObservabilityClient {
+class StubObservabilityClient extends BaseSafeObservabilityClient {
   track(_event: string, _properties?: Record<string, unknown>): void {
     // No-op stub
   }
