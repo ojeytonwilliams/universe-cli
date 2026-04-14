@@ -1,112 +1,128 @@
-# TODO
+# Create Command Extension — TODO
 
-Scope note: `logs` and `status` still genuinely operate against a selected environment. The removal below applies only to `deploy`, `list`, `promote`, `rollback`, and `teardown`, where the environment is implicit in the command semantics.
+Requirements reference: `plans/universe-cli/create-extension-prd.md`
 
-## Phase 1: Remove explicit environment args from command entrypoints
+---
 
-- [x] CODE: Remove explicit environment parsing from the five affected handlers
-  - Feature: `deploy`, `list`, `promote`, `rollback`, and `teardown` no longer parse or validate `argv[2]` as `environment`/`targetEnvironment`
-  - Files: src/commands.ts
+## Phase 1 — Centralize dependency versions and update to major ranges (FR-13, FR-14 partial)
+
+- [ ] CODE: Extract dependency versions to a centralized config and update docker-compose to use pnpm
+  - Feature: all version intent strings live in one file as major-version ranges; `docker-compose.dev.yml` uses pnpm
+  - Files: `src/services/layers/dependency-versions.ts` (new), `src/services/layers/base-node-js-typescript-layer.ts`, `src/services/layers/frameworks-layer.ts`
   - Acceptance:
-    - Too-many-args guards change from `argv.length > 3` to `argv.length > 2` for all 5 commands
-    - Usage strings become:
-      - `universe deploy [directory]`
-      - `universe list [directory]`
-      - `universe promote [directory]`
-      - `universe rollback [directory]`
-      - `universe teardown [directory]`
-    - `const environment = argv[2]` / `const targetEnvironment = argv[2]` lines are deleted
-    - Preview/production validation blocks are deleted for those 5 commands
-    - Fixed command semantics are expressed in the handler body instead of via argv:
-      - `deploy` uses preview
-      - `list` uses preview
-      - `promote` uses production
-      - `rollback` uses production
-      - `teardown` does not accept an environment selector
+    - `src/services/layers/dependency-versions.ts` exports a single const object mapping each dependency name to a `^major` range (e.g. `"express": "^5"`, `"typescript": "^5"`)
+    - `base-node-js-typescript-layer.ts` imports version strings from `dependency-versions.ts`; no hardcoded version string remains in the file
+    - `frameworks-layer.ts` imports version strings from `dependency-versions.ts`; no hardcoded version string remains in the file
+    - `docker-compose.dev.yml` template uses `pnpm install && pnpm dev` instead of npm equivalents
+    - `pnpm test` passes (snapshot tests updated to reflect range version strings and docker-compose change; exact version pinning is deferred to Phase 3)
 
-- [x] CODE: Remove environment context wiring from CLI command definitions
-  - Feature: observability for the 5 affected commands no longer includes synthetic `environment` or `targetEnvironment` context derived from argv
-  - Files: src/cli.ts
+---
+
+## Phase 2 — pnpm supply chain security scaffold artefacts (FR-14)
+
+- [ ] CODE: Add `.npmrc` and `only-allow` enforcement to Node.js scaffold
+  - Feature: generated Node.js projects include pnpm security hardening files
+  - Files: `src/services/layers/base-node-js-typescript-layer.ts`
   - Acceptance:
-    - `context` is removed from the `deploy`, `list`, `promote`, `rollback`, and `teardown` entries in `COMMANDS`
-    - `safeTrack()` receives `{}` for those commands unless handler metadata adds something else later
-    - `logs` and `status` keep their existing environment context wiring
+    - Generated `.npmrc` contains `blockExoticSubdeps=true`, `minimumReleaseAge=1440`, `trustPolicy=no-downgrade`, and `engine-strict=true` on separate lines
+    - Generated `package.json` includes `"preinstall": "npx only-allow pnpm"` in `scripts`
+    - Static scaffold (`base-static-layer.ts`) is not modified and generates no `.npmrc`
+    - `pnpm test` passes (integration test snapshots updated to include `.npmrc` and the `preinstall` script)
 
-## Phase 2: Remove environment from affected port contracts end-to-end
+---
 
-- [x] CODE: Remove environment fields from request types
-  - Feature: affected request contracts carry only the manifest because the command semantics already fix the target environment
-  - Files: src/ports/deploy-client.ts, src/ports/list-client.ts, src/ports/promote-client.ts, src/ports/rollback-client.ts, src/ports/teardown-client.ts
+## Phase 3 — PackageManager port and pnpm adapter (FR-15)
+
+- [ ] CODE: Define PackageManager port and error type
+  - Feature: typed port interface for package manager install operations
+  - Files: `src/ports/package-manager.ts`, `src/errors/cli-errors.ts`
   - Acceptance:
-    - `DeployRequest`, `ListRequest`, `PromoteRequest`, `RollbackRequest`, and `TeardownRequest` are each `{ manifest: PlatformManifest }`
-    - No affected handler passes `environment` or `targetEnvironment` to those clients anymore
+    - `PackageManager` interface exported from `src/ports/package-manager.ts` with method `install(projectDirectory: string): Promise<void>`
+    - `PackageInstallError` exported from `src/errors/cli-errors.ts` as a `CliError` subclass with a unique exit code not used by any existing error
+    - `pnpm test` and `pnpm lint` pass
 
-- [x] CODE: Remove environment fields from response/receipt types
-  - Feature: the implicit environment no longer flows back through the port layer either
-  - Files: src/ports/deploy-client.ts, src/ports/list-client.ts, src/ports/promote-client.ts, src/ports/rollback-client.ts, src/ports/teardown-client.ts, src/commands.ts
+- [ ] CODE: Implement PnpmPackageManagerAdapter
+  - Feature: pnpm-backed install adapter that pins exact versions into `package.json` after install
+  - Files: `src/adapters/pnpm-package-manager-adapter.ts`, `src/adapters/pnpm-package-manager-adapter.test.ts`
   - Acceptance:
-    - `DeployReceipt` no longer has `environment`
-    - `ListResponse` no longer has `environment`
-    - `PromoteReceipt`, `RollbackReceipt`, and `TeardownReceipt` no longer have `targetEnvironment`
-    - Any user-facing output that still mentions preview/production is produced from fixed command semantics in `src/commands.ts`, not from adapter return values
+    - `PnpmPackageManagerAdapter.install(dir)` performs three steps in sequence: (1) runs `pnpm install` in `dir`, (2) reads exact resolved versions of all direct dependencies from the generated `pnpm-lock.yaml`, (3) overwrites the version values in `package.json` with the exact resolved versions (e.g. `"^5"` becomes `"5.1.2"`)
+    - After `install` completes, `package.json` contains no range specifiers — all dependency versions are exact
+    - When any step exits non-zero or fails, `install` rejects with `PackageInstallError`
+    - Unit tests verify: correct pnpm command is invoked; `package.json` is updated with versions read from the lockfile; a non-zero exit from pnpm produces `PackageInstallError` (using a test double for the subprocess mechanism and filesystem reads, not a real pnpm call)
+    - `pnpm test` and `pnpm lint` pass
 
-## Phase 3: Update stub adapters to match the simplified contracts
-
-- [x] CODE: Simplify affected stub adapters
-  - Feature: stub clients stop branching on request environment/targetEnvironment because that input no longer exists
-  - Files: src/adapters/stub-deploy-client.ts, src/adapters/stub-list-client.ts, src/adapters/stub-promote-client.ts, src/adapters/stub-rollback-client.ts, src/adapters/stub-teardown-client.ts
+- [ ] CODE: Wire PackageManager into container and create handler
+  - Feature: create handler calls `packageManager.install` for Node.js scaffolds
+  - Files: `src/container.ts`, `src/commands.ts`
   - Acceptance:
-    - Stub adapter method parameters match the new request contracts
-    - Returned objects match the new receipt/response contracts
-    - Per-environment counter keys are replaced with project-scoped deterministic behaviour where needed
-    - Generated IDs no longer require caller-supplied environment input
+    - `PnpmPackageManagerAdapter` is wired in `src/container.ts` and the spike-guard test asserts it
+    - `Adapters` type in `src/commands.ts` includes `packageManager: PackageManager`
+    - The create handler calls `packageManager.install(targetDirectory)` after `filesystemWriter.writeProject` and only when the selected runtime is Node.js (not static)
+    - Integration tests inject an inline `PackageManager` test double and still pass
+    - `pnpm test` passes
 
-- [x] CODE: Rewrite adapter unit tests for the five affected stubs
-  - Feature: adapter tests assert the new implicit-environment behaviour instead of exercising environment permutations that no longer exist
-  - Files: src/adapters/stub-deploy-client.test.ts, src/adapters/stub-list-client.test.ts, src/adapters/stub-promote-client.test.ts, src/adapters/stub-rollback-client.test.ts, src/adapters/stub-teardown-client.test.ts
+---
+
+## Phase 4 — RepoInitialiser port and git adapter (FR-16)
+
+- [ ] CODE: Define RepoInitialiser port and error type
+  - Feature: typed port interface for repository initialisation
+  - Files: `src/ports/repo-initialiser.ts`, `src/errors/cli-errors.ts`
   - Acceptance:
-    - Tests no longer call the affected adapters with `environment`/`targetEnvironment`
-    - Tests that assert independent counters per environment are removed or replaced with project-scoped expectations
-    - Success-path assertions use the new receipt/response shapes
+    - `RepoInitialiser` interface exported from `src/ports/repo-initialiser.ts` with method `initialise(projectDirectory: string): Promise<void>`
+    - `RepoInitialisationError` exported from `src/errors/cli-errors.ts` as a `CliError` subclass with a unique exit code not used by any existing error (including `PackageInstallError`)
+    - `pnpm test` and `pnpm lint` pass
 
-## Phase 4: Update command and CLI tests across all affected commands
-
-- [x] CODE: Update shared CLI coverage for `deploy`, `promote`, and `rollback`
-  - Feature: top-level command tests in `src/cli.test.ts` stop asserting removed environment argument behaviour
-  - Files: src/cli.test.ts
+- [ ] CODE: Implement GitRepoInitialiserAdapter
+  - Feature: git-backed repo initialiser adapter
+  - Files: `src/adapters/git-repo-initialiser-adapter.ts`, `src/adapters/git-repo-initialiser-adapter.test.ts`
   - Acceptance:
-    - Invalid-environment tests are removed for `deploy`, `promote`, and `rollback`
-    - "defaults to preview/production when omitted" tests are removed for those commands
-    - Too-many-args cases become `['cmd', '/dir', 'extra']`
-    - Test doubles for the affected clients use manifest-only request types and the simplified receipt/response shapes
+    - `GitRepoInitialiserAdapter.initialise(dir)` runs `git init`, `git add .`, and `git commit -m "chore: initial commit"` in `dir`, in that order
+    - When any command exits non-zero, `initialise` rejects with `RepoInitialisationError`
+    - Unit tests verify correct command sequence and that any non-zero exit produces `RepoInitialisationError` (using a test double for subprocess, not a real git call)
+    - `pnpm test` and `pnpm lint` pass
 
-- [x] CODE: Update dedicated CLI coverage for `list` and `teardown`
-  - Feature: command-specific suites align with manifest-only requests and implicit environments
-  - Files: src/cli.list.test.ts, src/cli.teardown.test.ts
+- [ ] CODE: Wire RepoInitialiser into container and create handler
+  - Feature: create handler calls `repoInitialiser.initialise` for all scaffold types
+  - Files: `src/container.ts`, `src/commands.ts`
   - Acceptance:
-    - Invalid-environment and default-environment tests are removed
-    - Too-many-args cases become `['list', '/dir', 'extra']` and `['teardown', '/dir', 'extra']`
-    - Stubbed client signatures and expectations drop `environment`/`targetEnvironment`
+    - `GitRepoInitialiserAdapter` is wired in `src/container.ts` and the spike-guard test asserts it
+    - `Adapters` type includes `repoInitialiser: RepoInitialiser`
+    - The create handler calls `repoInitialiser.initialise(targetDirectory)` after `packageManager.install` (for Node.js) or after `filesystemWriter.writeProject` (for static)
+    - `PackageInstallError` propagates without calling `repoInitialiser.initialise`
+    - Integration tests inject an inline `RepoInitialiser` test double and still pass
+    - `pnpm test` passes
 
-- [x] CODE: Update observability assertions for the five affected commands
-  - Feature: tests stop expecting environment context on `*.start`, `*.success`, and `*.failure` events for the simplified commands
-  - Files: src/cli.test.ts, src/cli.list.test.ts, src/cli.teardown.test.ts
+---
+
+## Phase 5 — Integration tests and validation (FR-17)
+
+- [ ] CODE: Update integration tests to cover the extended create flow
+  - Feature: integration tests reflect the full Phase 1–4 create flow using inline test doubles for the new adapters
+  - Files: `src/integration-tests/create.test.ts`
   - Acceptance:
-    - No test asserts `environment`/`targetEnvironment` context for `deploy`, `list`, `promote`, `rollback`, or `teardown`
-    - Existing `logs` and `status` observability coverage remains intact
+    - Integration test helper injects inline test doubles for `packageManager` and `repoInitialiser` (e.g. `{ install: vi.fn() }`)
+    - At least one Node.js scenario asserts that `packageManager.install` is called with the correct target directory
+    - At least one static scenario asserts that `packageManager.install` is not called
+    - At least one scenario (Node.js and one Static) asserts that `repoInitialiser.initialise` is called with the correct target directory
+    - Snapshot tests still pass with updated artefacts from Phases 1–2
+    - `pnpm test` passes
 
-## Phase 5: Check integration coverage and finish validation
-
-- [x] CODE: Review integration coverage for the five affected commands
-  - Feature: end-to-end tests continue to cover the commands after the environment argument is removed from the public surface and adapter contracts
-  - Files: src/integration-tests/deploy.test.ts, src/integration-tests/list.test.ts, src/integration-tests/promote.test.ts, src/integration-tests/rollback.test.ts, src/integration-tests/teardown.test.ts, src/integration-tests/adapter-stubs.ts
-  - Acceptance:
-    - Integration helpers compile against the new port contracts
-    - No integration test invokes the affected commands with an environment argument
-    - Output assertions still reflect the intended fixed semantics where appropriate
-
-- [x] TASK: Run validation after the refactor
+- [ ] TASK: Run full validation
   - Acceptance:
     - `pnpm test` passes
     - `pnpm lint` passes
     - `pnpm check` passes
+
+---
+
+## Traceability Matrix
+
+| PRD Requirement | TODO Phase / Item                                                |
+| --------------- | ---------------------------------------------------------------- |
+| FR-13           | Phase 1 — Centralize dependency versions                         |
+| FR-14           | Phase 1 (docker-compose), Phase 2 (`.npmrc`, `only-allow`)       |
+| FR-15           | Phase 3 — PackageManager port, adapter, wiring                   |
+| FR-16           | Phase 4 — RepoInitialiser port, adapter, wiring                  |
+| FR-17           | Phase 3 & 4 (handler wiring), Phase 5 (integration tests)        |
+| Error taxonomy  | Phase 3 (PackageInstallError), Phase 4 (RepoInitialisationError) |
