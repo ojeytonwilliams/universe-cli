@@ -97,7 +97,7 @@ Requirements reference: `plans/universe-cli/create-extension-prd.md`
 
 ## Phase 5 — Integration tests and validation (FR-17)
 
-- [ ] CODE: Update integration tests to cover the extended create flow
+- [x] CODE: Update integration tests to cover the extended create flow
   - Feature: integration tests reflect the full Phase 1–4 create flow using inline test doubles for the new adapters
   - Files: `src/integration-tests/create.test.ts`
   - Acceptance:
@@ -108,7 +108,7 @@ Requirements reference: `plans/universe-cli/create-extension-prd.md`
     - Snapshot tests still pass with updated artefacts from Phases 1–2
     - `pnpm test` passes
 
-- [ ] TASK: Run full validation
+- [x] TASK: Run full validation
   - Acceptance:
     - `pnpm test` passes
     - `pnpm lint` passes

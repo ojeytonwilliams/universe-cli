@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.0.7] - 2026-04-14
+
+### Add integration test coverage for PackageManager and RepoInitialiser wiring
+
+The create integration tests now verify the full Phase 1–4 flow end-to-end. Four new test cases use `vi.fn()` inline test doubles in place of the silent stub adapters to assert that `packageManager.install` is called with the target directory for Node.js scaffolds, is not called for static scaffolds, and that `repoInitialiser.initialise` is called with the target directory for both scaffold types.
+
 ## [3.0.6] - 2026-04-14
 
 ### Move subprocess defaults into adapters and add pnpm-workspace.yaml to Node.js scaffold

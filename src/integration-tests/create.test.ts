@@ -9,7 +9,19 @@ import { CreateInputValidationService } from "../services/create-input-validatio
 import { LocalFilesystemWriter } from "../adapters/local-filesystem-writer.js";
 import { LocalProjectReader } from "../adapters/local-project-reader.js";
 import { runCli } from "../cli.js";
+import type { PackageManager } from "../ports/package-manager.js";
 import type { CreateSelections, Prompt } from "../ports/prompt.js";
+import type { RepoInitialiser } from "../ports/repo-initialiser.js";
+
+interface AdapterOverrides {
+  packageManager?: PackageManager;
+  repoInitialiser?: RepoInitialiser;
+}
+
+interface MakeDepsOptions {
+  adapterOverrides?: AdapterOverrides;
+  layerRegistry?: LayerRegistry;
+}
 
 const createPromptPort = (selection: CreateSelections | null): Prompt => ({
   promptForCreateInputs() {
@@ -71,7 +83,8 @@ const collectGeneratedFiles = (directory: string): Record<string, string> => {
   );
 };
 
-const makeDeps = (cwd: string, prompt: Prompt, layerRegistry?: LayerRegistry) => {
+const makeDeps = (cwd: string, prompt: Prompt, options: MakeDepsOptions = {}) => {
+  const { adapterOverrides = {}, layerRegistry } = options;
   const { observability, ...adapters } = createAdapterStubs();
   return {
     adapters: {
@@ -79,6 +92,7 @@ const makeDeps = (cwd: string, prompt: Prompt, layerRegistry?: LayerRegistry) =>
       filesystemWriter: new LocalFilesystemWriter(),
       projectReader: new LocalProjectReader(),
       prompt,
+      ...adapterOverrides,
     },
     cwd,
     observability,
@@ -240,7 +254,7 @@ describe("create", () => {
 
     const result = await runCli(
       ["create"],
-      makeDeps(rootDirectory, createPromptPort(selection), customLayers),
+      makeDeps(rootDirectory, createPromptPort(selection), { layerRegistry: customLayers }),
     );
 
     expect(result.exitCode).toBe(0);
@@ -281,7 +295,7 @@ describe("create", () => {
 
     const result = await runCli(
       ["create"],
-      makeDeps(rootDirectory, createPromptPort(selection), customLayers),
+      makeDeps(rootDirectory, createPromptPort(selection), { layerRegistry: customLayers }),
     );
 
     expect(result.exitCode).toBe(6);
@@ -353,6 +367,102 @@ describe("create", () => {
     const files = collectGeneratedFiles(join(rootDirectory, selection.name));
 
     expect(files[".npmrc"]).toBeUndefined();
+  });
+
+  it("calls packageManager.install with the target directory for Node.js scaffold", async () => {
+    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-"));
+    const name = "node-install-spy";
+    const selection = createNodeSelection({
+      databases: ["none"],
+      framework: "none",
+      name,
+      platformServices: ["none"],
+    });
+
+    tempDirectories.push(rootDirectory);
+
+    const packageManager = {
+      install: vi.fn((_dir: string) => Promise.resolve()),
+      specifyDeps: vi.fn((_dir: string) => Promise.resolve()),
+    };
+
+    const result = await runCli(
+      ["create"],
+      makeDeps(rootDirectory, createPromptPort(selection), {
+        adapterOverrides: { packageManager },
+      }),
+    );
+
+    expect(result.exitCode).toBe(0);
+    expect(packageManager.install).toHaveBeenCalledWith(join(rootDirectory, name));
+  });
+
+  it("does not call packageManager.install for Static scaffold", async () => {
+    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-"));
+    const name = "static-no-install-spy";
+    const selection = createStaticSelection(name);
+
+    tempDirectories.push(rootDirectory);
+
+    const packageManager = {
+      install: vi.fn((_dir: string) => Promise.resolve()),
+      specifyDeps: vi.fn((_dir: string) => Promise.resolve()),
+    };
+
+    const result = await runCli(
+      ["create"],
+      makeDeps(rootDirectory, createPromptPort(selection), {
+        adapterOverrides: { packageManager },
+      }),
+    );
+
+    expect(result.exitCode).toBe(0);
+    expect(packageManager.install).not.toHaveBeenCalled();
+  });
+
+  it("calls repoInitialiser.initialise with the target directory for Node.js scaffold", async () => {
+    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-"));
+    const name = "node-repo-init-spy";
+    const selection = createNodeSelection({
+      databases: ["none"],
+      framework: "none",
+      name,
+      platformServices: ["none"],
+    });
+
+    tempDirectories.push(rootDirectory);
+
+    const repoInitialiser = { initialise: vi.fn((_dir: string) => Promise.resolve()) };
+
+    const result = await runCli(
+      ["create"],
+      makeDeps(rootDirectory, createPromptPort(selection), {
+        adapterOverrides: { repoInitialiser },
+      }),
+    );
+
+    expect(result.exitCode).toBe(0);
+    expect(repoInitialiser.initialise).toHaveBeenCalledWith(join(rootDirectory, name));
+  });
+
+  it("calls repoInitialiser.initialise with the target directory for Static scaffold", async () => {
+    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-"));
+    const name = "static-repo-init-spy";
+    const selection = createStaticSelection(name);
+
+    tempDirectories.push(rootDirectory);
+
+    const repoInitialiser = { initialise: vi.fn((_dir: string) => Promise.resolve()) };
+
+    const result = await runCli(
+      ["create"],
+      makeDeps(rootDirectory, createPromptPort(selection), {
+        adapterOverrides: { repoInitialiser },
+      }),
+    );
+
+    expect(result.exitCode).toBe(0);
+    expect(repoInitialiser.initialise).toHaveBeenCalledWith(join(rootDirectory, name));
   });
 
   it("snapshots generated Static scaffold output", async () => {
