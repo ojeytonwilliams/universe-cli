@@ -20,7 +20,7 @@ Requirements reference: `plans/universe-cli/create-extension-prd.md`
 
 ## Phase 2 — pnpm supply chain security scaffold artefacts (FR-14)
 
-- [ ] CODE: Add `.npmrc` and `only-allow` enforcement to Node.js scaffold
+- [x] CODE: Add `.npmrc` and `only-allow` enforcement to Node.js scaffold
   - Feature: generated Node.js projects include pnpm security hardening files
   - Files: `src/services/layers/base-node-js-typescript-layer.ts`
   - Acceptance:

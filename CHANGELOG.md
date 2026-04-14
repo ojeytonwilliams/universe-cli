@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.0.3] - 2026-04-14
+
+### Add pnpm supply chain security artefacts to Node.js scaffold
+
+Generated Node.js projects now include a `.npmrc` with four pnpm security settings (`blockExoticSubdeps=true`, `minimumReleaseAge=1440`, `trustPolicy=no-downgrade`, `engine-strict=true`) and a `preinstall` script (`npx only-allow pnpm`) that enforces pnpm as the only permitted package manager. Static scaffolds are unaffected.
+
 ## [3.0.2] - 2026-04-14
 
 ### Centralize dependency versions and switch docker-compose to pnpm

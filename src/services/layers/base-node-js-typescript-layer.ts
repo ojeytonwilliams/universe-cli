@@ -1,6 +1,13 @@
 import { DEPENDENCY_VERSIONS } from "./dependency-versions.js";
 
 const baseNodeJsTypescriptLayer = {
+  ".npmrc": [
+    "blockExoticSubdeps=true",
+    "minimumReleaseAge=1440",
+    "trustPolicy=no-downgrade",
+    "engine-strict=true",
+    "",
+  ].join("\n"),
   Procfile: "web: node dist/index.js\n",
   "docker-compose.dev.yml": [
     "services:",
@@ -23,6 +30,7 @@ const baseNodeJsTypescriptLayer = {
     scripts: {
       build: "tsc -p tsconfig.json",
       dev: "npm run build && npm run start",
+      preinstall: "npx only-allow pnpm",
       start: "node dist/index.js",
     },
     type: "module",
