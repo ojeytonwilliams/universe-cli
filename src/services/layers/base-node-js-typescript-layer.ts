@@ -1,13 +1,6 @@
-import { DEPENDENCY_VERSIONS } from "./dependency-versions.js";
+const TYPESCRIPT_VERSION = "^5";
 
 const baseNodeJsTypescriptLayer = {
-  ".npmrc": [
-    "blockExoticSubdeps=true",
-    "minimumReleaseAge=1440",
-    "trustPolicy=no-downgrade",
-    "engine-strict=true",
-    "",
-  ].join("\n"),
   Procfile: "web: node dist/index.js\n",
   "docker-compose.dev.yml": [
     "services:",
@@ -23,19 +16,25 @@ const baseNodeJsTypescriptLayer = {
   ].join("\n"),
   "package.json": JSON.stringify({
     devDependencies: {
-      typescript: DEPENDENCY_VERSIONS.typescript,
+      typescript: TYPESCRIPT_VERSION,
     },
     name: "{{name}}",
     private: true,
     scripts: {
       build: "tsc -p tsconfig.json",
-      dev: "npm run build && npm run start",
+      dev: "pnpm run build && pnpm run start",
       preinstall: "npx only-allow pnpm",
       start: "node dist/index.js",
     },
     type: "module",
   }),
-  "pnpm-workspace.yaml": "",
+  "pnpm-workspace.yaml": [
+    "blockExoticSubdeps: true",
+    "minimumReleaseAge: 1440",
+    "trustPolicy: no-downgrade",
+    "engineStrict: true",
+    "",
+  ].join("\n"),
   "src/index.ts": [
     'import { createServer } from "node:http";',
     "",

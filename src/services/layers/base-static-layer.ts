@@ -12,6 +12,7 @@ const baseStaticLayer = {
     '      - "3000:3000"',
     "",
   ].join("\n"),
+  "pnpm-workspace.yaml": "",
   "public/index.html": [
     "<!doctype html>",
     '<html lang="en">',

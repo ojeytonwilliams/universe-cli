@@ -339,24 +339,25 @@ describe("create", () => {
     expect(result.exitCode).toBe(0);
 
     const files = collectGeneratedFiles(join(rootDirectory, selection.name));
-    const expectedNpmrc = [
-      "blockExoticSubdeps=true",
-      "minimumReleaseAge=1440",
-      "trustPolicy=no-downgrade",
-      "engine-strict=true",
+    const expectedWorkspace = [
+      "blockExoticSubdeps: true",
+      "minimumReleaseAge: 1440",
+      "trustPolicy: no-downgrade",
+      "engineStrict: true",
       "",
     ].join("\n");
 
-    expect(files[".npmrc"]).toBe(expectedNpmrc);
+    expect(files["pnpm-workspace.yaml"]).toBe(expectedWorkspace);
+    expect(files[".npmrc"]).toBeUndefined();
 
     const pkg = JSON.parse(files["package.json"]!) as { scripts: Record<string, string> };
 
     expect(pkg.scripts["preinstall"]).toBe("npx only-allow pnpm");
   });
 
-  it("does not include .npmrc in Static scaffold", async () => {
+  it("static scaffold pnpm-workspace.yaml is empty", async () => {
     const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-"));
-    const selection = createStaticSelection("static-no-npmrc");
+    const selection = createStaticSelection("static-workspace-check");
 
     tempDirectories.push(rootDirectory);
 
@@ -366,6 +367,7 @@ describe("create", () => {
 
     const files = collectGeneratedFiles(join(rootDirectory, selection.name));
 
+    expect(files["pnpm-workspace.yaml"]).toBe("");
     expect(files[".npmrc"]).toBeUndefined();
   });
 

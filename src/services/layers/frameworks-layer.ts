@@ -1,10 +1,10 @@
-import { DEPENDENCY_VERSIONS } from "./dependency-versions.js";
+const EXPRESS_VERSION = "^5";
 
 const frameworksLayer = {
   "frameworks/express": {
     "package.json": JSON.stringify({
       dependencies: {
-        express: DEPENDENCY_VERSIONS.express,
+        express: EXPRESS_VERSION,
       },
     }),
   },

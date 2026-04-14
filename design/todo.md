@@ -118,7 +118,7 @@ Requirements reference: `plans/universe-cli/create-extension-prd.md`
 
 ## Phase 6 — Align scaffold with pnpm-first conventions (FR-13, FR-14 corrections)
 
-- [ ] CODE: Move pnpm security config from `.npmrc` to `pnpm-workspace.yaml`
+- [x] CODE: Move pnpm security config from `.npmrc` to `pnpm-workspace.yaml`
   - Feature: Node.js scaffolds emit pnpm security settings as top-level keys in `pnpm-workspace.yaml`; no `.npmrc` is generated for any scaffold type
   - Files: `src/services/layers/base-node-js-typescript-layer.ts`, `src/integration-tests/create.test.ts`, `src/integration-tests/__snapshots__/create.test.ts.snap`
   - Acceptance:
@@ -130,7 +130,7 @@ Requirements reference: `plans/universe-cli/create-extension-prd.md`
     - Snapshot tests updated
     - `pnpm test` passes
 
-- [ ] CODE: Fix `dev` script to use `pnpm run` instead of `npm run`
+- [x] CODE: Fix `dev` script to use `pnpm run` instead of `npm run`
   - Feature: scaffolded `package.json` uses pnpm-native script invocation
   - Files: `src/services/layers/base-node-js-typescript-layer.ts`, `src/integration-tests/__snapshots__/create.test.ts.snap`
   - Acceptance:
@@ -138,7 +138,7 @@ Requirements reference: `plans/universe-cli/create-extension-prd.md`
     - Snapshot test updated
     - `pnpm test` passes
 
-- [ ] CODE: Move dependency version constants inline to each layer file; delete shared `dependency-versions.ts`
+- [x] CODE: Move dependency version constants inline to each layer file; delete shared `dependency-versions.ts`
   - Feature: each layer file owns its own version constants with no cross-layer sharing
   - Files: `src/services/layers/base-node-js-typescript-layer.ts`, `src/services/layers/frameworks-layer.ts`, delete `src/services/layers/dependency-versions.ts`, delete `src/services/layers/dependency-versions.test.ts`
   - Acceptance:
@@ -148,7 +148,7 @@ Requirements reference: `plans/universe-cli/create-extension-prd.md`
     - No inline version string literals remain in any layer object (all version references use a named local constant)
     - `pnpm test` passes
 
-- [ ] TASK: Run full validation
+- [x] TASK: Run full validation
   - Acceptance:
     - `pnpm test` passes
     - `pnpm lint` passes
