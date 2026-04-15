@@ -1,6 +1,6 @@
 ---
 name: changelog
-description: Guides changelog writing whenever the user mentions a changelog or CHANGELOG.md, release notes, or update notes. Review the current changes first, then write entries that explain why the changes were made more than what changed.
+description: Guides changelog updates whenever the user mentions a changelog or CHANGELOG.md, release notes, or update notes. Review the current changes first, then add entries that explain why the changes were made more than what changed.
 ---
 
 # Changelog
@@ -23,6 +23,11 @@ Focus on the **why** more than the **what**. The code already describes what cha
 - Keep entries specific and accurate.
 - Avoid repeating low-level file-by-file edits unless that detail matters to readers.
 - Do not invent work that is not present in the diff.
+
+## Core rules
+
+- All updates to existing changelogs are additive. NEVER replace any existing entries.
+- New entries appear at the top of the document.
 
 ## Examples
 

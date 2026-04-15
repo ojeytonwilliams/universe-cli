@@ -1,6 +1,6 @@
 ---
 name: project-planner
-description: Use this skill when a user needs planning artifacts before implementation: a concise project summary, a PRD, and an implementation-ready TODO plan. Use for new project definition, scope refinement, and requirement decomposition. Do not use for debugging, direct coding, or implementation-only requests.
+description: Use this skill when a user needs planning artifacts before implementation. This will generate a concise project summary, a PRD, and an implementation-ready TODO plan. Use for new project definition, scope refinement, and requirement decomposition. Do not use for debugging, direct coding, or implementation-only requests.
 argument-hint: "[output-directory]"
 compatibility: Requires ability to write markdown files and optional web access for market or technology research.
 ---

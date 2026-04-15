@@ -77,3 +77,7 @@ If tests/lint/check fail due to missing dependencies:
 
 Always pin exact versions. For example, if you want me to install `nanostores` ask me to do
 `pnpm add --save-exact nanostores @nanostores/react`
+
+## OpenCode specific guidance
+
+When editing large files, make sure not to delete everything after the part you're modifying. Make sure to use the "edit" tool, when updating and only use "write" when creating new files.
