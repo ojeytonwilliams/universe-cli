@@ -1,154 +1,114 @@
-# Create Command Extension — TODO
+# TODO — Create Extensibility: Framework Layers + Package Manager Selection
 
-Requirements reference: `plans/universe-cli/create-extension-prd.md`
-
----
-
-## Phase 1 — Centralize dependency versions and update to major ranges (FR-13, FR-14 partial)
-
-- [x] CODE: Extract dependency versions to a centralized config and update docker-compose to use pnpm
-  - Feature: all version intent strings live in one file as major-version ranges; `docker-compose.dev.yml` uses pnpm
-  - Files: `src/services/layers/dependency-versions.ts` (new), `src/services/layers/base-node-js-typescript-layer.ts`, `src/services/layers/frameworks-layer.ts`
-  - Acceptance:
-    - `src/services/layers/dependency-versions.ts` exports a single const object mapping each dependency name to a `^major` range (e.g. `"express": "^5"`, `"typescript": "^5"`)
-    - `base-node-js-typescript-layer.ts` imports version strings from `dependency-versions.ts`; no hardcoded version string remains in the file
-    - `frameworks-layer.ts` imports version strings from `dependency-versions.ts`; no hardcoded version string remains in the file
-    - `docker-compose.dev.yml` template uses `pnpm install && pnpm dev` instead of npm equivalents
-    - `pnpm test` passes (snapshot tests updated to reflect range version strings and docker-compose change; exact version pinning is deferred to Phase 3)
+Requirements reference: `plans/universe-cli/framework-package-manager-prd.md`
 
 ---
 
-## Phase 2 — pnpm supply chain security scaffold artefacts (FR-14)
+## Phase 1 — Create input and validation contract (FR-1, FR-2)
 
-- [x] CODE: Add `.npmrc` and `only-allow` enforcement to Node.js scaffold
-  - Feature: generated Node.js projects include pnpm security hardening files
-  - Files: `src/services/layers/base-node-js-typescript-layer.ts`
+- [x] CODE: Rename `node_ts` → `node`, add `typescript` framework option, and add package-manager selection to create prompt contract
+  - Feature: runtime value corrected to `node`; TypeScript promoted to a selectable framework; Node-only package-manager choice (`pnpm`, `bun`) captured in create selections
+  - Files: `src/ports/prompt.ts`, `src/adapters/clack-prompt-adapter.ts`, `src/adapters/clack-prompt-adapter.test.ts`
   - Acceptance:
-    - Generated `.npmrc` contains `blockExoticSubdeps=true`, `minimumReleaseAge=1440`, `trustPolicy=no-downgrade`, and `engine-strict=true` on separate lines
-    - Generated `package.json` includes `"preinstall": "npx only-allow pnpm"` in `scripts`
-    - Static scaffold (`base-static-layer.ts`) is not modified and generates no `.npmrc`
-    - `pnpm test` passes (integration test snapshots updated to include `.npmrc` and the `preinstall` script)
+    - `RUNTIME_OPTIONS.NODE_TS` renamed to `RUNTIME_OPTIONS.NODE` with value `"node"`; label remains "Node.js (TypeScript)" for now
+    - `FRAMEWORK_OPTIONS` gains `TYPESCRIPT: "typescript"`; `FRAMEWORK_LABELS` gains corresponding label
+    - `src/ports/prompt.ts` defines `PACKAGE_MANAGER_OPTIONS` (`pnpm`, `bun`), `PACKAGE_MANAGER_LABELS`, `PackageManagerOption` type, and `packageManager` field on `CreateSelections` (following the existing constants pattern)
+    - Prompt asks for package manager only when runtime is `node`
+    - Prompt confirmation includes selected package manager for Node
+    - Static flow remains unchanged and does not request package manager
+    - Tests are written first and initially fail, then pass after implementation
+
+- [x] CODE: Enforce runtime/framework/package-manager compatibility in validation
+  - Feature: invalid combinations fail before scaffold write
+  - Files: `src/services/create-input-validation-service.ts`, `src/services/create-input-validation-service.test.ts`
+  - Acceptance:
+    - `node` runtime requires a supported package manager (`pnpm` or `bun`)
+    - `static_web` rejects non-empty package-manager choice
+    - `static_web` rejects `typescript` or `express` framework choice
+    - Typed validation errors are asserted in tests
+    - Tests are written first and initially fail, then pass after implementation
+
+- [x] TASK: Document accepted selection tuples for this increment
+  - Acceptance:
+    - Matrix note added to planning docs covering all valid combinations: `node`+`typescript`+`pnpm`, `node`+`typescript`+`bun`, `node`+`express`+`pnpm`, `node`+`express`+`bun`, `node`+`none`+`pnpm`, `node`+`none`+`bun`, `static_web`+`none`+no-manager
 
 ---
 
-## Phase 3 — PackageManager port and pnpm adapter (FR-15)
+## Phase 2 — Layer model refactor for extensibility (FR-3, FR-4, FR-5, FR-6, NFR-3)
 
-- [x] CODE: Define PackageManager port and error type
-  - Feature: typed port interface for package manager operations
-  - Files: `src/ports/package-manager.ts`, `src/errors/cli-errors.ts`
+- [x] CODE: Add package-manager layer stage and data-driven framework resolution
+  - Feature: layer ordering includes manager stage for Node and removes hardcoded framework branching requirement for future additions
+  - Files: `src/services/layer-composition-service.ts`, `src/services/layer-composition-service.test.ts`
   - Acceptance:
-    - `PackageManager` interface exported from `src/ports/package-manager.ts` with two methods: `specifyDeps(projectDirectory: string): Promise<void>` and `install(projectDirectory: string): Promise<void>`
-    - `PackageInstallError` exported from `src/errors/cli-errors.ts` as a `CliError` subclass with a unique exit code not used by any existing error
-    - `pnpm test` and `pnpm lint` pass
+    - Deterministic order: `always` → `base/{runtime}` → `package-managers/{manager}` (Node only) → `frameworks/{framework}` → `services/{service}`
+    - Layer resolver uses `selections.runtime === "node"` (not `"node_ts"`) to gate PM stage
+    - Missing layer and conflict error behavior remains typed and covered by tests
+    - Layer-resolution tests include Node+pnpm, Node+bun, Static
+    - Tests are written first and initially fail, then pass after implementation
 
-- [x] CODE: Implement PnpmPackageManagerAdapter
-  - Feature: pnpm-backed adapter that pins exact versions and installs dependencies
-  - Files: `src/adapters/pnpm-package-manager-adapter.ts`, `src/adapters/pnpm-package-manager-adapter.test.ts`
+- [x] CODE: Rename and slim down the runtime layer
+  - Feature: `base/node-js-typescript` becomes `base/node` containing only Node.js execution-environment primitives
+  - Files: `src/services/layers/base-node-js-typescript-layer.ts` → rename to `src/services/layers/base-node-layer.ts`, relevant layer tests/snapshots
   - Acceptance:
-    - `PnpmPackageManagerAdapter.specifyDeps(dir)` performs three steps in sequence: (1) runs `pnpm install --lockfile-only` in `dir` (resolves versions respecting `.npmrc` constraints including `minimumReleaseAge`, writes lockfile, no `node_modules`), (2) runs `pnpm list --json --depth=0 --lockfile-only` to read exact resolved versions of all direct dependencies, (3) overwrites the version values in `package.json` with the exact resolved versions (e.g. `"^5"` becomes `"5.1.2"`)
-    - `PnpmPackageManagerAdapter.install(dir)` runs `pnpm install` in `dir` (populates `node_modules` from the already-pinned `package.json`)
-    - When any command exits non-zero or fails, the method rejects with `PackageInstallError`
-    - Unit tests verify: correct pnpm commands are invoked for each method; `package.json` is updated with versions read from `pnpm list` output; a non-zero exit from pnpm produces `PackageInstallError` (using a test double for the subprocess mechanism and filesystem reads, not a real pnpm call)
-    - `pnpm test` and `pnpm lint` pass
+    - File renamed; all imports updated
+    - `base/node` contains: `Procfile`, `docker-compose.dev.yml` (command: `sh start.sh`)
+    - `base/node` excludes: TypeScript devDep, `tsconfig.json`, `src/index.ts`, all scripts (`build`, `dev`, `start`, `preinstall`), `pnpm-workspace.yaml`
+    - Tests/snapshots updated and passing
+    - Tests are written first and initially fail, then pass after implementation
 
-- [x] CODE: Wire PackageManager into bin and create handler
-  - Feature: create handler calls `packageManager.specifyDeps` then `packageManager.install` for Node.js scaffolds
-  - Files: `src/bin.ts`, `src/commands.ts`
+- [x] CODE: Introduce `frameworks/typescript`, update `frameworks/express`, and add PM-layer artifacts
+  - Feature: TypeScript is a framework; PM layers own `start.sh` and PM-specific scripts
+  - Files: `src/services/layers/frameworks-layer.ts`, `src/services/layers/package-managers-layer.ts` (new), integration snapshots/tests
   - Acceptance:
-    - `PnpmPackageManagerAdapter` is wired in `src/bin.ts`
-    - `Adapters` type in `src/commands.ts` includes `packageManager: PackageManager`
-    - The create handler calls `packageManager.specifyDeps(targetDirectory)` then `packageManager.install(targetDirectory)` after `filesystemWriter.writeProject` and only when the selected runtime is Node.js (not static)
-    - `commands.test.ts` injects an inline `PackageManager` test double and still passes
-    - `pnpm test` passes
+    - `frameworks/typescript` contributes: TypeScript devDependency, `tsconfig.json`, `src/index.ts` (minimal TS HTTP server), `build: "tsc -p tsconfig.json"`, `start: "node dist/index.js"`
+    - `frameworks/express` contributes: express dependency, TypeScript devDependency, express-specific `src/index.ts`, `build` and `start` scripts
+    - `frameworks/none` remains empty
+    - `package-managers/pnpm` layer contributes: `pnpm-workspace.yaml`, `start.sh` (content: `pnpm install && pnpm dev`), `dev: "pnpm run build && pnpm run start"` script, `preinstall: "npx only-allow pnpm"` script
+    - `package-managers/bun` layer contributes: `start.sh` (content: `bun install && bun dev`), `dev: "bun run build && bun run start"` script (no preinstall hook in v1)
+    - Static output excludes all Node package-manager artifacts
+    - Tests are written first and initially fail, then pass after implementation
 
 ---
 
-## Phase 4 — RepoInitialiser port and git adapter (FR-16)
+## Phase 3 — Package manager service orchestration (FR-7, NFR-2)
 
-- [x] CODE: Define RepoInitialiser port and error type
-  - Feature: typed port interface for repository initialisation
-  - Files: `src/ports/repo-initialiser.ts`, `src/errors/cli-errors.ts`
+- [ ] CODE: Introduce package manager service abstraction over manager adapters
+  - Feature: one service handles manager dispatch and install workflow
+  - Files: `src/services/package-manager-service.ts` (new), `src/ports/package-manager.ts`, service tests (new)
   - Acceptance:
-    - `RepoInitialiser` interface exported from `src/ports/repo-initialiser.ts` with method `initialise(projectDirectory: string): Promise<void>`
-    - `RepoInitialisationError` exported from `src/errors/cli-errors.ts` as a `CliError` subclass with a unique exit code not used by any existing error (including `PackageInstallError`)
-    - `pnpm test` and `pnpm lint` pass
+    - Service API accepts validated selection context and target directory
+    - Service dispatches to pnpm or bun adapter based on selection
+    - Service encapsulates `specifyDeps` + `install` sequence for Node
+    - Service tests verify adapter dispatch and error propagation
+    - Tests are written first and initially fail, then pass after implementation
 
-- [x] CODE: Implement GitRepoInitialiserAdapter
-  - Feature: git-backed repo initialiser adapter
-  - Files: `src/adapters/git-repo-initialiser-adapter.ts`, `src/adapters/git-repo-initialiser-adapter.test.ts`
+- [ ] CODE: Add bun adapter and wire service into create flow
+  - Feature: Node create supports `bun` without changing command-handler complexity
+  - Files: `src/adapters/bun-package-manager-adapter.ts` (new), `src/adapters/bun-package-manager-adapter.test.ts` (new), `src/commands.ts`, `src/bin.ts`, `src/integration-tests/adapter-stubs.ts`
   - Acceptance:
-    - `GitRepoInitialiserAdapter.initialise(dir)` runs `git init`, `git add .`, and `git commit -m "chore: initial commit"` in `dir`, in that order
-    - When any command exits non-zero, `initialise` rejects with `RepoInitialisationError`
-    - Unit tests verify correct command sequence and that any non-zero exit produces `RepoInitialisationError` (using a test double for subprocess, not a real git call)
-    - `pnpm test` and `pnpm lint` pass
-
-- [x] CODE: Wire RepoInitialiser into bin and create handler
-  - Feature: create handler calls `repoInitialiser.initialise` for all scaffold types
-  - Files: `src/bin.ts`, `src/commands.ts`
-  - Acceptance:
-    - `GitRepoInitialiserAdapter` is wired in `src/bin.ts`
-    - `Adapters` type includes `repoInitialiser: RepoInitialiser`
-    - The create handler calls `repoInitialiser.initialise(targetDirectory)` after `packageManager.install` (for Node.js) or after `filesystemWriter.writeProject` (for static)
-    - `PackageInstallError` propagates without calling `repoInitialiser.initialise`
-    - Integration tests inject an inline `RepoInitialiser` test double and still pass
-    - `pnpm test` passes
+    - `handleCreate` uses one package-manager service dependency
+    - Static runtime does not execute package-manager operations
+    - Bun adapter `specifyDeps` runs `bun install --frozen-lockfile` (lockfile-only resolution) then `bun list --json` to extract installed versions, then pins exact versions in `package.json` — matching pnpm's two-step approach
+    - Bun adapter `install` runs `bun install` to install pinned deps
+    - Bun adapter command behavior is covered by unit tests
+    - Existing pnpm behavior remains covered
+    - Tests are written first and initially fail, then pass after implementation
 
 ---
 
-## Phase 5 — Integration tests and validation (FR-17)
+## Phase 4 — Integration stabilization and regression safety (FR-8, NFR-1)
 
-- [x] CODE: Update integration tests to cover the extended create flow
-  - Feature: integration tests reflect the full Phase 1–4 create flow using inline test doubles for the new adapters
-  - Files: `src/integration-tests/create.test.ts`
+- [ ] CODE: Expand create integration tests for manager/runtime/framework combinations
+  - Feature: create flow coverage includes Node+typescript+pnpm, Node+express+pnpm, Node+typescript+bun, Static
+  - Files: `src/integration-tests/create.test.ts`, `src/integration-tests/__snapshots__/create.test.ts.snap`, selection helpers in related tests if needed
   - Acceptance:
-    - Integration test helper injects inline test doubles for `packageManager` and `repoInitialiser` (e.g. `{ install: vi.fn() }`)
-    - At least one Node.js scenario asserts that `packageManager.install` is called with the correct target directory
-    - At least one static scenario asserts that `packageManager.install` is not called
-    - At least one scenario (Node.js and one Static) asserts that `repoInitialiser.initialise` is called with the correct target directory
-    - Snapshot tests still pass with updated artefacts from Phases 1–2
-    - `pnpm test` passes
+    - Integration scenarios assert correct package-manager service invocation for Node
+    - Static scenario asserts no package-manager service invocation
+    - Scaffold snapshots cover: `node`+`typescript`+`pnpm`, `node`+`express`+`pnpm`, `node`+`typescript`+`bun`, `static_web`+`none`
+    - Snapshots are deterministic and updated
+    - Tests are written first and initially fail, then pass after implementation
 
-- [x] TASK: Run full validation
-  - Acceptance:
-    - `pnpm test` passes
-    - `pnpm lint` passes
-    - `pnpm check` passes
-
----
-
-## Phase 6 — Align scaffold with pnpm-first conventions (FR-13, FR-14 corrections)
-
-- [x] CODE: Move pnpm security config from `.npmrc` to `pnpm-workspace.yaml`
-  - Feature: Node.js scaffolds emit pnpm security settings as top-level keys in `pnpm-workspace.yaml`; no `.npmrc` is generated for any scaffold type
-  - Files: `src/services/layers/base-node-js-typescript-layer.ts`, `src/integration-tests/create.test.ts`, `src/integration-tests/__snapshots__/create.test.ts.snap`
-  - Acceptance:
-    - `pnpm-workspace.yaml` for a Node.js scaffold contains exactly: `blockExoticSubdeps: true`, `minimumReleaseAge: 1440`, `trustPolicy: no-downgrade`, `engineStrict: true` as top-level camelCase YAML keys (pnpm v10 format — no wrapping key)
-    - `pnpm-workspace.yaml` for a Static scaffold remains an empty string (workspace root marker only; no security settings)
-    - No `.npmrc` key exists in the Node.js layer object and no `.npmrc` file is generated for any scaffold
-    - Integration test that previously verified `.npmrc` content now verifies `pnpm-workspace.yaml` content instead
-    - Integration test that previously asserted `.npmrc` is absent from Static scaffold now asserts no security keys appear in Static `pnpm-workspace.yaml`
-    - Snapshot tests updated
-    - `pnpm test` passes
-
-- [x] CODE: Fix `dev` script to use `pnpm run` instead of `npm run`
-  - Feature: scaffolded `package.json` uses pnpm-native script invocation
-  - Files: `src/services/layers/base-node-js-typescript-layer.ts`, `src/integration-tests/__snapshots__/create.test.ts.snap`
-  - Acceptance:
-    - `"dev"` script in the generated `package.json` is `"pnpm run build && pnpm run start"`
-    - Snapshot test updated
-    - `pnpm test` passes
-
-- [x] CODE: Move dependency version constants inline to each layer file; delete shared `dependency-versions.ts`
-  - Feature: each layer file owns its own version constants with no cross-layer sharing
-  - Files: `src/services/layers/base-node-js-typescript-layer.ts`, `src/services/layers/frameworks-layer.ts`, delete `src/services/layers/dependency-versions.ts`, delete `src/services/layers/dependency-versions.test.ts`
-  - Acceptance:
-    - `base-node-js-typescript-layer.ts` declares a local `TYPESCRIPT_VERSION` constant at the top of the file; no import from `dependency-versions.ts`
-    - `frameworks-layer.ts` declares a local `EXPRESS_VERSION` constant at the top of the file; no import from `dependency-versions.ts`
-    - `dependency-versions.ts` and `dependency-versions.test.ts` are deleted
-    - No inline version string literals remain in any layer object (all version references use a named local constant)
-    - `pnpm test` passes
-
-- [x] TASK: Run full validation
+- [ ] TASK: Run full validation gate
   - Acceptance:
     - `pnpm test` passes
     - `pnpm lint` passes
@@ -158,11 +118,17 @@ Requirements reference: `plans/universe-cli/create-extension-prd.md`
 
 ## Traceability Matrix
 
-| PRD Requirement | TODO Phase / Item                                                       |
-| --------------- | ----------------------------------------------------------------------- |
-| FR-13           | Phase 1 (centralize), Phase 6 (per-layer scoping correction)            |
-| FR-14           | Phase 1 (docker-compose), Phase 2 (supply chain), Phase 6 (corrections) |
-| FR-15           | Phase 3 — PackageManager port, adapter, wiring                          |
-| FR-16           | Phase 4 — RepoInitialiser port, adapter, wiring                         |
-| FR-17           | Phase 3 & 4 (handler wiring), Phase 5 (integration tests)               |
-| Error taxonomy  | Phase 3 (PackageInstallError), Phase 4 (RepoInitialisationError)        |
+| PRD Requirement ID | TODO Item                                                                                                                                 | Status |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| FR-1               | Phase 1 / CODE: Rename `node_ts` → `node`, add `typescript` framework option, and add package-manager selection to create prompt contract | mapped |
+| FR-2               | Phase 1 / CODE: Enforce runtime/framework/package-manager compatibility in validation                                                     | mapped |
+| FR-3               | Phase 2 / CODE: Add package-manager layer stage and data-driven framework resolution                                                      | mapped |
+| FR-4               | Phase 2 / CODE: Rename and slim down the runtime layer                                                                                    | mapped |
+| FR-5               | Phase 2 / CODE: Introduce `frameworks/typescript`, update `frameworks/express`, and add PM-layer artifacts                                | mapped |
+| FR-6               | Phase 2 / CODE: Introduce `frameworks/typescript`, update `frameworks/express`, and add PM-layer artifacts                                | mapped |
+| FR-7               | Phase 3 / CODE: Introduce package manager service abstraction over manager adapters                                                       | mapped |
+| FR-7               | Phase 3 / CODE: Add bun adapter and wire service into create flow                                                                         | mapped |
+| FR-8               | Phase 4 / CODE: Expand create integration tests for manager/runtime combinations                                                          | mapped |
+| NFR-1              | Phase 4 / CODE: Expand create integration tests for manager/runtime combinations                                                          | mapped |
+| NFR-2              | Phase 3 / CODE: Introduce package manager service abstraction over manager adapters                                                       | mapped |
+| NFR-3              | Phase 2 / CODE: Add package-manager layer stage and data-driven framework resolution                                                      | mapped |
