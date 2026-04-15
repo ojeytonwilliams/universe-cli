@@ -15,8 +15,9 @@ const createNodeSelection = (name: string): CreateSelections => ({
   databases: ["none"],
   framework: "express",
   name,
+  packageManager: "pnpm",
   platformServices: ["none"],
-  runtime: "node_ts",
+  runtime: "node",
 });
 
 const createPromptPort = (selection: CreateSelections | null): Prompt => ({

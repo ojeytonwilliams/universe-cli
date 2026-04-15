@@ -10,6 +10,7 @@ import {
   DATABASE_OPTIONS,
   FRAMEWORK_LABELS,
   FRAMEWORK_OPTIONS,
+  PACKAGE_MANAGER_OPTIONS,
   PLATFORM_SERVICE_OPTIONS,
   RUNTIME_LABELS,
   RUNTIME_OPTIONS,
@@ -18,6 +19,7 @@ import type {
   CreateSelections,
   DatabaseOption,
   FrameworkOption,
+  PackageManagerOption,
   PlatformServiceOption,
   RuntimeOption,
 } from "../ports/prompt.js";
@@ -26,11 +28,12 @@ type PathExists = (path: string) => boolean;
 
 const PROJECT_NAME_PATTERN = /^[a-z][a-z0-9-]{2,49}$/;
 
-const NODE_RUNTIME = RUNTIME_OPTIONS.NODE_TS;
+const NODE_RUNTIME = RUNTIME_OPTIONS.NODE;
 const STATIC_RUNTIME = RUNTIME_OPTIONS.STATIC_WEB;
 const NONE_VALUE = DATABASE_OPTIONS.NONE;
 
 const SUPPORTED_NODE_FRAMEWORKS: FrameworkOption[] = [
+  FRAMEWORK_OPTIONS.TYPESCRIPT,
   FRAMEWORK_OPTIONS.EXPRESS,
   FRAMEWORK_OPTIONS.NONE,
 ];
@@ -44,6 +47,10 @@ const SUPPORTED_NODE_SERVICES: PlatformServiceOption[] = [
   PLATFORM_SERVICE_OPTIONS.EMAIL,
   PLATFORM_SERVICE_OPTIONS.ANALYTICS,
   PLATFORM_SERVICE_OPTIONS.NONE,
+];
+const SUPPORTED_NODE_PACKAGE_MANAGERS: PackageManagerOption[] = [
+  PACKAGE_MANAGER_OPTIONS.PNPM,
+  PACKAGE_MANAGER_OPTIONS.BUN,
 ];
 
 const getRuntimeLabel = (runtime: string): string => {
@@ -115,6 +122,15 @@ class CreateInputValidationService implements CreateInputValidator {
       );
     }
 
+    if (
+      input.packageManager === undefined ||
+      !SUPPORTED_NODE_PACKAGE_MANAGERS.includes(input.packageManager)
+    ) {
+      throw new CreateUnsupportedCombinationError(
+        `Node runtime requires a supported package manager (${SUPPORTED_NODE_PACKAGE_MANAGERS.join(", ")})`,
+      );
+    }
+
     this.ensureNoneExclusive("databases", input.databases);
     this.ensureNoneExclusive("platform services", input.platformServices);
 
@@ -127,6 +143,12 @@ class CreateInputValidationService implements CreateInputValidator {
       throw new CreateUnsupportedFrameworkError(
         getFrameworkLabel(input.framework),
         getRuntimeLabel(input.runtime),
+      );
+    }
+
+    if (input.packageManager !== undefined) {
+      throw new CreateUnsupportedCombinationError(
+        "Static projects do not support a package manager",
       );
     }
 

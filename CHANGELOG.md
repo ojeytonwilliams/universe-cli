@@ -1,5 +1,16 @@
 # Changelog
 
+## [3.1.0] - 2026-04-15
+
+### Extend create prompt and validation with package manager selection and TypeScript framework
+
+- **Runtime renamed**: `node_ts` → `node` across prompt contract, validation, layers, commands, and all tests. The runtime is Node.js; TypeScript is now a first-class framework choice.
+- **TypeScript framework option**: `FRAMEWORK_OPTIONS.TYPESCRIPT` (`"typescript"`) added so TypeScript-only Node projects can be selected independently of Express.
+- **Package manager selection**: `PACKAGE_MANAGER_OPTIONS` (`pnpm`, `bun`), `PACKAGE_MANAGER_LABELS`, and `PackageManagerOption` type introduced in the prompt port. `CreateSelections` gains an optional `packageManager` field.
+- **Prompt flow updated**: `ClackPromptAdapter` asks for package manager after framework selection when runtime is `node`; static web flow is unchanged and never requests a package manager. Confirmation message includes the selected package manager for Node projects.
+- **Validation rules enforced**: `CreateInputValidationService` now rejects Node selections without a supported package manager, and rejects static selections that supply a package manager or a Node-only framework (`typescript`, `express`).
+- **Accepted selection tuples documented**: matrix of all valid `(runtime, framework, package-manager)` combinations added to the PRD.
+
 ## [3.0.8] - 2026-04-14
 
 ### Align Node.js scaffold with pnpm-first conventions

@@ -31,7 +31,7 @@ const createPromptPort = (selection: CreateSelections | null): Prompt => ({
 
 const createNodeSelection = (selection: {
   databases: CreateSelections["databases"];
-  framework: "express" | "none";
+  framework: "express" | "none" | "typescript";
   name: string;
   platformServices: CreateSelections["platformServices"];
 }): CreateSelections => ({
@@ -39,8 +39,9 @@ const createNodeSelection = (selection: {
   databases: selection.databases,
   framework: selection.framework,
   name: selection.name,
+  packageManager: "pnpm",
   platformServices: selection.platformServices,
-  runtime: "node_ts",
+  runtime: "node",
 });
 
 const createStaticSelection = (name: string): CreateSelections => ({

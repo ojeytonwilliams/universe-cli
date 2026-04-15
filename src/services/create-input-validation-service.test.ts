@@ -6,7 +6,7 @@ import {
   InvalidNameError,
   TargetDirectoryExistsError,
 } from "../errors/cli-errors.js";
-import type { CreateSelections } from "../ports/prompt.js";
+import type { CreateSelections, PackageManagerOption } from "../ports/prompt.js";
 import { CreateInputValidationService } from "./create-input-validation-service.js";
 
 const validNodeSelection: CreateSelections = {
@@ -14,8 +14,9 @@ const validNodeSelection: CreateSelections = {
   databases: ["postgresql"],
   framework: "express",
   name: "hello-universe",
+  packageManager: "pnpm",
   platformServices: ["auth"],
-  runtime: "node_ts",
+  runtime: "node",
 };
 
 describe(CreateInputValidationService, () => {
@@ -25,6 +26,28 @@ describe(CreateInputValidationService, () => {
     const result = service.validateCreateInput(validNodeSelection);
 
     expect(result).toStrictEqual(validNodeSelection);
+  });
+
+  it("accepts typescript framework for Node runtime", () => {
+    const service = new CreateInputValidationService(() => false);
+
+    const result = service.validateCreateInput({
+      ...validNodeSelection,
+      framework: "typescript",
+    });
+
+    expect(result.framework).toBe("typescript");
+  });
+
+  it("accepts bun as package manager for Node runtime", () => {
+    const service = new CreateInputValidationService(() => false);
+
+    const result = service.validateCreateInput({
+      ...validNodeSelection,
+      packageManager: "bun",
+    });
+
+    expect(result.packageManager).toBe("bun");
   });
 
   it("accepts supported Static combination", () => {
@@ -86,13 +109,83 @@ describe(CreateInputValidationService, () => {
     expect(act).toThrow(CreateUnsupportedRuntimeError);
   });
 
-  it("rejects unsupported frameworks per runtime", () => {
+  it("rejects unsupported frameworks for Node runtime", () => {
     const service = new CreateInputValidationService(() => false);
 
     const act = () =>
       service.validateCreateInput({
         ...validNodeSelection,
         framework: "Flask" as CreateSelections["framework"],
+      });
+
+    expect(act).toThrow(CreateUnsupportedFrameworkError);
+  });
+
+  it("rejects missing package manager for Node runtime", () => {
+    const service = new CreateInputValidationService(() => false);
+    const { packageManager: _pm, ...selectionWithoutPm } = validNodeSelection;
+
+    const act = () => service.validateCreateInput(selectionWithoutPm);
+
+    expect(act).toThrow(CreateUnsupportedCombinationError);
+  });
+
+  it("rejects unsupported package manager for Node runtime", () => {
+    const service = new CreateInputValidationService(() => false);
+
+    const act = () =>
+      service.validateCreateInput({
+        ...validNodeSelection,
+        packageManager: "npm" as unknown as PackageManagerOption,
+      });
+
+    expect(act).toThrow(CreateUnsupportedCombinationError);
+  });
+
+  it("rejects non-empty package manager for static_web runtime", () => {
+    const service = new CreateInputValidationService(() => false);
+
+    const act = () =>
+      service.validateCreateInput({
+        confirmed: true,
+        databases: ["none"],
+        framework: "none",
+        name: "site-app",
+        packageManager: "pnpm",
+        platformServices: ["none"],
+        runtime: "static_web",
+      });
+
+    expect(act).toThrow(CreateUnsupportedCombinationError);
+  });
+
+  it("rejects typescript framework for static_web runtime", () => {
+    const service = new CreateInputValidationService(() => false);
+
+    const act = () =>
+      service.validateCreateInput({
+        confirmed: true,
+        databases: ["none"],
+        framework: "typescript",
+        name: "site-app",
+        platformServices: ["none"],
+        runtime: "static_web",
+      });
+
+    expect(act).toThrow(CreateUnsupportedFrameworkError);
+  });
+
+  it("rejects express framework for static_web runtime", () => {
+    const service = new CreateInputValidationService(() => false);
+
+    const act = () =>
+      service.validateCreateInput({
+        confirmed: true,
+        databases: ["none"],
+        framework: "express",
+        name: "site-app",
+        platformServices: ["none"],
+        runtime: "static_web",
       });
 
     expect(act).toThrow(CreateUnsupportedFrameworkError);

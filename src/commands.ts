@@ -84,7 +84,7 @@ const handleCreate = async (
 
   await adapters.filesystemWriter.writeProject(targetDirectory, projectFiles);
 
-  if (validatedInput.runtime === "node_ts") {
+  if (validatedInput.runtime === "node") {
     await adapters.packageManager.specifyDeps(targetDirectory);
     await adapters.packageManager.install(targetDirectory);
   }

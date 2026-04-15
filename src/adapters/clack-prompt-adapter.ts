@@ -4,6 +4,8 @@ import {
   DATABASE_OPTIONS,
   FRAMEWORK_LABELS,
   FRAMEWORK_OPTIONS,
+  PACKAGE_MANAGER_LABELS,
+  PACKAGE_MANAGER_OPTIONS,
   PLATFORM_SERVICE_LABELS,
   PLATFORM_SERVICE_OPTIONS,
   RUNTIME_LABELS,
@@ -13,6 +15,7 @@ import type {
   CreateSelections,
   DatabaseOption,
   FrameworkOption,
+  PackageManagerOption,
   PlatformServiceOption,
   Prompt,
   RuntimeOption,
@@ -48,8 +51,8 @@ const defaultClackApi: ClackPromptApi = {
 
 const RUNTIME_PROMPT_OPTIONS: { label: string; value: RuntimeOption }[] = [
   {
-    label: RUNTIME_LABELS[RUNTIME_OPTIONS.NODE_TS],
-    value: RUNTIME_OPTIONS.NODE_TS,
+    label: RUNTIME_LABELS[RUNTIME_OPTIONS.NODE],
+    value: RUNTIME_OPTIONS.NODE,
   },
   {
     label: RUNTIME_LABELS[RUNTIME_OPTIONS.STATIC_WEB],
@@ -58,6 +61,7 @@ const RUNTIME_PROMPT_OPTIONS: { label: string; value: RuntimeOption }[] = [
 ];
 
 const NODE_FRAMEWORK_OPTIONS: FrameworkOption[] = [
+  FRAMEWORK_OPTIONS.TYPESCRIPT,
   FRAMEWORK_OPTIONS.EXPRESS,
   FRAMEWORK_OPTIONS.NONE,
 ];
@@ -78,6 +82,11 @@ const NODE_SERVICE_OPTIONS: PlatformServiceOption[] = [
 ];
 const STATIC_SERVICE_OPTIONS: PlatformServiceOption[] = [PLATFORM_SERVICE_OPTIONS.NONE];
 
+const NODE_PACKAGE_MANAGER_OPTIONS: PackageManagerOption[] = [
+  PACKAGE_MANAGER_OPTIONS.PNPM,
+  PACKAGE_MANAGER_OPTIONS.BUN,
+];
+
 const toPromptOptions = <T extends string>(
   values: T[],
   labels: Record<T, string>,
@@ -91,7 +100,7 @@ const toLabelList = <T extends string>(values: T[], labels: Record<T, string>): 
   values.map((value) => labels[value]).join(", ");
 
 const getFrameworkOptions = (runtime: RuntimeOption): FrameworkOption[] => {
-  if (runtime === RUNTIME_OPTIONS.NODE_TS) {
+  if (runtime === RUNTIME_OPTIONS.NODE) {
     return NODE_FRAMEWORK_OPTIONS;
   }
 
@@ -99,7 +108,7 @@ const getFrameworkOptions = (runtime: RuntimeOption): FrameworkOption[] => {
 };
 
 const getDatabaseOptions = (runtime: RuntimeOption): DatabaseOption[] => {
-  if (runtime === RUNTIME_OPTIONS.NODE_TS) {
+  if (runtime === RUNTIME_OPTIONS.NODE) {
     return NODE_DATABASE_OPTIONS;
   }
 
@@ -107,7 +116,7 @@ const getDatabaseOptions = (runtime: RuntimeOption): DatabaseOption[] => {
 };
 
 const getServiceOptions = (runtime: RuntimeOption): PlatformServiceOption[] => {
-  if (runtime === RUNTIME_OPTIONS.NODE_TS) {
+  if (runtime === RUNTIME_OPTIONS.NODE) {
     return NODE_SERVICE_OPTIONS;
   }
 
@@ -156,6 +165,18 @@ class ClackPromptAdapter implements Prompt {
       return null;
     }
 
+    let packageManager: string | symbol | undefined;
+    if (runtime === RUNTIME_OPTIONS.NODE) {
+      packageManager = await this.api.select({
+        message: "Select package manager",
+        options: toPromptOptions(NODE_PACKAGE_MANAGER_OPTIONS, PACKAGE_MANAGER_LABELS),
+      });
+
+      if (this.api.isCancel(packageManager)) {
+        return null;
+      }
+    }
+
     const databases = await this.api.multiselect({
       message: "Select databases",
       options: toPromptOptions(getDatabaseOptions(runtime as RuntimeOption), DATABASE_LABELS),
@@ -177,17 +198,26 @@ class ClackPromptAdapter implements Prompt {
       return null;
     }
 
+    const confirmLines = [
+      "Confirm create configuration:",
+      `- Name: ${name}`,
+      `- Runtime: ${RUNTIME_LABELS[runtime as RuntimeOption]}`,
+      `- Framework: ${FRAMEWORK_LABELS[framework as FrameworkOption]}`,
+    ];
+
+    if (packageManager !== undefined) {
+      confirmLines.push(
+        `- Package manager: ${PACKAGE_MANAGER_LABELS[packageManager as PackageManagerOption]}`,
+      );
+    }
+
+    confirmLines.push(
+      `- Databases: ${toLabelList(databases as DatabaseOption[], DATABASE_LABELS)}`,
+      `- Platform services: ${toLabelList(platformServices as PlatformServiceOption[], PLATFORM_SERVICE_LABELS)}`,
+    );
+
     const isConfirmed = await this.api.confirm({
-      message:
-        "Confirm create configuration:\n" +
-        `- Name: ${name}\n` +
-        `- Runtime: ${RUNTIME_LABELS[runtime as RuntimeOption]}\n` +
-        `- Framework: ${FRAMEWORK_LABELS[framework as FrameworkOption]}\n` +
-        `- Databases: ${toLabelList(databases as DatabaseOption[], DATABASE_LABELS)}\n` +
-        `- Platform services: ${toLabelList(
-          platformServices as PlatformServiceOption[],
-          PLATFORM_SERVICE_LABELS,
-        )}`,
+      message: confirmLines.join("\n"),
     });
 
     if (this.api.isCancel(isConfirmed)) {
@@ -201,6 +231,9 @@ class ClackPromptAdapter implements Prompt {
       name,
       platformServices: platformServices as PlatformServiceOption[],
       runtime: runtime as RuntimeOption,
+      ...(packageManager !== undefined && {
+        packageManager: packageManager as PackageManagerOption,
+      }),
     };
   }
 }

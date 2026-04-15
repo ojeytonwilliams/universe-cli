@@ -8,8 +8,9 @@ const nodeSelection: CreateSelections = {
   databases: ["redis", "postgresql"],
   framework: "express",
   name: "hello-universe",
+  packageManager: "pnpm",
   platformServices: ["email", "auth"],
-  runtime: "node_ts",
+  runtime: "node",
 };
 
 const staticSelection: CreateSelections = {

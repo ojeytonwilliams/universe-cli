@@ -160,7 +160,7 @@ class LayerCompositionService implements LayerComposer {
   }
 
   private resolveRuntimeLayer(runtime: CreateSelections["runtime"]): string {
-    if (runtime === RUNTIME_OPTIONS.NODE_TS) {
+    if (runtime === RUNTIME_OPTIONS.NODE) {
       return NODE_RUNTIME_LAYER;
     }
 

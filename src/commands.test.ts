@@ -74,8 +74,9 @@ const createPromptResult: CreateSelections = {
   databases: ["postgresql"],
   framework: "express",
   name: "hello-universe",
+  packageManager: "pnpm",
   platformServices: ["auth", "email"],
-  runtime: "node_ts",
+  runtime: "node",
 };
 
 const resolvedLayerFiles = {

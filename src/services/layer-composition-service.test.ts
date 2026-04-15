@@ -72,7 +72,7 @@ const nodeExpressSelection: CreateSelections = {
   framework: "express",
   name: "hello-universe",
   platformServices: ["email", "auth"],
-  runtime: "node_ts",
+  runtime: "node",
 };
 
 const createService = (overrides?: Record<string, Record<string, string>>) =>
@@ -196,7 +196,7 @@ describe(LayerCompositionService, () => {
         framework: "none",
         name: "my-app",
         platformServices: ["none"],
-        runtime: "node_ts",
+        runtime: "node",
       });
 
       expect(result.files["README.md"]).toBe("# my-app\n");
@@ -215,7 +215,7 @@ describe(LayerCompositionService, () => {
         framework: "express",
         name: "app",
         platformServices: ["none"],
-        runtime: "node_ts",
+        runtime: "node",
       });
 
       expect(result.files["meta.txt"]).toBe("rt=Node.js (TypeScript) fw=Express\n");
@@ -234,7 +234,7 @@ describe(LayerCompositionService, () => {
         framework: "none",
         name: "my-app",
         platformServices: ["none"],
-        runtime: "node_ts",
+        runtime: "node",
       });
 
       expect(result.files["note.txt"]).toBe("my-app {{unknown}}\n");
@@ -268,7 +268,7 @@ describe(LayerCompositionService, () => {
         framework: "express",
         name: "test",
         platformServices: ["none"],
-        runtime: "node_ts",
+        runtime: "node",
       });
 
       const output = result.files["docker-compose.yaml"];
@@ -291,7 +291,7 @@ describe(LayerCompositionService, () => {
         framework: "express",
         name: "test",
         platformServices: ["none"],
-        runtime: "node_ts",
+        runtime: "node",
       });
 
       const output = result.files["config.yml"];
@@ -313,7 +313,7 @@ describe(LayerCompositionService, () => {
         framework: "express",
         name: "test",
         platformServices: ["none"],
-        runtime: "node_ts",
+        runtime: "node",
       });
 
       expect(result.files["package.json"]).toBe(
@@ -339,7 +339,7 @@ describe(LayerCompositionService, () => {
         framework: "express",
         name: "test",
         platformServices: ["none"],
-        runtime: "node_ts",
+        runtime: "node",
       });
 
       expect(result.files["package.json"]).toBe(
@@ -380,7 +380,7 @@ describe(LayerCompositionService, () => {
           framework,
           name: "test",
           platformServices,
-          runtime: "node_ts",
+          runtime: "node",
         });
 
         expect(result.layers.map((layer) => layer.name)).toStrictEqual(
