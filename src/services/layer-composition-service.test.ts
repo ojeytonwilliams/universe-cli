@@ -8,7 +8,8 @@ import { LayerCompositionService, LayerTemplateRenderer } from "./layer-composit
 
 const NODE_DATABASES = ["postgresql", "redis"] as const;
 const NODE_SERVICES = ["auth", "email", "analytics"] as const;
-const NODE_FRAMEWORKS = ["express", "none"] as const;
+const NODE_FRAMEWORKS = ["express", "none", "typescript"] as const;
+const NODE_PACKAGE_MANAGERS = ["pnpm", "bun"] as const;
 
 const buildPowerSet = <T>(items: readonly T[]): T[][] => {
   const subsets: T[][] = [[]];
@@ -27,12 +28,17 @@ const buildPowerSet = <T>(items: readonly T[]): T[][] => {
 const toMultiSelect = <T extends string>(items: T[]): (T | "none")[] =>
   items.length === 0 ? ["none"] : ([...items].sort() as (T | "none")[]);
 
-const expectedNodeLayerNames = (
-  framework: (typeof NODE_FRAMEWORKS)[number],
-  databases: CreateSelections["databases"],
-  platformServices: CreateSelections["platformServices"],
-): string[] => {
-  const frameworkLayer = framework === "express" ? "frameworks/express" : "frameworks/none";
+const expectedNodeLayerNames = ({
+  framework,
+  packageManager,
+  databases,
+  platformServices,
+}: {
+  databases: CreateSelections["databases"];
+  framework: (typeof NODE_FRAMEWORKS)[number];
+  packageManager: (typeof NODE_PACKAGE_MANAGERS)[number];
+  platformServices: CreateSelections["platformServices"];
+}): string[] => {
   const serviceLayerSlugs = [
     ...databases.filter((d) => d !== "none"),
     ...platformServices.filter((s) => s !== "none"),
@@ -40,13 +46,20 @@ const expectedNodeLayerNames = (
     .map((v) => `services/${v}`)
     .sort((a, b) => a.localeCompare(b));
 
-  return ["always", "base/node-js-typescript", frameworkLayer, ...serviceLayerSlugs];
+  return [
+    "always",
+    "base/node",
+    `package-managers/${packageManager}`,
+    `frameworks/${framework}`,
+    ...serviceLayerSlugs,
+  ];
 };
 
 interface NodeCase {
   databases: CreateSelections["databases"];
   databaseLabel: string;
   framework: (typeof NODE_FRAMEWORKS)[number];
+  packageManager: (typeof NODE_PACKAGE_MANAGERS)[number];
   platformServices: CreateSelections["platformServices"];
   serviceLabel: string;
 }
@@ -54,15 +67,18 @@ interface NodeCase {
 const databaseSubsets = buildPowerSet(NODE_DATABASES).map((s) => toMultiSelect([...s]));
 const serviceSubsets = buildPowerSet(NODE_SERVICES).map((s) => toMultiSelect([...s]));
 
-const nodeCombinations: NodeCase[] = NODE_FRAMEWORKS.flatMap((framework) =>
-  databaseSubsets.flatMap((databases) =>
-    serviceSubsets.map((platformServices) => ({
-      databaseLabel: databases.join(","),
-      databases: databases as CreateSelections["databases"],
-      framework,
-      platformServices: platformServices as CreateSelections["platformServices"],
-      serviceLabel: platformServices.join(","),
-    })),
+const nodeCombinations: NodeCase[] = NODE_PACKAGE_MANAGERS.flatMap((packageManager) =>
+  NODE_FRAMEWORKS.flatMap((framework) =>
+    databaseSubsets.flatMap((databases) =>
+      serviceSubsets.map((platformServices) => ({
+        databaseLabel: databases.join(","),
+        databases: databases as CreateSelections["databases"],
+        framework,
+        packageManager,
+        platformServices: platformServices as CreateSelections["platformServices"],
+        serviceLabel: platformServices.join(","),
+      })),
+    ),
   ),
 );
 
@@ -71,17 +87,18 @@ const nodeExpressSelection: CreateSelections = {
   databases: ["redis", "postgresql"],
   framework: "express",
   name: "hello-universe",
+  packageManager: "pnpm",
   platformServices: ["email", "auth"],
   runtime: "node",
 };
 
-const createService = (overrides?: Record<string, Record<string, string>>) =>
+const createService = (overrides?: Record<string, Record<string, string> | undefined>) =>
   new LayerCompositionService({
     always: {
       ".gitignore": "dist\nnode_modules\n",
       "README.md": "# Hello Universe\n",
     },
-    "base/node-js-typescript": {
+    "base/node": {
       "package.json": '{"scripts":{"build":"tsc","dev":"node src/index.js"}}',
       "src/index.ts": "export { start } from './server.js';\n",
     },
@@ -89,6 +106,14 @@ const createService = (overrides?: Record<string, Record<string, string>>) =>
       "package.json":
         '{"dependencies":{"express":"1.2.3"},"scripts":{"dev":"node --watch src/index.js"}}',
       "src/server.ts": "const start = (): void => {};\nexport { start };\n",
+    },
+    "frameworks/none": {},
+    "frameworks/typescript": {},
+    "package-managers/bun": {
+      "start.sh": "bun install && bun dev\n",
+    },
+    "package-managers/pnpm": {
+      "start.sh": "pnpm install && pnpm dev\n",
     },
     "services/auth": {
       "config/services/auth.json": '{"service":"auth"}',
@@ -113,7 +138,8 @@ describe(LayerCompositionService, () => {
 
     expect(result.layers.map((layer) => layer.name)).toStrictEqual([
       "always",
-      "base/node-js-typescript",
+      "base/node",
+      "package-managers/pnpm",
       "frameworks/express",
       "services/auth",
       "services/email",
@@ -147,7 +173,7 @@ describe(LayerCompositionService, () => {
 
   it("fails with a typed error when a required layer is missing", () => {
     const service = createService({
-      "frameworks/express": undefined as unknown as Record<string, string>,
+      "frameworks/express": undefined,
     });
 
     const act = () => service.resolveLayers(nodeExpressSelection);
@@ -157,7 +183,7 @@ describe(LayerCompositionService, () => {
 
   it("fails with a typed error for non-configuration file collisions across stages", () => {
     const service = createService({
-      "base/node-js-typescript": {
+      "base/node": {
         "README.md": "# Replacement\n",
       },
     });
@@ -182,12 +208,33 @@ describe(LayerCompositionService, () => {
     expect(act).toThrow(LayerConflictError);
   });
 
+  it("resolves bun package manager layer for Node+bun selection", () => {
+    const service = createService();
+
+    const result = service.resolveLayers({
+      ...nodeExpressSelection,
+      packageManager: "bun",
+    });
+
+    expect(result.layers.map((layer) => layer.name)).toStrictEqual([
+      "always",
+      "base/node",
+      "package-managers/bun",
+      "frameworks/express",
+      "services/auth",
+      "services/email",
+      "services/postgresql",
+      "services/redis",
+    ]);
+  });
+
   describe("template rendering", () => {
     it("substitutes {{name}} in file content using the selection name", () => {
       const service = new LayerCompositionService({
         always: { "README.md": "# {{name}}\n" },
-        "base/node-js-typescript": {},
+        "base/node": {},
         "frameworks/none": {},
+        "package-managers/pnpm": {},
       });
 
       const result = service.resolveLayers({
@@ -195,6 +242,7 @@ describe(LayerCompositionService, () => {
         databases: ["none"],
         framework: "none",
         name: "my-app",
+        packageManager: "pnpm",
         platformServices: ["none"],
         runtime: "node",
       });
@@ -205,8 +253,9 @@ describe(LayerCompositionService, () => {
     it("substitutes {{runtime}} and {{framework}} in file content", () => {
       const service = new LayerCompositionService({
         always: { "meta.txt": "rt={{runtime}} fw={{framework}}\n" },
-        "base/node-js-typescript": {},
+        "base/node": {},
         "frameworks/express": {},
+        "package-managers/pnpm": {},
       });
 
       const result = service.resolveLayers({
@@ -214,6 +263,7 @@ describe(LayerCompositionService, () => {
         databases: ["none"],
         framework: "express",
         name: "app",
+        packageManager: "pnpm",
         platformServices: ["none"],
         runtime: "node",
       });
@@ -224,8 +274,9 @@ describe(LayerCompositionService, () => {
     it("leaves unknown placeholders in file content unchanged", () => {
       const service = new LayerCompositionService({
         always: { "note.txt": "{{name}} {{unknown}}\n" },
-        "base/node-js-typescript": {},
+        "base/node": {},
         "frameworks/none": {},
+        "package-managers/pnpm": {},
       });
 
       const result = service.resolveLayers({
@@ -233,6 +284,7 @@ describe(LayerCompositionService, () => {
         databases: ["none"],
         framework: "none",
         name: "my-app",
+        packageManager: "pnpm",
         platformServices: ["none"],
         runtime: "node",
       });
@@ -245,16 +297,17 @@ describe(LayerCompositionService, () => {
     const makeYamlService = (overrides?: Record<string, Record<string, string>>) =>
       new LayerCompositionService({
         always: { "README.md": "# test\n" },
-        "base/node-js-typescript": { "package.json": '{"name":"test"}' },
+        "base/node": { "package.json": '{"name":"test"}' },
         "base/static": { "public/index.html": "<h1>test</h1>\n" },
         "frameworks/express": {},
         "frameworks/none": {},
+        "package-managers/pnpm": {},
         ...overrides,
       });
 
     it("merges YAML config files and emits valid YAML output", () => {
       const service = makeYamlService({
-        "base/node-js-typescript": {
+        "base/node": {
           "docker-compose.yaml": "version: '3'\nservices:\n  app:\n    image: node:22\n",
         },
         "frameworks/express": {
@@ -267,6 +320,7 @@ describe(LayerCompositionService, () => {
         databases: ["none"],
         framework: "express",
         name: "test",
+        packageManager: "pnpm",
         platformServices: ["none"],
         runtime: "node",
       });
@@ -281,7 +335,7 @@ describe(LayerCompositionService, () => {
 
     it("merges .yml config files and emits valid YAML output", () => {
       const service = makeYamlService({
-        "base/node-js-typescript": { "config.yml": "env: base\nshared: common\n" },
+        "base/node": { "config.yml": "env: base\nshared: common\n" },
         "frameworks/express": { "config.yml": "env: extended\n" },
       });
 
@@ -290,6 +344,7 @@ describe(LayerCompositionService, () => {
         databases: ["none"],
         framework: "express",
         name: "test",
+        packageManager: "pnpm",
         platformServices: ["none"],
         runtime: "node",
       });
@@ -303,7 +358,7 @@ describe(LayerCompositionService, () => {
 
     it("preserves JSON round-trip behavior unchanged", () => {
       const service = makeYamlService({
-        "base/node-js-typescript": { "package.json": '{"scripts":{"build":"tsc"}}' },
+        "base/node": { "package.json": '{"scripts":{"build":"tsc"}}' },
         "frameworks/express": { "package.json": '{"dependencies":{"express":"5.1.0"}}' },
       });
 
@@ -312,6 +367,7 @@ describe(LayerCompositionService, () => {
         databases: ["none"],
         framework: "express",
         name: "test",
+        packageManager: "pnpm",
         platformServices: ["none"],
         runtime: "node",
       });
@@ -323,7 +379,7 @@ describe(LayerCompositionService, () => {
 
     it("resolves layers containing both JSON and YAML config files", () => {
       const service = makeYamlService({
-        "base/node-js-typescript": {
+        "base/node": {
           "docker-compose.yaml": "services:\n  app:\n    image: node:22\n",
           "package.json": '{"scripts":{"build":"tsc"}}',
         },
@@ -338,6 +394,7 @@ describe(LayerCompositionService, () => {
         databases: ["none"],
         framework: "express",
         name: "test",
+        packageManager: "pnpm",
         platformServices: ["none"],
         runtime: "node",
       });
@@ -372,19 +429,20 @@ describe(LayerCompositionService, () => {
     });
 
     it.each(nodeCombinations)(
-      "resolves Node.js + $framework + db:[$databaseLabel] + svc:[$serviceLabel]",
-      ({ framework, databases, platformServices }) => {
+      "resolves Node.js + $framework + $packageManager + db:[$databaseLabel] + svc:[$serviceLabel]",
+      ({ framework, packageManager, databases, platformServices }) => {
         const result = service.resolveLayers({
           confirmed: true,
           databases,
           framework,
           name: "test",
+          packageManager,
           platformServices,
           runtime: "node",
         });
 
         expect(result.layers.map((layer) => layer.name)).toStrictEqual(
-          expectedNodeLayerNames(framework, databases, platformServices),
+          expectedNodeLayerNames({ databases, framework, packageManager, platformServices }),
         );
       },
     );

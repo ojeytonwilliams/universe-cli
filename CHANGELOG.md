@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.2.0] - 2026-04-15
+
+### Repartition layers: slim base/node, introduce package-manager and framework layers
+
+- **`base/node` slimmed down**: Runtime layer now contains only `Procfile` and `docker-compose.dev.yml` (with `command: sh start.sh`). All TypeScript, scripts, and package-manager artifacts removed from the runtime layer.
+- **`package-managers/pnpm` layer**: Contributes `pnpm-workspace.yaml`, `start.sh` (`pnpm install && pnpm dev`), `dev` script, and `preinstall` script.
+- **`package-managers/bun` layer**: Contributes `start.sh` (`bun install && bun dev`) and `dev` script (no preinstall hook in v1).
+- **`frameworks/typescript` layer**: Contributes TypeScript devDependency, `tsconfig.json`, minimal TS HTTP server `src/index.ts`, `build` and `start` scripts.
+- **`frameworks/express` layer**: Contributes Express dependency, TypeScript devDependency, Express-specific `src/index.ts`, `tsconfig.json`, `build` and `start` scripts.
+- **Data-driven framework resolution**: `LayerCompositionService` now resolves `frameworks/${framework}` without branching; adding new frameworks requires no changes to the service.
+- **Deterministic layer order**: `always` → `base/{runtime}` → `package-managers/{manager}` (Node only) → `frameworks/{framework}` → `services/{service}`.
+- **Combination coverage expanded**: Layer-resolution tests now cover all pnpm/bun × express/typescript/none × database/service combinations.
+
 ## [3.1.0] - 2026-04-15
 
 ### Extend create prompt and validation with package manager selection and TypeScript framework

@@ -3,18 +3,18 @@ import { LayerConflictError, MissingLayerError } from "../errors/cli-errors.js";
 import {
   DATABASE_OPTIONS,
   FRAMEWORK_LABELS,
-  FRAMEWORK_OPTIONS,
   RUNTIME_LABELS,
   RUNTIME_OPTIONS,
 } from "../ports/prompt.js";
 import type { CreateSelections } from "../ports/prompt.js";
 import { alwaysLayer } from "./layers/always-layer.js";
-import { baseNodeJsTypescriptLayer } from "./layers/base-node-js-typescript-layer.js";
+import { baseNodeLayer } from "./layers/base-node-layer.js";
 import { baseStaticLayer } from "./layers/base-static-layer.js";
 import { frameworksLayer } from "./layers/frameworks-layer.js";
+import { packageManagersLayer } from "./layers/package-managers-layer.js";
 import { servicesLayer } from "./layers/services-layer.js";
 
-type LayerStage = "always" | "base" | "frameworks" | "services";
+type LayerStage = "always" | "base" | "frameworks" | "package-managers" | "services";
 type JsonValue = boolean | JsonObject | JsonValue[] | null | number | string;
 type LayerRegistry = Record<string, Record<string, string> | undefined>;
 
@@ -46,14 +46,15 @@ interface TemplateContext {
 
 const CONFIG_EXTENSIONS = new Set([".json", ".yaml", ".yml"]);
 const NONE_VALUE = DATABASE_OPTIONS.NONE;
-const NODE_RUNTIME_LAYER = "base/node-js-typescript";
+const NODE_RUNTIME_LAYER = "base/node";
 const STATIC_RUNTIME_LAYER = "base/static";
 
 const defaultLayerRegistry: LayerRegistry = {
   always: alwaysLayer,
-  "base/node-js-typescript": baseNodeJsTypescriptLayer,
+  "base/node": baseNodeLayer,
   "base/static": baseStaticLayer,
   ...frameworksLayer,
+  ...packageManagersLayer,
   ...servicesLayer,
 };
 
@@ -130,9 +131,13 @@ class LayerCompositionService implements LayerComposer {
   }
 
   private resolveOrderedLayers(input: CreateSelections): ResolvedLayer[] {
+    const isNode = input.runtime === RUNTIME_OPTIONS.NODE;
     const orderedLayerNames = [
       "always",
       this.resolveRuntimeLayer(input.runtime),
+      ...(isNode && input.packageManager !== undefined
+        ? [this.resolvePackageManagerLayer(input.packageManager)]
+        : []),
       this.resolveFrameworkLayer(input.framework),
       ...this.resolveServiceLayers(input),
     ];
@@ -167,12 +172,14 @@ class LayerCompositionService implements LayerComposer {
     return STATIC_RUNTIME_LAYER;
   }
 
-  private resolveFrameworkLayer(framework: CreateSelections["framework"]): string {
-    if (framework === FRAMEWORK_OPTIONS.EXPRESS) {
-      return "frameworks/express";
-    }
+  private resolvePackageManagerLayer(
+    packageManager: NonNullable<CreateSelections["packageManager"]>,
+  ): string {
+    return `package-managers/${packageManager}`;
+  }
 
-    return "frameworks/none";
+  private resolveFrameworkLayer(framework: CreateSelections["framework"]): string {
+    return `frameworks/${framework}`;
   }
 
   private resolveStage(layerName: string): LayerStage {
@@ -182,6 +189,10 @@ class LayerCompositionService implements LayerComposer {
 
     if (layerName.startsWith("base/")) {
       return "base";
+    }
+
+    if (layerName.startsWith("package-managers/")) {
+      return "package-managers";
     }
 
     if (layerName.startsWith("frameworks/")) {

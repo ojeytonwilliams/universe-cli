@@ -36,7 +36,7 @@ Requirements reference: `plans/universe-cli/framework-package-manager-prd.md`
 
 ## Phase 2 — Layer model refactor for extensibility (FR-3, FR-4, FR-5, FR-6, NFR-3)
 
-- [ ] CODE: Add package-manager layer stage and data-driven framework resolution
+- [x] CODE: Add package-manager layer stage and data-driven framework resolution
   - Feature: layer ordering includes manager stage for Node and removes hardcoded framework branching requirement for future additions
   - Files: `src/services/layer-composition-service.ts`, `src/services/layer-composition-service.test.ts`
   - Acceptance:
@@ -46,7 +46,7 @@ Requirements reference: `plans/universe-cli/framework-package-manager-prd.md`
     - Layer-resolution tests include Node+pnpm, Node+bun, Static
     - Tests are written first and initially fail, then pass after implementation
 
-- [ ] CODE: Rename and slim down the runtime layer
+- [x] CODE: Rename and slim down the runtime layer
   - Feature: `base/node-js-typescript` becomes `base/node` containing only Node.js execution-environment primitives
   - Files: `src/services/layers/base-node-js-typescript-layer.ts` → rename to `src/services/layers/base-node-layer.ts`, relevant layer tests/snapshots
   - Acceptance:
@@ -56,7 +56,7 @@ Requirements reference: `plans/universe-cli/framework-package-manager-prd.md`
     - Tests/snapshots updated and passing
     - Tests are written first and initially fail, then pass after implementation
 
-- [ ] CODE: Introduce `frameworks/typescript`, update `frameworks/express`, and add PM-layer artifacts
+- [x] CODE: Introduce `frameworks/typescript`, update `frameworks/express`, and add PM-layer artifacts
   - Feature: TypeScript is a framework; PM layers own `start.sh` and PM-specific scripts
   - Files: `src/services/layers/frameworks-layer.ts`, `src/services/layers/package-managers-layer.ts` (new), integration snapshots/tests
   - Acceptance:

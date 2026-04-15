@@ -227,7 +227,7 @@ describe("create", () => {
       always: {
         "README.md": "# __PROJECT_NAME__\n",
       },
-      "base/node-js-typescript": {
+      "base/node": {
         "package.json": JSON.stringify({
           scripts: {
             build: "tsc -p tsconfig.json",
@@ -249,6 +249,7 @@ describe("create", () => {
         }),
       },
       "frameworks/none": {},
+      "package-managers/pnpm": {},
     };
 
     tempDirectories.push(rootDirectory);
@@ -282,7 +283,7 @@ describe("create", () => {
       always: {
         "README.md": "# from always\n",
       },
-      "base/node-js-typescript": {
+      "base/node": {
         "README.md": "# from base\n",
       },
       "base/static": {
@@ -290,6 +291,7 @@ describe("create", () => {
       },
       "frameworks/express": {},
       "frameworks/none": {},
+      "package-managers/pnpm": {},
     };
 
     tempDirectories.push(rootDirectory);
