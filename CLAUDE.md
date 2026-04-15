@@ -72,3 +72,8 @@ If tests/lint/check fail due to missing dependencies:
 1. **Stop and ask** for the exact install needed.
 2. Include: (a) what is missing, (b) why it is required, and (c) the exact package/tool name(s).
 3. **Do not pivot** to a different implementation approach to avoid the missing dependency unless the user explicitly declines installation.
+
+## Dependencies
+
+Always pin exact versions. For example, if you want me to install `nanostores` ask me to do
+`pnpm add --save-exact nanostores @nanostores/react`
