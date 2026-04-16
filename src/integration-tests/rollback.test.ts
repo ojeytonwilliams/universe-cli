@@ -9,7 +9,7 @@ import { CreateInputValidationService } from "../services/create-input-validatio
 import { LayerCompositionService } from "../services/layer-composition-service.js";
 import { PackageManagerService } from "../package-manager/package-manager.service.js";
 import { PlatformManifestService } from "../services/platform-manifest-service.js";
-import { runCli } from "../cli.js";
+import { route } from "../bin.js";
 import type { CreateSelections, Prompt } from "../prompt/prompt.port.js";
 
 const createNodeSelection = (name: string): CreateSelections => ({
@@ -63,13 +63,16 @@ describe("rollback", () => {
     tempDirectories.push(rootDirectory);
 
     const projectName = "rollback-app";
-    const deps = makeDeps(rootDirectory, createPromptPort(createNodeSelection(projectName)));
+    const { observability, ...routeDeps } = makeDeps(
+      rootDirectory,
+      createPromptPort(createNodeSelection(projectName)),
+    );
     const projectDir = join(rootDirectory, projectName);
 
-    const createResult = await runCli(["create"], deps);
+    const createResult = await route(["create"], routeDeps, observability);
     expect(createResult.exitCode).toBe(0);
 
-    const rollbackResult = await runCli(["rollback", projectDir], deps);
+    const rollbackResult = await route(["rollback", projectDir], routeDeps, observability);
     expect(rollbackResult.exitCode).toBe(0);
     expect(rollbackResult.output).toContain(projectName);
     expect(rollbackResult.output).toContain("production");
@@ -81,13 +84,16 @@ describe("rollback", () => {
     tempDirectories.push(rootDirectory);
 
     const projectName = "repeat-rollback";
-    const deps = makeDeps(rootDirectory, createPromptPort(createNodeSelection(projectName)));
+    const { observability, ...routeDeps } = makeDeps(
+      rootDirectory,
+      createPromptPort(createNodeSelection(projectName)),
+    );
     const projectDir = join(rootDirectory, projectName);
 
-    await runCli(["create"], deps);
-    await runCli(["rollback", projectDir], deps);
+    await route(["create"], routeDeps, observability);
+    await route(["rollback", projectDir], routeDeps, observability);
 
-    const secondResult = await runCli(["rollback", projectDir], deps);
+    const secondResult = await route(["rollback", projectDir], routeDeps, observability);
     expect(secondResult.exitCode).toBe(0);
     expect(secondResult.output).toContain(`stub-rollback-${projectName}-production-2`);
   });
@@ -96,12 +102,15 @@ describe("rollback", () => {
     const rootDirectory = mkdtempSync(join(tmpdir(), "universe-rollback-"));
     tempDirectories.push(rootDirectory);
 
-    const deps = makeDeps(rootDirectory, createPromptPort(createNodeSelection("rollback-failure")));
+    const { observability, ...routeDeps } = makeDeps(
+      rootDirectory,
+      createPromptPort(createNodeSelection("rollback-failure")),
+    );
     const projectDir = join(rootDirectory, "rollback-failure");
 
-    await runCli(["create"], deps);
+    await route(["create"], routeDeps, observability);
 
-    const result = await runCli(["rollback", projectDir], deps);
+    const result = await route(["rollback", projectDir], routeDeps, observability);
     expect(result.exitCode).toBeGreaterThan(0);
   });
 });

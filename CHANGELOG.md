@@ -1,5 +1,14 @@
 # Changelog
 
+## [3.3.2] - 2026-04-16
+
+### Move routing and validation to `bin.ts`; slim `runCli`
+
+- `bin.ts` now owns all argv parsing, `--help`/`-h` handling, unknown-command detection, and per-command arg-count and env-value validation via an exported `route(argv, deps, observability)` function.
+- `runCli` in `cli.ts` is reduced to a three-argument observability wrapper `(command, handler, observability)` with no knowledge of argv, commands, or dep shapes.
+- Observability is only tracked for commands that reach `runCli`; help, unknown-command, and bad-arg branches return early without emitting tracking events.
+- All integration tests updated to call `route` instead of the old `runCli` signature.
+
 ## [3.3.1] - 2026-04-16
 
 ### Flatten handler and CLI dependency injection

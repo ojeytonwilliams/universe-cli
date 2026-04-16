@@ -7,7 +7,7 @@ import { LocalProjectReader } from "../io/local-project-reader.js";
 import { CreateInputValidationService } from "../services/create-input-validation-service.js";
 import { LayerCompositionService } from "../services/layer-composition-service.js";
 import { PlatformManifestService } from "../services/platform-manifest-service.js";
-import { runCli } from "../cli.js";
+import { route } from "../bin.js";
 import type { CreateSelections, Prompt } from "../prompt/prompt.port.js";
 import { PackageManagerService } from "../package-manager/package-manager.service.js";
 import { StubPackageManager } from "../package-manager/package-manager.stub.js";
@@ -63,13 +63,16 @@ describe("logs", () => {
     tempDirectories.push(rootDirectory);
 
     const projectName = "logs-app";
-    const deps = makeDeps(rootDirectory, createPromptPort(createNodeSelection(projectName)));
+    const { observability, ...routeDeps } = makeDeps(
+      rootDirectory,
+      createPromptPort(createNodeSelection(projectName)),
+    );
     const projectDir = join(rootDirectory, projectName);
 
-    const createResult = await runCli(["create"], deps);
+    const createResult = await route(["create"], routeDeps, observability);
     expect(createResult.exitCode).toBe(0);
 
-    const logsResult = await runCli(["logs", projectDir], deps);
+    const logsResult = await route(["logs", projectDir], routeDeps, observability);
     expect(logsResult.exitCode).toBe(0);
     expect(logsResult.output).toContain(projectName);
     expect(logsResult.output).toContain("preview");
@@ -79,12 +82,15 @@ describe("logs", () => {
     const rootDirectory = mkdtempSync(join(tmpdir(), "universe-logs-"));
     tempDirectories.push(rootDirectory);
 
-    const deps = makeDeps(rootDirectory, createPromptPort(createNodeSelection("logs-failure")));
+    const { observability, ...routeDeps } = makeDeps(
+      rootDirectory,
+      createPromptPort(createNodeSelection("logs-failure")),
+    );
     const projectDir = join(rootDirectory, "logs-failure");
 
-    await runCli(["create"], deps);
+    await route(["create"], routeDeps, observability);
 
-    const result = await runCli(["logs", projectDir], deps);
+    const result = await route(["logs", projectDir], routeDeps, observability);
     expect(result.exitCode).toBeGreaterThan(0);
   });
 });

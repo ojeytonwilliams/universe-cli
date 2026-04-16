@@ -9,7 +9,7 @@ import { CreateInputValidationService } from "../services/create-input-validatio
 import { LayerCompositionService } from "../services/layer-composition-service.js";
 import { PackageManagerService } from "../package-manager/package-manager.service.js";
 import { PlatformManifestService } from "../services/platform-manifest-service.js";
-import { runCli } from "../cli.js";
+import { route } from "../bin.js";
 import type { CreateSelections, Prompt } from "../prompt/prompt.port.js";
 
 const createNodeSelection = (name: string): CreateSelections => ({
@@ -63,13 +63,16 @@ describe("deploy", () => {
     tempDirectories.push(rootDirectory);
 
     const projectName = "e2e-deploy-app";
-    const deps = makeDeps(rootDirectory, createPromptPort(createNodeSelection(projectName)));
+    const { observability, ...routeDeps } = makeDeps(
+      rootDirectory,
+      createPromptPort(createNodeSelection(projectName)),
+    );
     const projectDir = join(rootDirectory, projectName);
 
-    const createResult = await runCli(["create"], deps);
+    const createResult = await route(["create"], routeDeps, observability);
     expect(createResult.exitCode).toBe(0);
 
-    const deployResult = await runCli(["deploy", projectDir], deps);
+    const deployResult = await route(["deploy", projectDir], routeDeps, observability);
     expect(deployResult.exitCode).toBe(0);
     expect(deployResult.output).toContain(projectName);
     expect(deployResult.output).toContain("preview");
@@ -81,13 +84,16 @@ describe("deploy", () => {
     tempDirectories.push(rootDirectory);
 
     const projectName = "e2e-repeat-deploy";
-    const deps = makeDeps(rootDirectory, createPromptPort(createNodeSelection(projectName)));
+    const { observability, ...routeDeps } = makeDeps(
+      rootDirectory,
+      createPromptPort(createNodeSelection(projectName)),
+    );
     const projectDir = join(rootDirectory, projectName);
 
-    await runCli(["create"], deps);
-    await runCli(["deploy", projectDir], deps);
+    await route(["create"], routeDeps, observability);
+    await route(["deploy", projectDir], routeDeps, observability);
 
-    const secondResult = await runCli(["deploy", projectDir], deps);
+    const secondResult = await route(["deploy", projectDir], routeDeps, observability);
     expect(secondResult.exitCode).toBe(0);
     expect(secondResult.output).toContain(`stub-${projectName}-preview-2`);
   });
@@ -96,12 +102,15 @@ describe("deploy", () => {
     const rootDirectory = mkdtempSync(join(tmpdir(), "universe-deploy-e2e-"));
     tempDirectories.push(rootDirectory);
 
-    const deps = makeDeps(rootDirectory, createPromptPort(createNodeSelection("deploy-failure")));
+    const { observability, ...routeDeps } = makeDeps(
+      rootDirectory,
+      createPromptPort(createNodeSelection("deploy-failure")),
+    );
     const projectDir = join(rootDirectory, "deploy-failure");
 
-    await runCli(["create"], deps);
+    await route(["create"], routeDeps, observability);
 
-    const result = await runCli(["deploy", projectDir], deps);
+    const result = await route(["deploy", projectDir], routeDeps, observability);
     expect(result.exitCode).toBeGreaterThan(0);
   });
 });

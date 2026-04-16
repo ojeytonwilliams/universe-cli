@@ -49,7 +49,7 @@ Requirements reference: `design/prd.md`
 
 ## Phase 2 — Move routing and validation to `bin.ts`; slim `runCli`
 
-- [ ] CODE: Extract routing, validation, and help into a testable `route` function; update `runCli` signature
+- [x] CODE: Extract routing, validation, and help into a testable `route` function; update `runCli` signature
   - Feature: `bin.ts` owns all argv parsing, `--help` handling, unknown-command detection, and per-command arg validation. `runCli` is reduced to a three-argument observability wrapper `(command, handler, observability)`. A named `route` function (exported for testing) encapsulates the dispatch logic so tests do not require a live process.
   - Files:
     - `src/bin.ts` — add exported `route(argv, deps, observability)` function containing: `--help`/`-h`/no-command branch (prints `HELP_TEXT`, returns `CliResult` directly), unknown-command branch (returns `BadArgumentsError` result directly), per-command arg-count and env-value validation (throws `BadArgumentsError` on failure), thunk binding (closes over deps), and call to `runCli(command, thunk, observability)`; top-level script calls `route(process.argv.slice(2), deps, observability)` and writes output
@@ -65,7 +65,7 @@ Requirements reference: `design/prd.md`
     - Observability is tracked only for commands that reach `runCli`; no observability calls occur for help, unknown-command, or bad-arg branches
     - All previously passing `cli.test.ts` assertions continue to pass under the restructured tests
 
-- [ ] TASK: Validation gate — Phase 2
+- [x] TASK: Validation gate — Phase 2
   - `pnpm test` passes
   - `pnpm lint` passes
   - `pnpm check` passes

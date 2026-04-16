@@ -9,7 +9,7 @@ import { CreateInputValidationService } from "../services/create-input-validatio
 import { LayerCompositionService } from "../services/layer-composition-service.js";
 import { PackageManagerService } from "../package-manager/package-manager.service.js";
 import { PlatformManifestService } from "../services/platform-manifest-service.js";
-import { runCli } from "../cli.js";
+import { route } from "../bin.js";
 import type { CreateSelections, Prompt } from "../prompt/prompt.port.js";
 
 const createNodeSelection = (name: string): CreateSelections => ({
@@ -63,13 +63,16 @@ describe("list", () => {
     tempDirectories.push(rootDirectory);
 
     const projectName = "list-app";
-    const deps = makeDeps(rootDirectory, createPromptPort(createNodeSelection(projectName)));
+    const { observability, ...routeDeps } = makeDeps(
+      rootDirectory,
+      createPromptPort(createNodeSelection(projectName)),
+    );
     const projectDir = join(rootDirectory, projectName);
 
-    const createResult = await runCli(["create"], deps);
+    const createResult = await route(["create"], routeDeps, observability);
     expect(createResult.exitCode).toBe(0);
 
-    const listResult = await runCli(["list", projectDir], deps);
+    const listResult = await route(["list", projectDir], routeDeps, observability);
     expect(listResult.exitCode).toBe(0);
     expect(listResult.output).toContain(projectName);
     expect(listResult.output).toContain("preview");
@@ -80,12 +83,15 @@ describe("list", () => {
     const rootDirectory = mkdtempSync(join(tmpdir(), "universe-list-"));
     tempDirectories.push(rootDirectory);
 
-    const deps = makeDeps(rootDirectory, createPromptPort(createNodeSelection("list-failure")));
+    const { observability, ...routeDeps } = makeDeps(
+      rootDirectory,
+      createPromptPort(createNodeSelection("list-failure")),
+    );
     const projectDir = join(rootDirectory, "list-failure");
 
-    await runCli(["create"], deps);
+    await route(["create"], routeDeps, observability);
 
-    const result = await runCli(["list", projectDir], deps);
+    const result = await route(["list", projectDir], routeDeps, observability);
     expect(result.exitCode).toBeGreaterThan(0);
   });
 });

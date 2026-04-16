@@ -9,7 +9,7 @@ import { CreateInputValidationService } from "../services/create-input-validatio
 import { LayerCompositionService } from "../services/layer-composition-service.js";
 import { PackageManagerService } from "../package-manager/package-manager.service.js";
 import { PlatformManifestService } from "../services/platform-manifest-service.js";
-import { runCli } from "../cli.js";
+import { route } from "../bin.js";
 import type { CreateSelections, Prompt } from "../prompt/prompt.port.js";
 
 const createNodeSelection = (name: string): CreateSelections => ({
@@ -63,13 +63,16 @@ describe("promote", () => {
     tempDirectories.push(rootDirectory);
 
     const projectName = "promote-app";
-    const deps = makeDeps(rootDirectory, createPromptPort(createNodeSelection(projectName)));
+    const { observability, ...routeDeps } = makeDeps(
+      rootDirectory,
+      createPromptPort(createNodeSelection(projectName)),
+    );
     const projectDir = join(rootDirectory, projectName);
 
-    const createResult = await runCli(["create"], deps);
+    const createResult = await route(["create"], routeDeps, observability);
     expect(createResult.exitCode).toBe(0);
 
-    const promoteResult = await runCli(["promote", projectDir], deps);
+    const promoteResult = await route(["promote", projectDir], routeDeps, observability);
     expect(promoteResult.exitCode).toBe(0);
     expect(promoteResult.output).toContain(projectName);
     expect(promoteResult.output).toContain("production");
@@ -81,13 +84,16 @@ describe("promote", () => {
     tempDirectories.push(rootDirectory);
 
     const projectName = "repeat-promote";
-    const deps = makeDeps(rootDirectory, createPromptPort(createNodeSelection(projectName)));
+    const { observability, ...routeDeps } = makeDeps(
+      rootDirectory,
+      createPromptPort(createNodeSelection(projectName)),
+    );
     const projectDir = join(rootDirectory, projectName);
 
-    await runCli(["create"], deps);
-    await runCli(["promote", projectDir], deps);
+    await route(["create"], routeDeps, observability);
+    await route(["promote", projectDir], routeDeps, observability);
 
-    const secondResult = await runCli(["promote", projectDir], deps);
+    const secondResult = await route(["promote", projectDir], routeDeps, observability);
     expect(secondResult.exitCode).toBe(0);
     expect(secondResult.output).toContain(`stub-promote-${projectName}-production-2`);
   });
@@ -96,12 +102,15 @@ describe("promote", () => {
     const rootDirectory = mkdtempSync(join(tmpdir(), "universe-promote-"));
     tempDirectories.push(rootDirectory);
 
-    const deps = makeDeps(rootDirectory, createPromptPort(createNodeSelection("promote-failure")));
+    const { observability, ...routeDeps } = makeDeps(
+      rootDirectory,
+      createPromptPort(createNodeSelection("promote-failure")),
+    );
     const projectDir = join(rootDirectory, "promote-failure");
 
-    await runCli(["create"], deps);
+    await route(["create"], routeDeps, observability);
 
-    const result = await runCli(["promote", projectDir], deps);
+    const result = await route(["promote", projectDir], routeDeps, observability);
     expect(result.exitCode).toBeGreaterThan(0);
   });
 });

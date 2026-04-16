@@ -9,7 +9,7 @@ import { CreateInputValidationService } from "../services/create-input-validatio
 import { LayerCompositionService } from "../services/layer-composition-service.js";
 import { PackageManagerService } from "../package-manager/package-manager.service.js";
 import { PlatformManifestService } from "../services/platform-manifest-service.js";
-import { runCli } from "../cli.js";
+import { route } from "../bin.js";
 import type { CreateSelections, Prompt } from "../prompt/prompt.port.js";
 
 const createNodeSelection = (name: string): CreateSelections => ({
@@ -63,13 +63,16 @@ describe("teardown", () => {
     tempDirectories.push(rootDirectory);
 
     const projectName = "teardown-app";
-    const deps = makeDeps(rootDirectory, createPromptPort(createNodeSelection(projectName)));
+    const { observability, ...routeDeps } = makeDeps(
+      rootDirectory,
+      createPromptPort(createNodeSelection(projectName)),
+    );
     const projectDir = join(rootDirectory, projectName);
 
-    const createResult = await runCli(["create"], deps);
+    const createResult = await route(["create"], routeDeps, observability);
     expect(createResult.exitCode).toBe(0);
 
-    const teardownResult = await runCli(["teardown", projectDir], deps);
+    const teardownResult = await route(["teardown", projectDir], routeDeps, observability);
     expect(teardownResult.exitCode).toBe(0);
     expect(teardownResult.output).toContain(projectName);
     expect(teardownResult.output).toContain(`stub-teardown-${projectName}-1`);
@@ -79,12 +82,15 @@ describe("teardown", () => {
     const rootDirectory = mkdtempSync(join(tmpdir(), "universe-teardown-"));
     tempDirectories.push(rootDirectory);
 
-    const deps = makeDeps(rootDirectory, createPromptPort(createNodeSelection("teardown-failure")));
+    const { observability, ...routeDeps } = makeDeps(
+      rootDirectory,
+      createPromptPort(createNodeSelection("teardown-failure")),
+    );
     const projectDir = join(rootDirectory, "teardown-failure");
 
-    await runCli(["create"], deps);
+    await route(["create"], routeDeps, observability);
 
-    const result = await runCli(["teardown", projectDir], deps);
+    const result = await route(["teardown", projectDir], routeDeps, observability);
     expect(result.exitCode).toBeGreaterThan(0);
   });
 });

@@ -9,7 +9,7 @@ import { CreateInputValidationService } from "../services/create-input-validatio
 import { LayerCompositionService } from "../services/layer-composition-service.js";
 import { PackageManagerService } from "../package-manager/package-manager.service.js";
 import { PlatformManifestService } from "../services/platform-manifest-service.js";
-import { runCli } from "../cli.js";
+import { route } from "../bin.js";
 import type { CreateSelections, Prompt } from "../prompt/prompt.port.js";
 
 const createNodeSelection = (name: string): CreateSelections => ({
@@ -63,13 +63,16 @@ describe("register", () => {
     tempDirectories.push(rootDirectory);
 
     const projectName = "register-app";
-    const deps = makeDeps(rootDirectory, createPromptPort(createNodeSelection(projectName)));
+    const { observability, ...routeDeps } = makeDeps(
+      rootDirectory,
+      createPromptPort(createNodeSelection(projectName)),
+    );
     const projectDir = join(rootDirectory, projectName);
 
-    const createResult = await runCli(["create"], deps);
+    const createResult = await route(["create"], routeDeps, observability);
     expect(createResult.exitCode).toBe(0);
 
-    const registerResult = await runCli(["register", projectDir], deps);
+    const registerResult = await route(["register", projectDir], routeDeps, observability);
     expect(registerResult.exitCode).toBe(0);
     expect(registerResult.output).toContain(projectName);
     expect(registerResult.output).toContain(`stub-${projectName}`);
@@ -80,13 +83,16 @@ describe("register", () => {
     tempDirectories.push(rootDirectory);
 
     const projectName = "duplicate-app";
-    const deps = makeDeps(rootDirectory, createPromptPort(createNodeSelection(projectName)));
+    const { observability, ...routeDeps } = makeDeps(
+      rootDirectory,
+      createPromptPort(createNodeSelection(projectName)),
+    );
     const projectDir = join(rootDirectory, projectName);
 
-    await runCli(["create"], deps);
-    await runCli(["register", projectDir], deps);
+    await route(["create"], routeDeps, observability);
+    await route(["register", projectDir], routeDeps, observability);
 
-    const secondResult = await runCli(["register", projectDir], deps);
+    const secondResult = await route(["register", projectDir], routeDeps, observability);
     expect(secondResult.exitCode).toBeGreaterThan(0);
   });
 });
