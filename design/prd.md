@@ -1,153 +1,114 @@
-# Ports/Adapters Reorganisation
+# PRD — CLI Layer Responsibility Refactor
 
-## Motivation
+## Overview
 
-The current flat `src/adapters/` and `src/ports/` folders mix unrelated concerns: platform client stubs (deploy, list, logs, etc.) live alongside local infrastructure adapters (filesystem, git, prompts, package managers). As internal services grow to own their own adapters (e.g. `PackageManagerService` owns `BunPackageManager` and `PnpmPackageManager`), the clutter compounds.
+Redistribute responsibilities across `bin.ts`, `cli.ts`, and `commands.ts` so each layer has a single, clear concern. Currently `cli.ts` acts as a pass-through for dependencies it doesn't own, coupling the routing layer to the full `Services` and `Adapters` interfaces. This refactor removes that coupling.
 
-## Target Structure
+## Problem
 
-Reorganise by **domain co-location**: each domain folder owns its port(s), adapter(s), and service (if any). Remove the top-level `src/adapters/` and `src/ports/` folders entirely.
+`cli.ts` (`runCli`) receives the full `{ services, adapters }` dependency bundle and forwards it to command handlers. It only uses `observability` for its own logic. This means:
 
-```
-src/
-  platform/
-    deploy-client.port.ts
-    deploy-client.stub.ts
-    list-client.port.ts
-    list-client.stub.ts
-    logs-client.port.ts
-    logs-client.stub.ts
-    promote-client.port.ts
-    promote-client.stub.ts
-    registration-client.port.ts
-    registration-client.stub.ts
-    rollback-client.port.ts
-    rollback-client.stub.ts
-    status-client.port.ts
-    status-client.stub.ts
-    teardown-client.port.ts
-    teardown-client.stub.ts
-  package-manager/
-    package-manager.port.ts
-    bun-package-manager.ts
-    pnpm-package-manager.ts
-    package-manager.stub.ts
-    package-manager.service.ts
-  io/
-    filesystem-writer.port.ts
-    local-filesystem-writer.ts
-    project-reader.port.ts
-    local-project-reader.ts
-    repo-initialiser.port.ts
-    git-repo-initialiser.ts
-    repo-initialiser.stub.ts
-  prompt/
-    prompt.port.ts
-    clack-prompt.ts
-  observability/
-    observability-client.port.ts
-    safe-observability-client.ts
-    observability-client.stub.ts
-  services/
-    layers/
-      always-layer.ts
-      base-node-layer.ts
-      base-static-layer.ts
-      frameworks-layer.ts
-      package-managers-layer.ts
-      services-layer.ts
-    layer-composition-service.ts
-    create-input-validation-service.ts
-    platform-manifest-service.ts
+- `cli.ts` imports `Services` and `Adapters` types it doesn't need
+- Argument validation (bad arg counts, invalid env values, unknown commands) is scattered across `cli.ts` and per-command handler definitions inside `cli.ts`
+- The `CommandHandler` type in `cli.ts` knows about the full dependency surface
+- Observability is called for non-semantic failures (unknown command, bad args) that aren't worth tracking
+
+## Goals
+
+- `cli.ts` (`runCli`) knows nothing about `Services`, `Adapters`, or `argv`
+- All argument parsing, command routing, and validation happens in `bin.ts` before `runCli` is called
+- Command handlers in `commands.ts` receive a flat deps object (no `services`/`adapters` nesting)
+- Observability is only called for real command execution outcomes, not validation failures
+- `--help` is handled entirely in `bin.ts`; it is not a command passed to `runCli`
+
+## Target Architecture
+
+### `bin.ts`
+
+Owns everything before dispatch:
+
+1. Parse `process.argv`
+2. If `--help` / `-h` / no command: print help text, set exit code, exit — never calls `runCli`
+3. If unknown command: print error, set exit code, exit — never calls `runCli`
+4. Validate argv shape for the matched command (arg counts, valid env values); on failure: print error, set exit code, exit
+5. Construct all concrete adapters and services
+6. Bind deps to the matched handler, producing a zero-argument thunk `() => Promise<HandlerResult>`
+7. Call `runCli(command, thunk, observability)`
+
+### `cli.ts` (`runCli`)
+
+Owns only dispatch and observability:
+
+```ts
+const runCli = async (
+  command: string,
+  handler: () => Promise<HandlerResult>,
+  observability: ObservabilityClient,
+): Promise<CliResult>
 ```
 
-## Naming Conventions
+- Calls `observability.safeTrack(`${command}.start`)`
+- Awaits `handler()`
+- On success: calls `observability.safeTrack(`${command}.success`, result.meta)`
+- On `CliError`: calls `observability.safeError` + `safeTrack(`${command}.failure`)`, returns error exit code
+- On unknown error: rethrows
 
-- **Port files** use a `.port.ts` secondary extension: `deploy-client.port.ts`
-- **Adapter files** are named after the technology they wrap: `bun-package-manager.ts`, `clack-prompt.ts`, `git-repo-initialiser.ts`, `local-filesystem-writer.ts`
-- **Stub files** use a `.stub.ts` secondary extension: `deploy-client.stub.ts`
-- **Service files** use a `.service.ts` secondary extension when co-located inside a domain folder: `package-manager.service.ts`
-- Services that do not own adapters live in `src/services/` and keep their current `-service.ts` suffix
+No knowledge of `argv`, `Services`, `Adapters`, or command names beyond the string passed in.
 
-The dot secondary extension groups related files by their shared root in file tree listings:
+### `commands.ts`
 
+Each handler receives a flat deps object — no `{ services, adapters }` nesting. There is no shared `Deps` interface; each handler declares its own inline dep type with exactly the members it needs.
+
+```ts
+// Before
+const handleDeploy = async (
+  { projectDirectory },
+  deps: {
+    services: Pick<Services, "platformManifestGenerator">;
+    adapters: Pick<Adapters, "deployClient" | "projectReader">;
+  },
+)
+
+// After
+const handleDeploy = async (
+  { projectDirectory },
+  deps: {
+    platformManifestGenerator: PlatformManifestGenerator;
+    deployClient: DeployClient;
+    projectReader: ProjectReaderPort;
+  },
+)
 ```
-deploy-client.port.ts
-deploy-client.stub.ts   ← pairing is visually obvious
-```
 
-## Class/Interface Naming
+`commands.ts` removes the `Services` and `Adapters` interfaces entirely. `HandlerResult` and `CliResult` remain exported.
 
-Type and class names do **not** repeat the role — the file path carries that context:
+## What Does Not Change
 
-| File                      | Exported name              |
-| ------------------------- | -------------------------- |
-| `deploy-client.port.ts`   | `interface DeployClient`   |
-| `deploy-client.stub.ts`   | `class StubDeployClient`   |
-| `bun-package-manager.ts`  | `class BunPackageManager`  |
-| `clack-prompt.ts`         | `class ClackPrompt`        |
-| `git-repo-initialiser.ts` | `class GitRepoInitialiser` |
+- The `BadArgumentsError` type and its exit code
+- Observability call sites and behaviour for successful/failed commands
+- The `HandlerResult` shape
+- The port and adapter interfaces themselves
+- Test coverage — existing tests must continue to pass; no new tests are required for this refactor
 
-## `src/services/` scope
+## Phases
 
-`src/services/` is for pure-logic services that do not own adapters. Currently:
+### Phase 1 — Flatten `commands.ts` deps
 
-- `LayerCompositionService`
-- `CreateInputValidationService`
-- `PlatformManifestService`
+- Merge `Services` and `Adapters` into a single `Deps` interface
+- Update every handler signature to use `Pick<Deps, ...>` instead of nested `services`/`adapters`
+- Update `bin.ts` and any tests that construct handler deps
+- `cli.ts` is unchanged in this phase
 
-`PackageManagerService` moves to `src/package-manager/` because it owns and delegates to adapters.
+### Phase 2 — Move validation and routing to `bin.ts`
 
-## Files to move (current → target)
+- Move the `COMMANDS` map and all `BadArgumentsError` throw logic out of `cli.ts` into `bin.ts`
+- Move `--help` handling into `bin.ts`
+- `bin.ts` binds deps to each handler producing a zero-arg thunk
+- `bin.ts` calls `runCli(command, thunk, observability)` only after successful validation
 
-| Current                                               | Target                                                |
-| ----------------------------------------------------- | ----------------------------------------------------- |
-| `src/ports/deploy-client.ts`                          | `src/platform/deploy-client.port.ts`                  |
-| `src/adapters/stub-deploy-client.ts`                  | `src/platform/deploy-client.stub.ts`                  |
-| `src/adapters/stub-deploy-client.test.ts`             | `src/platform/deploy-client.stub.test.ts`             |
-| `src/ports/list-client.ts`                            | `src/platform/list-client.port.ts`                    |
-| `src/adapters/stub-list-client.ts`                    | `src/platform/list-client.stub.ts`                    |
-| `src/adapters/stub-list-client.test.ts`               | `src/platform/list-client.stub.test.ts`               |
-| `src/ports/logs-client.ts`                            | `src/platform/logs-client.port.ts`                    |
-| `src/adapters/stub-logs-client.ts`                    | `src/platform/logs-client.stub.ts`                    |
-| `src/adapters/stub-logs-client.test.ts`               | `src/platform/logs-client.stub.test.ts`               |
-| `src/ports/promote-client.ts`                         | `src/platform/promote-client.port.ts`                 |
-| `src/adapters/stub-promote-client.ts`                 | `src/platform/promote-client.stub.ts`                 |
-| `src/adapters/stub-promote-client.test.ts`            | `src/platform/promote-client.stub.test.ts`            |
-| `src/ports/registration-client.ts`                    | `src/platform/registration-client.port.ts`            |
-| `src/adapters/stub-registration-client.ts`            | `src/platform/registration-client.stub.ts`            |
-| `src/adapters/stub-registration-client.test.ts`       | `src/platform/registration-client.stub.test.ts`       |
-| `src/ports/rollback-client.ts`                        | `src/platform/rollback-client.port.ts`                |
-| `src/adapters/stub-rollback-client.ts`                | `src/platform/rollback-client.stub.ts`                |
-| `src/adapters/stub-rollback-client.test.ts`           | `src/platform/rollback-client.stub.test.ts`           |
-| `src/ports/status-client.ts`                          | `src/platform/status-client.port.ts`                  |
-| `src/adapters/stub-status-client.ts`                  | `src/platform/status-client.stub.ts`                  |
-| `src/adapters/stub-status-client.test.ts`             | `src/platform/status-client.stub.test.ts`             |
-| `src/ports/teardown-client.ts`                        | `src/platform/teardown-client.port.ts`                |
-| `src/adapters/stub-teardown-client.ts`                | `src/platform/teardown-client.stub.ts`                |
-| `src/adapters/stub-teardown-client.test.ts`           | `src/platform/teardown-client.stub.test.ts`           |
-| `src/ports/package-manager.ts`                        | `src/package-manager/package-manager.port.ts`         |
-| `src/adapters/bun-package-manager-adapter.ts`         | `src/package-manager/bun-package-manager.ts`          |
-| `src/adapters/bun-package-manager-adapter.test.ts`    | `src/package-manager/bun-package-manager.test.ts`     |
-| `src/adapters/pnpm-package-manager-adapter.ts`        | `src/package-manager/pnpm-package-manager.ts`         |
-| `src/adapters/pnpm-package-manager-adapter.test.ts`   | `src/package-manager/pnpm-package-manager.test.ts`    |
-| `src/adapters/stub-package-manager-adapter.ts`        | `src/package-manager/package-manager.stub.ts`         |
-| `src/services/package-manager-service.ts`             | `src/package-manager/package-manager.service.ts`      |
-| `src/services/package-manager-service.test.ts`        | `src/package-manager/package-manager.service.test.ts` |
-| `src/ports/filesystem-writer.ts`                      | `src/io/filesystem-writer.port.ts`                    |
-| `src/adapters/local-filesystem-writer.ts`             | `src/io/local-filesystem-writer.ts`                   |
-| `src/adapters/local-filesystem-writer.test.ts`        | `src/io/local-filesystem-writer.test.ts`              |
-| `src/ports/project-reader.ts`                         | `src/io/project-reader.port.ts`                       |
-| `src/adapters/local-project-reader.ts`                | `src/io/local-project-reader.ts`                      |
-| `src/adapters/local-project-reader.test.ts`           | `src/io/local-project-reader.test.ts`                 |
-| `src/ports/repo-initialiser.ts`                       | `src/io/repo-initialiser.port.ts`                     |
-| `src/adapters/git-repo-initialiser-adapter.ts`        | `src/io/git-repo-initialiser.ts`                      |
-| `src/adapters/git-repo-initialiser-adapter.test.ts`   | `src/io/git-repo-initialiser.test.ts`                 |
-| `src/adapters/stub-repo-initialiser-adapter.ts`       | `src/io/repo-initialiser.stub.ts`                     |
-| `src/ports/prompt.ts`                                 | `src/prompt/prompt.port.ts`                           |
-| `src/adapters/clack-prompt-adapter.ts`                | `src/prompt/clack-prompt.ts`                          |
-| `src/adapters/clack-prompt-adapter.test.ts`           | `src/prompt/clack-prompt.test.ts`                     |
-| `src/ports/observability-client.ts`                   | `src/observability/observability-client.port.ts`      |
-| `src/adapters/base-safe-observability-client.ts`      | `src/observability/safe-observability-client.ts`      |
-| `src/adapters/base-safe-observability-client.test.ts` | `src/observability/safe-observability-client.test.ts` |
-| `src/adapters/stub-observability-client.ts`           | `src/observability/observability-client.stub.ts`      |
+### Phase 3 — Slim `runCli`
+
+- Remove `argv`, `cwd`, `Services`, `Adapters`, and `CommandHandler` from `cli.ts`
+- Update `runCli` to the new three-argument signature
+- Remove `CliDependencies` interface; it is no longer needed
+- Verify `cli.ts` imports only `ObservabilityClient` and types from `commands.ts`

@@ -1,83 +1,87 @@
-# TODO — Ports/Adapters Reorganisation
+# TODO — CLI Layer Responsibility Refactor
 
 Requirements reference: `design/prd.md`
 
 ---
 
-## Phase 1: Migrate `platform/` domain
+## Phase 1 — Flatten `commands.ts` deps
 
-- [x] TASK: Move and rename platform client port and stub files into `src/platform/`
-  - Move all 8 port files from `src/ports/` and all 8 stub implementation files + their test files from `src/adapters/` into `src/platform/`
-  - Apply dot secondary extension renaming per the file map in `design/prd.md`
-  - Stub class names are already correct (`StubDeployClient`, etc.) — no renames needed
-  - Update all import paths in `src/commands.ts`, `src/integration-tests/adapter-stubs.ts`, and all integration test files that reference these ports or stubs
-  - Verify `pnpm test` and `pnpm lint` pass
+- [ ] CODE: Remove `services`/`adapters` nesting from handler signatures in `commands.ts`
+  - Feature: Replace nested `{ services: { ... }, adapters: { ... } }` dep objects with a flat inline type per handler; no shared `Deps` interface is introduced
+  - Files:
+    - `src/commands.ts` — remove `Services` and `Adapters` interfaces; update all nine handler signatures and `readAndValidateManifest` to declare a flat inline dep type (e.g. `{ platformManifestGenerator: PlatformManifestGenerator; deployClient: DeployClient; projectReader: ProjectReaderPort }`) using only the members each handler actually needs; keep `HandlerResult` and `CliResult` as exports
+  - Acceptance:
+    - `Services` and `Adapters` interfaces are removed from `commands.ts`
+    - No shared merged `Deps` interface is introduced
+    - Every handler and `readAndValidateManifest` declares its own flat inline dep type with no `services:` or `adapters:` nesting
+    - `bin.ts` still compiles — it constructs and passes a flat object satisfying each handler's inline dep type
 
-## Phase 2: Migrate `package-manager/` domain
+- [ ] CODE: Update `commands.test.ts` dep construction to flat shape
+  - Feature: Remove `services:` / `adapters:` nesting from all dep objects constructed in `commands.test.ts`
+  - Files:
+    - `src/commands.test.ts` — flatten all `{ services: { ... }, adapters: { ... } }` literals into a single flat object
+  - Acceptance:
+    - All `commands.test.ts` tests pass without modification to assertions
+    - No `services:` or `adapters:` keys appear in dep object literals in the file
 
-- [x] TASK: Move and rename package manager port, adapters, stub, and service into `src/package-manager/`
-  - Move `src/ports/package-manager.ts` → `src/package-manager/package-manager.port.ts`
-  - Move `src/adapters/bun-package-manager-adapter.ts` → `src/package-manager/bun-package-manager.ts`; rename class `BunPackageManagerAdapter` → `BunPackageManager`
-  - Move `src/adapters/pnpm-package-manager-adapter.ts` → `src/package-manager/pnpm-package-manager.ts`; rename class `PnpmPackageManagerAdapter` → `PnpmPackageManager`
-  - Move `src/adapters/stub-package-manager-adapter.ts` → `src/package-manager/package-manager.stub.ts`; rename class `StubPackageManagerAdapter` → `StubPackageManager`
-  - Move `src/services/package-manager-service.ts` → `src/package-manager/package-manager.service.ts`
-  - Move all corresponding test files alongside their source files
-  - Update all import paths in `src/commands.ts`, `src/bin.ts`, `src/integration-tests/adapter-stubs.ts`, and any other consumers
-  - Verify `pnpm test` and `pnpm lint` pass
+- [ ] CODE: Update integration test dep construction to flat shape
+  - Feature: Remove `services:` / `adapters:` nesting from dep objects in all integration tests
+  - Files:
+    - `src/integration-tests/create.test.ts`
+    - `src/integration-tests/deploy.test.ts`
+    - `src/integration-tests/list.test.ts`
+    - `src/integration-tests/logs.test.ts`
+    - `src/integration-tests/promote.test.ts`
+    - `src/integration-tests/register.test.ts`
+    - `src/integration-tests/rollback.test.ts`
+    - `src/integration-tests/status.test.ts`
+    - `src/integration-tests/teardown.test.ts`
+  - Acceptance:
+    - All integration tests pass without modification to assertions
+    - No `services:` or `adapters:` keys appear in dep object literals in any of these files
 
-## Phase 3: Migrate `io/` domain
+- [ ] TASK: Validation gate — Phase 1
+  - `pnpm test` passes
+  - `pnpm lint` passes
+  - `pnpm check` passes
 
-- [x] TASK: Move and rename IO ports, adapters, and stubs into `src/io/`
-  - Move `src/ports/filesystem-writer.ts` → `src/io/filesystem-writer.port.ts` (interface name unchanged)
-  - Move `src/adapters/local-filesystem-writer.ts` → `src/io/local-filesystem-writer.ts` (class name unchanged)
-  - Move `src/ports/project-reader.ts` → `src/io/project-reader.port.ts` (interface name unchanged)
-  - Move `src/adapters/local-project-reader.ts` → `src/io/local-project-reader.ts` (class name unchanged)
-  - Move `src/ports/repo-initialiser.ts` → `src/io/repo-initialiser.port.ts` (interface name unchanged)
-  - Move `src/adapters/git-repo-initialiser-adapter.ts` → `src/io/git-repo-initialiser.ts`; rename class `GitRepoInitialiserAdapter` → `GitRepoInitialiser`
-  - Move `src/adapters/stub-repo-initialiser-adapter.ts` → `src/io/repo-initialiser.stub.ts`; rename class `StubRepoInitialiserAdapter` → `StubRepoInitialiser`
-  - Move all corresponding test files alongside their source files
-  - Update all import paths in `src/commands.ts`, `src/integration-tests/adapter-stubs.ts`, and any other consumers
-  - Verify `pnpm test` and `pnpm lint` pass
+---
 
-## Phase 4: Migrate `prompt/` domain
+## Phase 2 — Move routing and validation to `bin.ts`; slim `runCli`
 
-- [x] TASK: Move and rename prompt port and adapter into `src/prompt/`
-  - Move `src/ports/prompt.ts` → `src/prompt/prompt.port.ts` (exported types/constants unchanged)
-  - Move `src/adapters/clack-prompt-adapter.ts` → `src/prompt/clack-prompt.ts`; rename class `ClackPromptAdapter` → `ClackPrompt`
-  - Move corresponding test file alongside its source file
-  - Update all import paths in `src/commands.ts` and any other consumers
-  - Verify `pnpm test` and `pnpm lint` pass
+- [ ] CODE: Extract routing, validation, and help into a testable `route` function; update `runCli` signature
+  - Feature: `bin.ts` owns all argv parsing, `--help` handling, unknown-command detection, and per-command arg validation. `runCli` is reduced to a three-argument observability wrapper `(command, handler, observability)`. A named `route` function (exported for testing) encapsulates the dispatch logic so tests do not require a live process.
+  - Files:
+    - `src/bin.ts` — add exported `route(argv, deps, observability)` function containing: `--help`/`-h`/no-command branch (prints `HELP_TEXT`, returns `CliResult` directly), unknown-command branch (returns `BadArgumentsError` result directly), per-command arg-count and env-value validation (throws `BadArgumentsError` on failure), thunk binding (closes over deps), and call to `runCli(command, thunk, observability)`; top-level script calls `route(process.argv.slice(2), deps, observability)` and writes output
+    - `src/cli.ts` — replace `CliDependencies`, `CommandDef`, `CommandHandler`, `COMMANDS`, and the `argv`-based switch with the slimmed signature: `runCli(command: string, handler: () => Promise<HandlerResult>, observability: ObservabilityClient): Promise<CliResult>`; body calls `observability.safeTrack(start)`, awaits `handler()`, tracks success/failure, rethrows unknown errors; remove all imports of `Services`, `Adapters`, `BadArgumentsError`, `handleCreate`, etc.
+    - `src/cli.test.ts` — restructure: (a) tests for `--help`, unknown commands, and per-command bad-arg validation now call `route` instead of `runCli`; (b) observability tracking tests call `runCli` directly with a pre-bound stub thunk; (c) remove the `CliDependencies`-shaped `createDeps` helper; add a minimal `createDeps` that returns the three arguments `runCli` now expects
+  - Acceptance:
+    - `runCli` signature is `(command: string, handler: () => Promise<HandlerResult>, observability: ObservabilityClient) => Promise<CliResult>`
+    - `cli.ts` imports only `ObservabilityClient` (port) and `HandlerResult`/`CliResult` (from `commands.ts`); zero imports of `Services`, `Adapters`, `BadArgumentsError`, or any command handler
+    - `--help` and `-h` and no-argument invocation return exit code 0 and the full help text without calling `runCli`
+    - Unknown command returns exit code matching `BadArgumentsError.exitCode` and an appropriate message without calling `runCli`
+    - Per-command over-argument calls (e.g. `deploy /dir extra`) return the expected `BadArgumentsError` message and exit code without calling `runCli`
+    - Invalid env-value calls (e.g. `logs /dir staging`) return the expected `BadArgumentsError` message and exit code without calling `runCli`
+    - Observability is tracked only for commands that reach `runCli`; no observability calls occur for help, unknown-command, or bad-arg branches
+    - All previously passing `cli.test.ts` assertions continue to pass under the restructured tests
 
-## Phase 5: Migrate `observability/` domain
-
-- [x] TASK: Move and rename observability port, safe base, and stub into `src/observability/`
-  - Move `src/ports/observability-client.ts` → `src/observability/observability-client.port.ts` (interface name unchanged)
-  - Move `src/adapters/base-safe-observability-client.ts` → `src/observability/safe-observability-client.ts` (class name unchanged)
-  - Move `src/adapters/stub-observability-client.ts` → `src/observability/observability-client.stub.ts` (class name unchanged)
-  - Move all corresponding test files alongside their source files
-  - Update all import paths in `src/commands.ts`, `src/bin.ts`, `src/integration-tests/adapter-stubs.ts`, and any other consumers
-  - Verify `pnpm test` and `pnpm lint` pass
-
-## Phase 6: Remove legacy folders and verify
-
-- [x] TASK: Delete now-empty `src/adapters/` and `src/ports/` directories
-  - Confirm both directories are empty before deleting
-  - Run `pnpm test`, `pnpm lint`, and `pnpm check`; fix any remaining issues
-  - Confirm the directory structure matches the target layout in `design/prd.md`
+- [ ] TASK: Validation gate — Phase 2
+  - `pnpm test` passes
+  - `pnpm lint` passes
+  - `pnpm check` passes
 
 ---
 
 ## Traceability Matrix
 
-| Requirement ID | TODO Item                                                                           | Status |
-| -------------- | ----------------------------------------------------------------------------------- | ------ |
-| REQ-1          | Phase 1 / TASK: Move and rename platform client port and stub files                 | mapped |
-| REQ-2          | Phase 2 / TASK: Move and rename package manager port, adapters, stub, and service   | mapped |
-| REQ-3          | Phase 3 / TASK: Move and rename IO ports, adapters, and stubs                       | mapped |
-| REQ-4          | Phase 4 / TASK: Move and rename prompt port and adapter                             | mapped |
-| REQ-5          | Phase 5 / TASK: Move and rename observability port, safe base, and stub             | mapped |
-| REQ-6          | Phase 6 / TASK: Delete now-empty `src/adapters/` and `src/ports/` directories       | mapped |
-| REQ-7          | Phase 1–5 / TASK: Update all import paths in consuming files after each domain move | mapped |
-| NFR-1          | Phase 1–6 / TASK: Verify `pnpm test` and `pnpm lint` pass (repeated each phase)     | mapped |
-| NFR-2          | Phase 1–5 / TASK: Apply dot secondary extension naming throughout                   | mapped |
-| NFR-3          | Phase 2–4 / TASK: Rename classes to drop `-Adapter` suffix                          | mapped |
+| Requirement ID                                       | TODO Item                                                                | Status |
+| ---------------------------------------------------- | ------------------------------------------------------------------------ | ------ |
+| Goal: flat deps in commands.ts                       | Phase 1 / CODE: Remove services/adapters nesting from handler signatures | mapped |
+| Goal: flat deps — test updates                       | Phase 1 / CODE: Update commands.test.ts dep construction                 | mapped |
+| Goal: flat deps — test updates                       | Phase 1 / CODE: Update integration test dep construction                 | mapped |
+| Goal: bin.ts owns argv/routing/validation            | Phase 2 / CODE: Extract route function; update runCli signature          | mapped |
+| Goal: runCli has no argv/Services/Adapters knowledge | Phase 2 / CODE: Extract route function; update runCli signature          | mapped |
+| Goal: --help handled in bin.ts only                  | Phase 2 / CODE: Extract route function; update runCli signature          | mapped |
+| Goal: observability only on real command execution   | Phase 2 / CODE: Extract route function; update runCli signature          | mapped |
+| Constraint: existing tests must continue to pass     | Phase 1 / TASK: Validation gate                                          | mapped |
+| Constraint: existing tests must continue to pass     | Phase 2 / TASK: Validation gate                                          | mapped |
