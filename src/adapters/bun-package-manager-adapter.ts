@@ -7,37 +7,50 @@ import type { PackageManager } from "../ports/package-manager.js";
 
 const execFileAsync = promisify(execFile);
 
-const defaultRun = async (command: string, args: string[], cwd: string): Promise<string> => {
-  const { stdout } = await execFileAsync(command, args, { cwd, encoding: "utf8" });
-  return stdout;
+interface BunRunner {
+  installLockfileOnly(cwd: string): Promise<void>;
+  install(cwd: string): Promise<void>;
+  list(cwd: string): Promise<string>;
+}
+
+interface FilesystemApi {
+  readFile(path: string): Promise<string>;
+  writeFile(path: string, content: string): Promise<void>;
+}
+
+const defaultBunRunner: BunRunner = {
+  async install(cwd) {
+    await execFileAsync("bun", ["install"], { cwd, encoding: "utf8" });
+  },
+  async installLockfileOnly(cwd) {
+    await execFileAsync("bun", ["install", "--lockfile-only"], { cwd, encoding: "utf8" });
+  },
+  async list(cwd) {
+    const { stdout } = await execFileAsync("bun", ["list"], { cwd, encoding: "utf8" });
+    return stdout;
+  },
 };
 
-const defaultFilesystemApi = {
-  readFile: (path: string) => readFile(path, "utf8"),
-  writeFile: (path: string, content: string) => writeFile(path, content, "utf8"),
+const defaultFilesystemApi: FilesystemApi = {
+  readFile: (path) => readFile(path, "utf8"),
+  writeFile: (path, content) => writeFile(path, content, "utf8"),
 };
 
+// Parses the tree output from `bun list` (not JSON)
 const extractVersions = (listOutput: string): Record<string, string> => {
-  let data: unknown;
-  try {
-    data = JSON.parse(listOutput);
-  } catch {
-    return {};
-  }
   const versions: Record<string, string> = {};
-  if (Array.isArray(data)) {
-    for (const dep of data) {
-      if (
-        typeof dep === "object" &&
-        dep !== null &&
-        "name" in dep &&
-        typeof (dep as { name?: unknown }).name === "string" &&
-        "version" in dep &&
-        typeof (dep as { version?: unknown }).version === "string"
-      ) {
-        const { name, version } = dep as { name: string; version: string };
-        versions[name] = version;
-      }
+  // Match lines like: ├── the-answer@1.0.0 or └── typescript@5.9.3
+  const regex = /^[├└]──\s+([^@\s]+)@([\w.-]+)/gm;
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(listOutput)) !== null) {
+    const [, name, version] = match;
+    if (
+      typeof name === "string" &&
+      typeof version === "string" &&
+      name.length > 0 &&
+      version.length > 0
+    ) {
+      versions[name] = version;
     }
   }
   return versions;
@@ -51,7 +64,15 @@ interface PackageJson {
 const pinVersions = (pkg: PackageJson, versions: Record<string, string>): PackageJson => {
   const pin = (deps: Record<string, string> = {}) =>
     Object.fromEntries(
-      Object.entries(deps).map(([name, range]) => [name, versions[name] ?? range]),
+      Object.entries(deps).map(([name, range]) => {
+        const pinnedVersion = versions[name];
+        if (pinnedVersion === "" || pinnedVersion === undefined) {
+          throw new PackageInstallError(
+            `Dependency mismatch - no pinned version found for package "${name}"`,
+          );
+        }
+        return [name, versions[name] ?? range];
+      }),
     );
   const { dependencies, devDependencies, ...rest } = pkg;
   const pinned: PackageJson = { ...rest };
@@ -65,26 +86,19 @@ const pinVersions = (pkg: PackageJson, versions: Record<string, string>): Packag
 };
 
 class BunPackageManagerAdapter implements PackageManager {
-  private readonly run;
+  private readonly bun;
   private readonly filesystem;
 
-  constructor(
-    run: typeof defaultRun = defaultRun,
-    filesystem: typeof defaultFilesystemApi = defaultFilesystemApi,
-  ) {
-    this.run = run;
+  constructor(bun: BunRunner = defaultBunRunner, filesystem: FilesystemApi = defaultFilesystemApi) {
+    this.bun = bun;
     this.filesystem = filesystem;
   }
 
   async specifyDeps(projectDirectory: string): Promise<void> {
+    let listOutput: string;
     try {
-      await this.run("bun", ["install", "--frozen-lockfile"], projectDirectory);
-    } catch (error) {
-      throw new PackageInstallError((error as Error).message);
-    }
-    let listOutput = "";
-    try {
-      listOutput = await this.run("bun", ["list", "--json"], projectDirectory);
+      await this.bun.installLockfileOnly(projectDirectory);
+      listOutput = await this.bun.list(projectDirectory);
     } catch (error) {
       throw new PackageInstallError((error as Error).message);
     }
@@ -98,7 +112,7 @@ class BunPackageManagerAdapter implements PackageManager {
 
   async install(projectDirectory: string): Promise<void> {
     try {
-      await this.run("bun", ["install"], projectDirectory);
+      await this.bun.install(projectDirectory);
     } catch (error) {
       throw new PackageInstallError((error as Error).message);
     }

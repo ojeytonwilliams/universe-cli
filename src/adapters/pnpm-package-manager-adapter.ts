@@ -5,7 +5,13 @@ import { promisify } from "node:util";
 import { PackageInstallError } from "../errors/cli-errors.js";
 import type { PackageManager } from "../ports/package-manager.js";
 
-type RunCommand = (command: string, args: string[], cwd: string) => Promise<string>;
+const execFileAsync = promisify(execFile);
+
+interface PnpmRunner {
+  installLockfileOnly(cwd: string): Promise<void>;
+  install(cwd: string): Promise<void>;
+  list(cwd: string): Promise<string>;
+}
 
 interface FilesystemApi {
   readFile(path: string): Promise<string>;
@@ -27,11 +33,21 @@ interface PackageJson {
   [key: string]: unknown;
 }
 
-const execFileAsync = promisify(execFile);
-
-const defaultRun: RunCommand = async (command, args, cwd) => {
-  const { stdout } = await execFileAsync(command, args, { cwd, encoding: "utf8" });
-  return stdout;
+const defaultPnpmRunner: PnpmRunner = {
+  async install(cwd) {
+    await execFileAsync("pnpm", ["install"], { cwd, encoding: "utf8" });
+  },
+  async installLockfileOnly(cwd) {
+    await execFileAsync("pnpm", ["install", "--lockfile-only"], { cwd, encoding: "utf8" });
+  },
+  async list(cwd) {
+    const { stdout } = await execFileAsync(
+      "pnpm",
+      ["list", "--json", "--depth=0", "--lockfile-only"],
+      { cwd, encoding: "utf8" },
+    );
+    return stdout;
+  },
 };
 
 const defaultFilesystemApi: FilesystemApi = {
@@ -76,29 +92,22 @@ const pinVersions = (pkg: PackageJson, versions: Record<string, string>): Packag
 };
 
 class PnpmPackageManagerAdapter implements PackageManager {
-  private readonly run: RunCommand;
+  private readonly pnpm: PnpmRunner;
   private readonly filesystem: FilesystemApi;
 
-  constructor(run: RunCommand = defaultRun, filesystem: FilesystemApi = defaultFilesystemApi) {
-    this.run = run;
+  constructor(
+    pnpm: PnpmRunner = defaultPnpmRunner,
+    filesystem: FilesystemApi = defaultFilesystemApi,
+  ) {
+    this.pnpm = pnpm;
     this.filesystem = filesystem;
   }
 
   async specifyDeps(projectDirectory: string): Promise<void> {
-    try {
-      await this.run("pnpm", ["install", "--lockfile-only"], projectDirectory);
-    } catch (error) {
-      throw new PackageInstallError((error as Error).message);
-    }
-
     let listOutput: string;
-
     try {
-      listOutput = await this.run(
-        "pnpm",
-        ["list", "--json", "--depth=0", "--lockfile-only"],
-        projectDirectory,
-      );
+      await this.pnpm.installLockfileOnly(projectDirectory);
+      listOutput = await this.pnpm.list(projectDirectory);
     } catch (error) {
       throw new PackageInstallError((error as Error).message);
     }
@@ -114,7 +123,7 @@ class PnpmPackageManagerAdapter implements PackageManager {
 
   async install(projectDirectory: string): Promise<void> {
     try {
-      await this.run("pnpm", ["install"], projectDirectory);
+      await this.pnpm.install(projectDirectory);
     } catch (error) {
       throw new PackageInstallError((error as Error).message);
     }
@@ -122,4 +131,3 @@ class PnpmPackageManagerAdapter implements PackageManager {
 }
 
 export { PnpmPackageManagerAdapter };
-export type { FilesystemApi, RunCommand };

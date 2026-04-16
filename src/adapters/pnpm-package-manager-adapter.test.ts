@@ -14,109 +14,84 @@ const PNPM_LIST_OUTPUT = JSON.stringify([
   },
 ]);
 
-const makeRun = (outputs: Record<string, string> = {}) =>
-  vi.fn((command: string, args: string[]) => {
-    const key = [command, ...args].join(" ");
-    return Promise.resolve(outputs[key] ?? "");
-  });
-
-const makeFilesystem = (files: Record<string, string>) => ({
-  readFile: vi.fn((path: string) => {
-    const content = files[path];
-    if (content === undefined) {
-      return Promise.reject(new Error(`File not found: ${path}`));
-    }
-    return Promise.resolve(content);
-  }),
-  writeFile: vi.fn((_path: string, _content: string) => Promise.resolve()),
-});
-
 describe(PnpmPackageManagerAdapter, () => {
+  const makeMock = () => {
+    const pnpm = {
+      install: vi.fn(),
+      installLockfileOnly: vi.fn(),
+      list: vi.fn(),
+    };
+    const filesystem = {
+      readFile: vi.fn(),
+      writeFile: vi.fn(),
+    };
+    return { filesystem, pnpm };
+  };
+
   describe("specifyDeps", () => {
-    it("runs pnpm install --lockfile-only then pnpm list --json --depth=0 --lockfile-only", async () => {
-      const dir = "/some/project";
-      const run = makeRun({
-        "pnpm list --json --depth=0 --lockfile-only": PNPM_LIST_OUTPUT,
-      });
-      const pkg = JSON.stringify({
-        dependencies: { express: "^5" },
-        devDependencies: { typescript: "^5" },
-      });
-      const fs = makeFilesystem({ [join(dir, "package.json")]: pkg });
-      const adapter = new PnpmPackageManagerAdapter(run, fs);
-
-      await adapter.specifyDeps(dir);
-
-      expect(run).toHaveBeenNthCalledWith(1, "pnpm", ["install", "--lockfile-only"], dir);
-      expect(run).toHaveBeenNthCalledWith(
-        2,
-        "pnpm",
-        ["list", "--json", "--depth=0", "--lockfile-only"],
-        dir,
+    it("creates a lockfile and does not install modules", async () => {
+      const { pnpm, filesystem } = makeMock();
+      pnpm.installLockfileOnly.mockResolvedValueOnce(undefined);
+      pnpm.list.mockResolvedValueOnce(PNPM_LIST_OUTPUT);
+      filesystem.readFile.mockResolvedValueOnce(
+        JSON.stringify({ dependencies: { express: "^5" }, devDependencies: { typescript: "^5" } }),
       );
+      filesystem.writeFile.mockResolvedValueOnce(undefined);
+      const adapter = new PnpmPackageManagerAdapter(pnpm, filesystem);
+
+      await adapter.specifyDeps("/proj");
+
+      expect(pnpm.installLockfileOnly).toHaveBeenCalledWith("/proj");
+      expect(pnpm.list).toHaveBeenCalledWith("/proj");
+      expect(pnpm.install).not.toHaveBeenCalled();
     });
 
-    it("writes exact versions from pnpm list output back to package.json", async () => {
-      const dir = "/some/project";
-      const run = makeRun({
-        "pnpm list --json --depth=0 --lockfile-only": PNPM_LIST_OUTPUT,
-      });
-      const pkg = JSON.stringify({
-        dependencies: { express: "^5" },
-        devDependencies: { typescript: "^5" },
-        name: "my-app",
-      });
-      const fs = makeFilesystem({ [join(dir, "package.json")]: pkg });
-      const adapter = new PnpmPackageManagerAdapter(run, fs);
+    it("pins versions in package.json", async () => {
+      const { pnpm, filesystem } = makeMock();
+      pnpm.installLockfileOnly.mockResolvedValueOnce(undefined);
+      pnpm.list.mockResolvedValueOnce(PNPM_LIST_OUTPUT);
+      filesystem.readFile.mockResolvedValueOnce(
+        JSON.stringify({ dependencies: { express: "^5" }, devDependencies: { typescript: "^5" } }),
+      );
+      filesystem.writeFile.mockResolvedValueOnce(undefined);
+      const adapter = new PnpmPackageManagerAdapter(pnpm, filesystem);
 
-      await adapter.specifyDeps(dir);
+      await adapter.specifyDeps("/proj");
 
-      const [writePath, writtenContent] = fs.writeFile.mock.calls[0]!;
+      const [writePath, writtenContent] = filesystem.writeFile.mock.calls[0] as [string, string];
       const written = JSON.parse(writtenContent) as {
         dependencies: Record<string, string>;
         devDependencies: Record<string, string>;
       };
-
-      expect(writePath).toBe(join(dir, "package.json"));
+      expect(writePath).toBe(join("/proj", "package.json"));
       expect(written.dependencies["express"]).toBe("5.1.2");
       expect(written.devDependencies["typescript"]).toBe("5.9.3");
     });
 
-    it("throws PackageInstallError when pnpm install --lockfile-only exits non-zero", async () => {
-      const dir = "/some/project";
-      const run = vi.fn(() => Promise.reject(new Error("pnpm exited with code 1")));
-      const adapter = new PnpmPackageManagerAdapter(run, {
-        readFile: vi.fn(),
-        writeFile: vi.fn(),
-      });
-
-      await expect(adapter.specifyDeps(dir)).rejects.toBeInstanceOf(PackageInstallError);
+    it("throws PackageInstallError when installLockfileOnly fails", async () => {
+      const { pnpm, filesystem } = makeMock();
+      pnpm.installLockfileOnly.mockRejectedValueOnce(new Error("pnpm exited with code 1"));
+      const adapter = new PnpmPackageManagerAdapter(pnpm, filesystem);
+      await expect(adapter.specifyDeps("/proj")).rejects.toBeInstanceOf(PackageInstallError);
     });
   });
 
   describe("install", () => {
-    it("runs pnpm install in the given directory", async () => {
-      const dir = "/some/project";
-      const run = vi.fn(() => Promise.resolve(""));
-      const adapter = new PnpmPackageManagerAdapter(run, {
-        readFile: vi.fn(),
-        writeFile: vi.fn(),
-      });
+    it("runs a full install in the given directory", async () => {
+      const { pnpm, filesystem } = makeMock();
+      pnpm.install.mockResolvedValueOnce(undefined);
+      const adapter = new PnpmPackageManagerAdapter(pnpm, filesystem);
 
-      await adapter.install(dir);
+      await adapter.install("/proj");
 
-      expect(run).toHaveBeenCalledWith("pnpm", ["install"], dir);
+      expect(pnpm.install).toHaveBeenCalledWith("/proj");
     });
 
-    it("throws PackageInstallError when pnpm install exits non-zero", async () => {
-      const dir = "/some/project";
-      const run = vi.fn(() => Promise.reject(new Error("pnpm exited with code 1")));
-      const adapter = new PnpmPackageManagerAdapter(run, {
-        readFile: vi.fn(),
-        writeFile: vi.fn(),
-      });
-
-      await expect(adapter.install(dir)).rejects.toBeInstanceOf(PackageInstallError);
+    it("throws PackageInstallError when install fails", async () => {
+      const { pnpm, filesystem } = makeMock();
+      pnpm.install.mockRejectedValueOnce(new Error("pnpm exited with code 1"));
+      const adapter = new PnpmPackageManagerAdapter(pnpm, filesystem);
+      await expect(adapter.install("/proj")).rejects.toBeInstanceOf(PackageInstallError);
     });
   });
 });
