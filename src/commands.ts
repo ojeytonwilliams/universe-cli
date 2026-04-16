@@ -24,77 +24,54 @@ interface CliResult {
   output: string;
 }
 
-interface Services {
-  layerResolver: LayerComposer;
-  platformManifestGenerator: PlatformManifestGenerator;
-  validator: CreateInputValidator;
-  packageManager: PackageManagerRunner;
-}
-
-interface Adapters {
-  deployClient: DeployClient;
-  filesystemWriter: FilesystemWriter;
-  listClient: ListClient;
-  logsClient: LogsClient;
-  projectReader: ProjectReaderPort;
-  repoInitialiser: RepoInitialiser;
-  promoteClient: PromoteClient;
-  prompt: Prompt;
-  registrationClient: RegistrationClient;
-  rollbackClient: RollbackClient;
-  statusClient: StatusClient;
-  teardownClient: TeardownClient;
-}
-
 type HandlerResult = CliResult & { meta?: Record<string, string> };
 
 const readAndValidateManifest = async (
   projectDirectory: string,
-  services: Pick<Services, "platformManifestGenerator">,
-  adapters: Pick<Adapters, "projectReader">,
+  deps: { platformManifestGenerator: PlatformManifestGenerator; projectReader: ProjectReaderPort },
 ): Promise<PlatformManifest> => {
   const platformYamlPath = join(projectDirectory, "platform.yaml");
-  const yaml = await adapters.projectReader.readFile(platformYamlPath);
+  const yaml = await deps.projectReader.readFile(platformYamlPath);
 
-  return services.platformManifestGenerator.validateManifest(yaml, platformYamlPath);
+  return deps.platformManifestGenerator.validateManifest(yaml, platformYamlPath);
 };
 
 const handleCreate = async (
   cwd: string,
   deps: {
-    services: Pick<
-      Services,
-      "layerResolver" | "platformManifestGenerator" | "validator" | "packageManager"
-    >;
-    adapters: Pick<Adapters, "filesystemWriter" | "prompt" | "repoInitialiser">;
+    filesystemWriter: FilesystemWriter;
+    layerResolver: LayerComposer;
+    packageManager: PackageManagerRunner;
+    platformManifestGenerator: PlatformManifestGenerator;
+    prompt: Prompt;
+    repoInitialiser: RepoInitialiser;
+    validator: CreateInputValidator;
   },
 ): Promise<HandlerResult> => {
-  const { services, adapters } = deps;
-
-  const promptResult = await adapters.prompt.promptForCreateInputs();
+  const promptResult = await deps.prompt.promptForCreateInputs();
 
   if (promptResult === null || !promptResult.confirmed) {
     return { exitCode: 1, output: "Create cancelled before writing files." };
   }
 
-  const validatedInput = services.validator.validateCreateInput(promptResult);
-  const resolvedLayers = services.layerResolver.resolveLayers(validatedInput);
+  const validatedInput = deps.validator.validateCreateInput(promptResult);
+  const resolvedLayers = deps.layerResolver.resolveLayers(validatedInput);
   const targetDirectory = join(cwd, validatedInput.name);
   const projectFiles = {
     ...resolvedLayers.files,
-    "platform.yaml": services.platformManifestGenerator.generatePlatformManifest(validatedInput),
+    "platform.yaml": deps.platformManifestGenerator.generatePlatformManifest(validatedInput),
   };
 
-  await adapters.filesystemWriter.writeProject(targetDirectory, projectFiles);
+  await deps.filesystemWriter.writeProject(targetDirectory, projectFiles);
 
   if (validatedInput.runtime === "node") {
-    await services.packageManager.run({
+    await deps.packageManager.run({
       manager: validatedInput.packageManager!,
       projectDirectory: targetDirectory,
     });
   }
 
-  await adapters.repoInitialiser.initialise(targetDirectory);
+  await deps.repoInitialiser.initialise(targetDirectory);
 
   return { exitCode: 0, output: `Scaffolded project at ${targetDirectory}` };
 };
@@ -102,13 +79,13 @@ const handleCreate = async (
 const handleRegister = async (
   { projectDirectory }: { projectDirectory: string },
   deps: {
-    services: Pick<Services, "platformManifestGenerator">;
-    adapters: Pick<Adapters, "projectReader" | "registrationClient">;
+    platformManifestGenerator: PlatformManifestGenerator;
+    projectReader: ProjectReaderPort;
+    registrationClient: RegistrationClient;
   },
 ): Promise<HandlerResult> => {
-  const { services, adapters } = deps;
-  const manifest = await readAndValidateManifest(projectDirectory, services, adapters);
-  const receipt = await adapters.registrationClient.register(manifest);
+  const manifest = await readAndValidateManifest(projectDirectory, deps);
+  const receipt = await deps.registrationClient.register(manifest);
 
   return {
     exitCode: 0,
@@ -120,13 +97,13 @@ const handleRegister = async (
 const handleDeploy = async (
   { projectDirectory }: { projectDirectory: string },
   deps: {
-    services: Pick<Services, "platformManifestGenerator">;
-    adapters: Pick<Adapters, "deployClient" | "projectReader">;
+    deployClient: DeployClient;
+    platformManifestGenerator: PlatformManifestGenerator;
+    projectReader: ProjectReaderPort;
   },
 ): Promise<HandlerResult> => {
-  const { services, adapters } = deps;
-  const manifest = await readAndValidateManifest(projectDirectory, services, adapters);
-  const receipt = await adapters.deployClient.deploy({ manifest });
+  const manifest = await readAndValidateManifest(projectDirectory, deps);
+  const receipt = await deps.deployClient.deploy({ manifest });
 
   return {
     exitCode: 0,
@@ -138,13 +115,13 @@ const handleDeploy = async (
 const handlePromote = async (
   { projectDirectory }: { projectDirectory: string },
   deps: {
-    services: Pick<Services, "platformManifestGenerator">;
-    adapters: Pick<Adapters, "projectReader" | "promoteClient">;
+    platformManifestGenerator: PlatformManifestGenerator;
+    projectReader: ProjectReaderPort;
+    promoteClient: PromoteClient;
   },
 ): Promise<HandlerResult> => {
-  const { services, adapters } = deps;
-  const manifest = await readAndValidateManifest(projectDirectory, services, adapters);
-  const receipt = await adapters.promoteClient.promote({ manifest });
+  const manifest = await readAndValidateManifest(projectDirectory, deps);
+  const receipt = await deps.promoteClient.promote({ manifest });
 
   return {
     exitCode: 0,
@@ -156,13 +133,13 @@ const handlePromote = async (
 const handleRollback = async (
   { projectDirectory }: { projectDirectory: string },
   deps: {
-    services: Pick<Services, "platformManifestGenerator">;
-    adapters: Pick<Adapters, "projectReader" | "rollbackClient">;
+    platformManifestGenerator: PlatformManifestGenerator;
+    projectReader: ProjectReaderPort;
+    rollbackClient: RollbackClient;
   },
 ): Promise<HandlerResult> => {
-  const { services, adapters } = deps;
-  const manifest = await readAndValidateManifest(projectDirectory, services, adapters);
-  const receipt = await adapters.rollbackClient.rollback({ manifest });
+  const manifest = await readAndValidateManifest(projectDirectory, deps);
+  const receipt = await deps.rollbackClient.rollback({ manifest });
 
   return {
     exitCode: 0,
@@ -174,13 +151,13 @@ const handleRollback = async (
 const handleLogs = async (
   { environment, projectDirectory }: { environment: string; projectDirectory: string },
   deps: {
-    services: Pick<Services, "platformManifestGenerator">;
-    adapters: Pick<Adapters, "logsClient" | "projectReader">;
+    logsClient: LogsClient;
+    platformManifestGenerator: PlatformManifestGenerator;
+    projectReader: ProjectReaderPort;
   },
 ): Promise<HandlerResult> => {
-  const { services, adapters } = deps;
-  const manifest = await readAndValidateManifest(projectDirectory, services, adapters);
-  const response = await adapters.logsClient.getLogs({ environment, manifest });
+  const manifest = await readAndValidateManifest(projectDirectory, deps);
+  const response = await deps.logsClient.getLogs({ environment, manifest });
 
   const renderedEntries = response.entries
     .map((e) => `${e.timestamp} [${e.level}] ${e.message}`)
@@ -196,13 +173,13 @@ const handleLogs = async (
 const handleList = async (
   { projectDirectory }: { projectDirectory: string },
   deps: {
-    services: Pick<Services, "platformManifestGenerator">;
-    adapters: Pick<Adapters, "listClient" | "projectReader">;
+    listClient: ListClient;
+    platformManifestGenerator: PlatformManifestGenerator;
+    projectReader: ProjectReaderPort;
   },
 ): Promise<HandlerResult> => {
-  const { services, adapters } = deps;
-  const manifest = await readAndValidateManifest(projectDirectory, services, adapters);
-  const response = await adapters.listClient.getList({ manifest });
+  const manifest = await readAndValidateManifest(projectDirectory, deps);
+  const response = await deps.listClient.getList({ manifest });
 
   const renderedEntries = response.deployments
     .map((d) => `  ${d.deploymentId} — ${d.state} (deployed: ${d.deployedAt})`)
@@ -218,13 +195,13 @@ const handleList = async (
 const handleStatus = async (
   { environment, projectDirectory }: { environment: string; projectDirectory: string },
   deps: {
-    services: Pick<Services, "platformManifestGenerator">;
-    adapters: Pick<Adapters, "projectReader" | "statusClient">;
+    platformManifestGenerator: PlatformManifestGenerator;
+    projectReader: ProjectReaderPort;
+    statusClient: StatusClient;
   },
 ): Promise<HandlerResult> => {
-  const { services, adapters } = deps;
-  const manifest = await readAndValidateManifest(projectDirectory, services, adapters);
-  const response = await adapters.statusClient.getStatus({ environment, manifest });
+  const manifest = await readAndValidateManifest(projectDirectory, deps);
+  const response = await deps.statusClient.getStatus({ environment, manifest });
 
   return {
     exitCode: 0,
@@ -236,13 +213,13 @@ const handleStatus = async (
 const handleTeardown = async (
   { projectDirectory }: { projectDirectory: string },
   deps: {
-    services: Pick<Services, "platformManifestGenerator">;
-    adapters: Pick<Adapters, "projectReader" | "teardownClient">;
+    platformManifestGenerator: PlatformManifestGenerator;
+    projectReader: ProjectReaderPort;
+    teardownClient: TeardownClient;
   },
 ): Promise<HandlerResult> => {
-  const { services, adapters } = deps;
-  const manifest = await readAndValidateManifest(projectDirectory, services, adapters);
-  const receipt = await adapters.teardownClient.teardown({ manifest });
+  const manifest = await readAndValidateManifest(projectDirectory, deps);
+  const receipt = await deps.teardownClient.teardown({ manifest });
 
   return {
     exitCode: 0,
@@ -262,4 +239,4 @@ export {
   handleStatus,
   handleTeardown,
 };
-export type { Adapters, CliResult, HandlerResult, Services };
+export type { CliResult, HandlerResult };

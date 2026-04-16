@@ -6,7 +6,7 @@ Requirements reference: `design/prd.md`
 
 ## Phase 1 — Flatten `commands.ts` deps
 
-- [ ] CODE: Remove `services`/`adapters` nesting from handler signatures in `commands.ts`
+- [x] CODE: Remove `services`/`adapters` nesting from handler signatures in `commands.ts`
   - Feature: Replace nested `{ services: { ... }, adapters: { ... } }` dep objects with a flat inline type per handler; no shared `Deps` interface is introduced
   - Files:
     - `src/commands.ts` — remove `Services` and `Adapters` interfaces; update all nine handler signatures and `readAndValidateManifest` to declare a flat inline dep type (e.g. `{ platformManifestGenerator: PlatformManifestGenerator; deployClient: DeployClient; projectReader: ProjectReaderPort }`) using only the members each handler actually needs; keep `HandlerResult` and `CliResult` as exports
@@ -16,7 +16,7 @@ Requirements reference: `design/prd.md`
     - Every handler and `readAndValidateManifest` declares its own flat inline dep type with no `services:` or `adapters:` nesting
     - `bin.ts` still compiles — it constructs and passes a flat object satisfying each handler's inline dep type
 
-- [ ] CODE: Update `commands.test.ts` dep construction to flat shape
+- [x] CODE: Update `commands.test.ts` dep construction to flat shape
   - Feature: Remove `services:` / `adapters:` nesting from all dep objects constructed in `commands.test.ts`
   - Files:
     - `src/commands.test.ts` — flatten all `{ services: { ... }, adapters: { ... } }` literals into a single flat object
@@ -24,7 +24,7 @@ Requirements reference: `design/prd.md`
     - All `commands.test.ts` tests pass without modification to assertions
     - No `services:` or `adapters:` keys appear in dep object literals in the file
 
-- [ ] CODE: Update integration test dep construction to flat shape
+- [x] CODE: Update integration test dep construction to flat shape
   - Feature: Remove `services:` / `adapters:` nesting from dep objects in all integration tests
   - Files:
     - `src/integration-tests/create.test.ts`
@@ -40,7 +40,7 @@ Requirements reference: `design/prd.md`
     - All integration tests pass without modification to assertions
     - No `services:` or `adapters:` keys appear in dep object literals in any of these files
 
-- [ ] TASK: Validation gate — Phase 1
+- [x] TASK: Validation gate — Phase 1
   - `pnpm test` passes
   - `pnpm lint` passes
   - `pnpm check` passes

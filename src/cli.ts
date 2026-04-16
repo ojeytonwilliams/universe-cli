@@ -1,5 +1,21 @@
 import { BadArgumentsError, CliError } from "./errors/cli-errors.js";
 import type { ObservabilityClient } from "./observability/observability-client.port.js";
+import type { DeployClient } from "./platform/deploy-client.port.js";
+import type { FilesystemWriter } from "./io/filesystem-writer.port.js";
+import type { ListClient } from "./platform/list-client.port.js";
+import type { RepoInitialiser } from "./io/repo-initialiser.port.js";
+import type { PromoteClient } from "./platform/promote-client.port.js";
+import type { Prompt } from "./prompt/prompt.port.js";
+import type { ProjectReaderPort } from "./io/project-reader.port.js";
+import type { RegistrationClient } from "./platform/registration-client.port.js";
+import type { RollbackClient } from "./platform/rollback-client.port.js";
+import type { StatusClient } from "./platform/status-client.port.js";
+import type { TeardownClient } from "./platform/teardown-client.port.js";
+import type { LogsClient } from "./platform/logs-client.port.js";
+import type { LayerComposer } from "./services/layer-composition-service.js";
+import type { PlatformManifestGenerator } from "./services/platform-manifest-service.js";
+import type { CreateInputValidator } from "./services/create-input-validation-service.js";
+import type { PackageManagerRunner } from "./package-manager/package-manager.service.js";
 import {
   handleCreate,
   handleDeploy,
@@ -11,7 +27,7 @@ import {
   handleStatus,
   handleTeardown,
 } from "./commands.js";
-import type { Adapters, CliResult, HandlerResult, Services } from "./commands.js";
+import type { CliResult, HandlerResult } from "./commands.js";
 
 const HELP_TEXT = `
 Usage: universe <command>
@@ -32,19 +48,30 @@ Options:
 `.trim();
 
 interface CliDependencies {
-  adapters: Adapters;
   cwd: string;
+  deployClient: DeployClient;
+  filesystemWriter: FilesystemWriter;
+  layerResolver: LayerComposer;
+  listClient: ListClient;
+  logsClient: LogsClient;
   observability: ObservabilityClient;
-  services: Services;
+  packageManager: PackageManagerRunner;
+  platformManifestGenerator: PlatformManifestGenerator;
+  projectReader: ProjectReaderPort;
+  prompt: Prompt;
+  promoteClient: PromoteClient;
+  registrationClient: RegistrationClient;
+  repoInitialiser: RepoInitialiser;
+  rollbackClient: RollbackClient;
+  statusClient: StatusClient;
+  teardownClient: TeardownClient;
+  validator: CreateInputValidator;
 }
 
 type CommandHandler = (
   argv: string[],
   cwd: string,
-  deps: {
-    services: Services;
-    adapters: Adapters;
-  },
+  deps: CliDependencies,
 ) => Promise<HandlerResult>;
 
 interface CommandDef {

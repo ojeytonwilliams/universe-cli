@@ -151,28 +151,24 @@ const createDeps = (
   validator: { validateCreateInput(input: CreateSelections): CreateSelections },
   filesystemWriter: FilesystemWriter = recordingWriter,
 ) => ({
-  adapters: {
-    deployClient: defaultDeployClient,
-    filesystemWriter,
-    listClient: defaultListClient,
-    logsClient: defaultLogsClient,
-    projectReader: defaultProjectReader,
-    promoteClient: defaultPromoteClient,
-    prompt,
-    registrationClient: defaultRegistrationClient,
-    repoInitialiser: defaultRepoInitialiser,
-    rollbackClient: defaultRollbackClient,
-    statusClient: defaultStatusClient,
-    teardownClient: defaultTeardownClient,
-  },
   cwd: "/workspace",
+  deployClient: defaultDeployClient,
+  filesystemWriter,
+  layerResolver: passThroughLayerResolver,
+  listClient: defaultListClient,
+  logsClient: defaultLogsClient,
   observability: client,
-  services: {
-    layerResolver: passThroughLayerResolver,
-    packageManager: { run: () => Promise.resolve() },
-    platformManifestGenerator: manifestGenerator,
-    validator,
-  },
+  packageManager: { run: () => Promise.resolve() },
+  platformManifestGenerator: manifestGenerator,
+  projectReader: defaultProjectReader,
+  promoteClient: defaultPromoteClient,
+  prompt,
+  registrationClient: defaultRegistrationClient,
+  repoInitialiser: defaultRepoInitialiser,
+  rollbackClient: defaultRollbackClient,
+  statusClient: defaultStatusClient,
+  teardownClient: defaultTeardownClient,
+  validator,
 });
 
 describe(runCli, () => {
@@ -240,13 +236,10 @@ describe(runCli, () => {
       },
     };
 
-    const deployDeps = (deployClient = successDeployClient) => {
-      const base = createDeps(createPrompt, passThroughValidator);
-      return {
-        ...base,
-        adapters: { ...base.adapters, deployClient },
-      };
-    };
+    const deployDeps = (deployClient = successDeployClient) => ({
+      ...createDeps(createPrompt, passThroughValidator),
+      deployClient,
+    });
 
     it("tracks deploy.start and deploy.success on a successful deployment", async () => {
       const trackedEvents: string[] = [];
@@ -311,13 +304,10 @@ describe(runCli, () => {
       },
     };
 
-    const promoteDeps = (promoteClient = successPromoteClient) => {
-      const base = createDeps(createPrompt, passThroughValidator);
-      return {
-        ...base,
-        adapters: { ...base.adapters, promoteClient },
-      };
-    };
+    const promoteDeps = (promoteClient = successPromoteClient) => ({
+      ...createDeps(createPrompt, passThroughValidator),
+      promoteClient,
+    });
 
     it("tracks promote.start and promote.success on a successful promotion", async () => {
       const trackedEvents: string[] = [];
@@ -382,13 +372,10 @@ describe(runCli, () => {
       },
     };
 
-    const rollbackDeps = (rollbackClient = successRollbackClient) => {
-      const base = createDeps(createPrompt, passThroughValidator);
-      return {
-        ...base,
-        adapters: { ...base.adapters, rollbackClient },
-      };
-    };
+    const rollbackDeps = (rollbackClient = successRollbackClient) => ({
+      ...createDeps(createPrompt, passThroughValidator),
+      rollbackClient,
+    });
 
     it("tracks rollback.start and rollback.success on a successful rollback", async () => {
       const trackedEvents: string[] = [];
@@ -453,13 +440,10 @@ describe(runCli, () => {
       },
     };
 
-    const listDeps = (listClient = successListClient) => {
-      const base = createDeps(createPrompt, passThroughValidator);
-      return {
-        ...base,
-        adapters: { ...base.adapters, listClient },
-      };
-    };
+    const listDeps = (listClient = successListClient) => ({
+      ...createDeps(createPrompt, passThroughValidator),
+      listClient,
+    });
 
     it("tracks list.start and list.success on successful retrieval", async () => {
       const trackedEvents: string[] = [];
@@ -521,13 +505,10 @@ describe(runCli, () => {
       },
     };
 
-    const logsDeps = (logsClient = successLogsClient) => {
-      const base = createDeps(createPrompt, passThroughValidator);
-      return {
-        ...base,
-        adapters: { ...base.adapters, logsClient },
-      };
-    };
+    const logsDeps = (logsClient = successLogsClient) => ({
+      ...createDeps(createPrompt, passThroughValidator),
+      logsClient,
+    });
 
     it("tracks logs.start and logs.success on successful retrieval", async () => {
       const trackedEvents: string[] = [];
@@ -619,13 +600,10 @@ describe(runCli, () => {
       },
     };
 
-    const statusDeps = (statusClient = successStatusClient) => {
-      const base = createDeps(createPrompt, passThroughValidator);
-      return {
-        ...base,
-        adapters: { ...base.adapters, statusClient },
-      };
-    };
+    const statusDeps = (statusClient = successStatusClient) => ({
+      ...createDeps(createPrompt, passThroughValidator),
+      statusClient,
+    });
 
     it("tracks status.start and status.success on successful retrieval", async () => {
       const trackedEvents: string[] = [];
@@ -713,13 +691,10 @@ describe(runCli, () => {
       },
     };
 
-    const teardownDeps = (teardownClient = successTeardownClient) => {
-      const base = createDeps(createPrompt, passThroughValidator);
-      return {
-        ...base,
-        adapters: { ...base.adapters, teardownClient },
-      };
-    };
+    const teardownDeps = (teardownClient = successTeardownClient) => ({
+      ...createDeps(createPrompt, passThroughValidator),
+      teardownClient,
+    });
 
     it("tracks teardown.start and teardown.success on successful teardown", async () => {
       const trackedEvents: string[] = [];

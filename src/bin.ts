@@ -22,41 +22,28 @@ import { StubTeardownClient } from "./platform/teardown-client.stub.js";
 import { runCli } from "./cli.js";
 import { PackageManagerService } from "./package-manager/package-manager.service.js";
 
-const filesystemWriter = new LocalFilesystemWriter();
-const layerResolver = new LayerCompositionService();
-const manifestGenerator = new PlatformManifestService();
-
-const packageManager = new PackageManagerService({
-  bun: new BunPackageManager(),
-  pnpm: new PnpmPackageManager(),
-});
-const repoInitialiser = new GitRepoInitialiser();
-const projectReader = new LocalProjectReader();
-const prompt = new ClackPrompt();
-const inputValidator = new CreateInputValidationService((path) => existsSync(path));
 const { exitCode, output } = await runCli(process.argv.slice(2), {
-  adapters: {
-    deployClient: new StubDeployClient(),
-    filesystemWriter,
-    listClient: new StubListClient(),
-    logsClient: new StubLogsClient(),
-    projectReader,
-    promoteClient: new StubPromoteClient(),
-    prompt,
-    registrationClient: new StubRegistrationClient(),
-    repoInitialiser,
-    rollbackClient: new StubRollbackClient(),
-    statusClient: new StubStatusClient(),
-    teardownClient: new StubTeardownClient(),
-  },
   cwd: process.cwd(),
+  deployClient: new StubDeployClient(),
+  filesystemWriter: new LocalFilesystemWriter(),
+  layerResolver: new LayerCompositionService(),
+  listClient: new StubListClient(),
+  logsClient: new StubLogsClient(),
   observability: new StubObservabilityClient(),
-  services: {
-    layerResolver,
-    packageManager,
-    platformManifestGenerator: manifestGenerator,
-    validator: inputValidator,
-  },
+  packageManager: new PackageManagerService({
+    bun: new BunPackageManager(),
+    pnpm: new PnpmPackageManager(),
+  }),
+  platformManifestGenerator: new PlatformManifestService(),
+  projectReader: new LocalProjectReader(),
+  promoteClient: new StubPromoteClient(),
+  prompt: new ClackPrompt(),
+  registrationClient: new StubRegistrationClient(),
+  repoInitialiser: new GitRepoInitialiser(),
+  rollbackClient: new StubRollbackClient(),
+  statusClient: new StubStatusClient(),
+  teardownClient: new StubTeardownClient(),
+  validator: new CreateInputValidationService((path) => existsSync(path)),
 });
 
 if (output.length > 0) {

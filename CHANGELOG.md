@@ -1,5 +1,14 @@
 # Changelog
 
+## [3.3.1] - 2026-04-16
+
+### Flatten handler and CLI dependency injection
+
+- Removed nested `Services` and `Adapters` interfaces from `commands.ts`; each handler now declares its own flat inline dep type containing only the members it needs.
+- `CliDependencies` in `cli.ts` is now a single flat interface — no `services:` or `adapters:` sub-objects.
+- `bin.ts` wiring updated to pass a flat dep object to `runCli`.
+- All unit and integration test dep helpers updated to reflect the flat shape; no `services:` or `adapters:` keys remain in any test dep object.
+
 ## [3.3.0] - 2026-04-15
 
 ### Package manager abstraction and Bun adapter

@@ -93,28 +93,24 @@ const makeDeps = (cwd: string, prompt: Prompt, options: MakeDepsOptions = {}) =>
   const { adapterOverrides = {}, layerRegistry, packageManagerService } = options;
   const { observability, ...adapters } = createAdapterStubs();
   return {
-    adapters: {
-      ...adapters,
-      filesystemWriter: new LocalFilesystemWriter(),
-      projectReader: new LocalProjectReader(),
-      prompt,
-      ...adapterOverrides,
-    },
+    ...adapters,
     cwd,
+    filesystemWriter: new LocalFilesystemWriter(),
+    layerResolver: layerRegistry
+      ? new LayerCompositionService(layerRegistry)
+      : new LayerCompositionService(),
     observability,
-    services: {
-      layerResolver: layerRegistry
-        ? new LayerCompositionService(layerRegistry)
-        : new LayerCompositionService(),
-      packageManager:
-        packageManagerService ??
-        new PackageManagerService({
-          bun: new StubPackageManager(),
-          pnpm: new StubPackageManager(),
-        }),
-      platformManifestGenerator: new PlatformManifestService(),
-      validator: new CreateInputValidationService((path) => existsSync(join(cwd, path))),
-    },
+    packageManager:
+      packageManagerService ??
+      new PackageManagerService({
+        bun: new StubPackageManager(),
+        pnpm: new StubPackageManager(),
+      }),
+    platformManifestGenerator: new PlatformManifestService(),
+    projectReader: new LocalProjectReader(),
+    prompt,
+    validator: new CreateInputValidationService((path) => existsSync(join(cwd, path))),
+    ...adapterOverrides,
   };
 };
 
