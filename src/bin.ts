@@ -107,7 +107,7 @@ const bindThunk = (argv: string[], deps: RouteDeps): (() => Promise<unknown>) =>
           'The "create" command is interactive-only in this spike. Run "universe create" with no additional arguments.',
         );
       }
-      return () => handleCreate(cwd, deps);
+      return () => handleCreate({ cwd }, deps);
 
     case "deploy":
       if (argv.length > 2) {

@@ -37,7 +37,7 @@ const readAndValidateManifest = async (
 };
 
 const handleCreate = async (
-  cwd: string,
+  { cwd }: { cwd: string },
   deps: {
     filesystemWriter: FilesystemWriter;
     layerResolver: LayerComposer;

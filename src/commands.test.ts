@@ -160,7 +160,7 @@ describe(handleCreate, () => {
       },
     };
 
-    const { output } = await handleCreate("/workspace", deps);
+    const { output } = await handleCreate({ cwd: "/workspace" }, deps);
 
     expect(writerCalls).toStrictEqual([
       {
@@ -216,98 +216,106 @@ describe(handleCreate, () => {
       },
     };
 
-    const result = await handleCreate("/workspace", deps);
+    const result = await handleCreate({ cwd: "/workspace" }, deps);
 
     expect(result.exitCode).toBeGreaterThan(0);
   });
 
   it("returns actionable feedback for invalid input", async () => {
     await expect(
-      handleCreate("/workspace", {
-        filesystemWriter: {
-          writeProject(_targetDirectory: never): never {
-            throw new Error("filesystemWriter not used in this test");
+      handleCreate(
+        { cwd: "/workspace" },
+        {
+          filesystemWriter: {
+            writeProject(_targetDirectory: never): never {
+              throw new Error("filesystemWriter not used in this test");
+            },
+          },
+          layerResolver: {
+            resolveLayers(_input: never): never {
+              throw new Error("layerResolver not used in this test");
+            },
+          },
+          packageManager: {
+            run(): never {
+              throw new Error("packageManager not used in this test");
+            },
+          },
+          platformManifestGenerator: {
+            generatePlatformManifest(_input: never): never {
+              throw new Error("generatePlatformManifest not used in this test");
+            },
+            validateManifest(_yaml: never): never {
+              throw new Error("validateManifest not used in this test");
+            },
+          },
+          prompt: {
+            promptForCreateInputs() {
+              return Promise.resolve(createPromptResult);
+            },
+          },
+          repoInitialiser: {
+            initialise: (_dir: never): never => {
+              throw new Error("repoInitialiser not used in this test");
+            },
+          },
+          validator: {
+            validateCreateInput(_input: CreateSelections): never {
+              throw new InvalidNameError("InvalidName");
+            },
           },
         },
-        layerResolver: {
-          resolveLayers(_input: never): never {
-            throw new Error("layerResolver not used in this test");
-          },
-        },
-        packageManager: {
-          run(): never {
-            throw new Error("packageManager not used in this test");
-          },
-        },
-        platformManifestGenerator: {
-          generatePlatformManifest(_input: never): never {
-            throw new Error("generatePlatformManifest not used in this test");
-          },
-          validateManifest(_yaml: never): never {
-            throw new Error("validateManifest not used in this test");
-          },
-        },
-        prompt: {
-          promptForCreateInputs() {
-            return Promise.resolve(createPromptResult);
-          },
-        },
-        repoInitialiser: {
-          initialise: (_dir: never): never => {
-            throw new Error("repoInitialiser not used in this test");
-          },
-        },
-        validator: {
-          validateCreateInput(_input: CreateSelections): never {
-            throw new InvalidNameError("InvalidName");
-          },
-        },
-      }),
+      ),
     ).rejects.toThrow(InvalidNameError);
   });
 
   it("throws a typed write failure when scaffold output cannot be written", async () => {
     await expect(
-      handleCreate("/workspace", {
-        filesystemWriter: {
-          writeProject(targetDirectory: string) {
-            return Promise.reject(new ScaffoldWriteError(targetDirectory, new Error("disk full")));
+      handleCreate(
+        { cwd: "/workspace" },
+        {
+          filesystemWriter: {
+            writeProject(targetDirectory: string) {
+              return Promise.reject(
+                new ScaffoldWriteError(targetDirectory, new Error("disk full")),
+              );
+            },
+          },
+          layerResolver: {
+            resolveLayers(_input: CreateSelections): ResolvedLayerSet {
+              return { files: resolvedLayerFiles, layers: [] };
+            },
+          },
+          packageManager: {
+            run(): never {
+              throw new Error("packageManager not used in this test");
+            },
+          },
+          platformManifestGenerator: {
+            generatePlatformManifest(_input: CreateSelections) {
+              return "name: hello-universe\n";
+            },
+            validateManifest(_yaml: never): never {
+              throw new Error("validateManifest not used in this test");
+            },
+          },
+          prompt: {
+            promptForCreateInputs() {
+              return Promise.resolve(createPromptResult);
+            },
+          },
+          repoInitialiser: {
+            initialise: (_dir: never): never => {
+              throw new Error("repoInitialiser not used in this test");
+            },
+          },
+          validator: {
+            validateCreateInput(input: CreateSelections) {
+              return input;
+            },
           },
         },
-        layerResolver: {
-          resolveLayers(_input: CreateSelections): ResolvedLayerSet {
-            return { files: resolvedLayerFiles, layers: [] };
-          },
-        },
-        packageManager: {
-          run(): never {
-            throw new Error("packageManager not used in this test");
-          },
-        },
-        platformManifestGenerator: {
-          generatePlatformManifest(_input: CreateSelections) {
-            return "name: hello-universe\n";
-          },
-          validateManifest(_yaml: never): never {
-            throw new Error("validateManifest not used in this test");
-          },
-        },
-        prompt: {
-          promptForCreateInputs() {
-            return Promise.resolve(createPromptResult);
-          },
-        },
-        repoInitialiser: {
-          initialise: (_dir: never): never => {
-            throw new Error("repoInitialiser not used in this test");
-          },
-        },
-        validator: {
-          validateCreateInput(input: CreateSelections) {
-            return input;
-          },
-        },
-      }),
+      ),
     ).rejects.toThrow(ScaffoldWriteError);
   });
 });
