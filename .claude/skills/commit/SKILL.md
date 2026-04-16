@@ -53,9 +53,13 @@ If the intention is obvious from the title, as in the last example, the body can
 
 Avoid messages that only restate low-level edits, such as:
 
-- `Update SKILL.md`
-- `Change some files`
-- `Fix stuff`
+- `Update SKILL.md` -- This is obvious from the diff, so does not need restating.
+- `Change some files` -- Vague.
+- `Fix stuff` -- Vague.
+
+Avoid describing how the code was written
+
+- `Strict TDD, lint, and type-check compliance enforced.` -- This is unhelpful because it doesn't tell us anything about what was created or why, only how it was created. Also, lint/type-check compliance should be enforced by tooling, so does not need to be mentioned.
 
 ## Safety rules
 

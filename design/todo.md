@@ -72,7 +72,7 @@ Requirements reference: `plans/universe-cli/framework-package-manager-prd.md`
 
 ## Phase 3 — Package manager service orchestration (FR-7, NFR-2)
 
-- [ ] CODE: Introduce package manager service abstraction over manager adapters
+- [x] CODE: Introduce package manager service abstraction over manager adapters
   - Feature: one service handles manager dispatch and install workflow
   - Files: `src/services/package-manager-service.ts` (new), `src/ports/package-manager.ts`, service tests (new)
   - Acceptance:
@@ -82,7 +82,7 @@ Requirements reference: `plans/universe-cli/framework-package-manager-prd.md`
     - Service tests verify adapter dispatch and error propagation
     - Tests are written first and initially fail, then pass after implementation
 
-- [ ] CODE: Add bun adapter and wire service into create flow
+- [x] CODE: Add bun adapter and wire service into create flow
   - Feature: Node create supports `bun` without changing command-handler complexity
   - Files: `src/adapters/bun-package-manager-adapter.ts` (new), `src/adapters/bun-package-manager-adapter.test.ts` (new), `src/commands.ts`, `src/bin.ts`, `src/integration-tests/adapter-stubs.ts`
   - Acceptance:
