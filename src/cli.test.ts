@@ -8,15 +8,7 @@ import type { PlatformManifest } from "./services/platform-manifest-service.js";
 import { parseArgs, route } from "./bin.js";
 import type { RouteDeps } from "./bin.js";
 import { runCli } from "./cli.js";
-import {
-  DeploymentError,
-  ListError,
-  LogsError,
-  PromotionError,
-  RollbackError,
-  StatusError,
-  TeardownError,
-} from "./errors/cli-errors.js";
+import { CliError } from "./errors/cli-errors.js";
 
 const client: ObservabilityClient = {
   error() {},
@@ -186,145 +178,45 @@ describe(runCli, () => {
   };
 
   const successHandler = (): Promise<HandlerResult> => Promise.resolve({ exitCode: 0, output: "" });
+  const failureHandler = (): Promise<HandlerResult> => Promise.reject(new Error("Command failed"));
 
-  describe("deploy", () => {
-    it("tracks deploy.start and deploy.success on a successful handler", async () => {
+  const commands = [
+    ["create"],
+    ["register"],
+    ["deploy"],
+    ["promote"],
+    ["rollback"],
+    ["logs"],
+    ["status"],
+    ["list"],
+    ["teardown"],
+  ];
+
+  it.each(commands)(
+    "tracks <command>.start and <command>.success on a successful %s call",
+    async ([command]) => {
       const { obs, trackedEvents } = makeTracking();
+      await runCli(command!, successHandler, obs);
 
-      await runCli("deploy", successHandler, obs);
+      expect(trackedEvents).toContain(`${command}.start`);
+      expect(trackedEvents).toContain(`${command}.success`);
+    },
+  );
 
-      expect(trackedEvents).toContain("deploy.start");
-      expect(trackedEvents).toContain("deploy.success");
-    });
-
-    it("tracks deploy.start and deploy.failure on a CliError", async () => {
+  it.each(commands)(
+    "tracks <command>.start and <command>.failure if the %s handler throws an error",
+    async ([command]) => {
       const { obs, trackedEvents } = makeTracking();
+      await runCli(command!, () => Promise.reject(new CliError("app", 7)), obs);
 
-      await runCli("deploy", () => Promise.reject(new DeploymentError("app", "timeout")), obs);
+      expect(trackedEvents).toContain(`${command}.start`);
+      expect(trackedEvents).toContain(`${command}.failure`);
+    },
+  );
 
-      expect(trackedEvents).toContain("deploy.start");
-      expect(trackedEvents).toContain("deploy.failure");
-    });
-  });
-
-  describe("promote", () => {
-    it("tracks promote.start and promote.success on a successful handler", async () => {
-      const { obs, trackedEvents } = makeTracking();
-
-      await runCli("promote", successHandler, obs);
-
-      expect(trackedEvents).toContain("promote.start");
-      expect(trackedEvents).toContain("promote.success");
-    });
-
-    it("tracks promote.start and promote.failure on a CliError", async () => {
-      const { obs, trackedEvents } = makeTracking();
-
-      await runCli("promote", () => Promise.reject(new PromotionError("app", "timeout")), obs);
-
-      expect(trackedEvents).toContain("promote.start");
-      expect(trackedEvents).toContain("promote.failure");
-    });
-  });
-
-  describe("rollback", () => {
-    it("tracks rollback.start and rollback.success on a successful handler", async () => {
-      const { obs, trackedEvents } = makeTracking();
-
-      await runCli("rollback", successHandler, obs);
-
-      expect(trackedEvents).toContain("rollback.start");
-      expect(trackedEvents).toContain("rollback.success");
-    });
-
-    it("tracks rollback.start and rollback.failure on a CliError", async () => {
-      const { obs, trackedEvents } = makeTracking();
-
-      await runCli("rollback", () => Promise.reject(new RollbackError("app", "timeout")), obs);
-
-      expect(trackedEvents).toContain("rollback.start");
-      expect(trackedEvents).toContain("rollback.failure");
-    });
-  });
-
-  describe("list", () => {
-    it("tracks list.start and list.success on a successful handler", async () => {
-      const { obs, trackedEvents } = makeTracking();
-
-      await runCli("list", successHandler, obs);
-
-      expect(trackedEvents).toContain("list.start");
-      expect(trackedEvents).toContain("list.success");
-    });
-
-    it("tracks list.start and list.failure on a CliError", async () => {
-      const { obs, trackedEvents } = makeTracking();
-
-      await runCli("list", () => Promise.reject(new ListError("app", "unavailable")), obs);
-
-      expect(trackedEvents).toContain("list.start");
-      expect(trackedEvents).toContain("list.failure");
-    });
-  });
-
-  describe("logs", () => {
-    it("tracks logs.start and logs.success on a successful handler", async () => {
-      const { obs, trackedEvents } = makeTracking();
-
-      await runCli("logs", successHandler, obs);
-
-      expect(trackedEvents).toContain("logs.start");
-      expect(trackedEvents).toContain("logs.success");
-    });
-
-    it("tracks logs.start and logs.failure on a CliError", async () => {
-      const { obs, trackedEvents } = makeTracking();
-
-      await runCli("logs", () => Promise.reject(new LogsError("app", "timeout")), obs);
-
-      expect(trackedEvents).toContain("logs.start");
-      expect(trackedEvents).toContain("logs.failure");
-    });
-  });
-
-  describe("status", () => {
-    it("tracks status.start and status.success on a successful handler", async () => {
-      const { obs, trackedEvents } = makeTracking();
-
-      await runCli("status", successHandler, obs);
-
-      expect(trackedEvents).toContain("status.start");
-      expect(trackedEvents).toContain("status.success");
-    });
-
-    it("tracks status.start and status.failure on a CliError", async () => {
-      const { obs, trackedEvents } = makeTracking();
-
-      await runCli("status", () => Promise.reject(new StatusError("app", "unavailable")), obs);
-
-      expect(trackedEvents).toContain("status.start");
-      expect(trackedEvents).toContain("status.failure");
-    });
-  });
-
-  describe("teardown", () => {
-    it("tracks teardown.start and teardown.success on a successful handler", async () => {
-      const { obs, trackedEvents } = makeTracking();
-
-      await runCli("teardown", successHandler, obs);
-
-      expect(trackedEvents).toContain("teardown.start");
-      expect(trackedEvents).toContain("teardown.success");
-    });
-
-    it("tracks teardown.start and teardown.failure on a CliError", async () => {
-      const { obs, trackedEvents } = makeTracking();
-
-      await runCli("teardown", () => Promise.reject(new TeardownError("app", "unavailable")), obs);
-
-      expect(trackedEvents).toContain("teardown.start");
-      expect(trackedEvents).toContain("teardown.failure");
-    });
+  it("re-throws non-CliError exceptions", async () => {
+    const { obs } = makeTracking();
+    await expect(runCli("deploy", failureHandler, obs)).rejects.toThrow("Command failed");
   });
 });
 

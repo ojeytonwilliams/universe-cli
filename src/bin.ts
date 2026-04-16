@@ -125,24 +125,24 @@ type HandlerBinder = (
   deps: RouteDeps,
 ) => HandlerThunk;
 
-const parseSingleDirectoryArg =
-  (errorMessage: string): ArgParser =>
-  (args, command) => {
-    if (args.length > 1) {
-      return { error: new BadArgumentsError(errorMessage) };
-    }
-
-    const options: ParsedOptions = {};
-    const [projectDirectory] = args;
-    if (projectDirectory !== undefined) {
-      options.projectDirectory = projectDirectory;
-    }
-
+const parseSingleDirectoryArg: ArgParser = (args, command) => {
+  if (args.length > 1) {
     return {
-      command,
-      options,
+      error: new BadArgumentsError(`Too many arguments. Usage: universe ${command} [directory]`),
     };
+  }
+
+  const options: ParsedOptions = {};
+  const [projectDirectory] = args;
+  if (projectDirectory !== undefined) {
+    options.projectDirectory = projectDirectory;
+  }
+
+  return {
+    command,
+    options,
   };
+};
 
 const parseCreateArgs: ArgParser = (args, command) => {
   if (args.length > 0) {
@@ -156,7 +156,15 @@ const parseCreateArgs: ArgParser = (args, command) => {
   return { command, options: {} };
 };
 
-const parseEnvironmentArgs = (command: "logs" | "status", args: string[]): ParseArgsResult => {
+const parseEnvironmentArgs: ArgParser = (args, command) => {
+  if (command !== "logs" && command !== "status") {
+    return {
+      error: new BadArgumentsError(
+        `Internal parser configuration error. Usage: universe ${command} [directory]`,
+      ),
+    };
+  }
+
   if (args.length > 2) {
     return {
       error: new BadArgumentsError(
@@ -185,14 +193,14 @@ const parseEnvironmentArgs = (command: "logs" | "status", args: string[]): Parse
 
 const argParsers: Record<CommandName, ArgParser> = {
   create: parseCreateArgs,
-  deploy: parseSingleDirectoryArg("Too many arguments. Usage: universe deploy [directory]"),
-  list: parseSingleDirectoryArg("Too many arguments. Usage: universe list [directory]"),
-  logs: (args) => parseEnvironmentArgs("logs", args),
-  promote: parseSingleDirectoryArg("Too many arguments. Usage: universe promote [directory]"),
-  register: parseSingleDirectoryArg("Too many arguments. Usage: universe register [directory]"),
-  rollback: parseSingleDirectoryArg("Too many arguments. Usage: universe rollback [directory]"),
-  status: (args) => parseEnvironmentArgs("status", args),
-  teardown: parseSingleDirectoryArg("Too many arguments. Usage: universe teardown [directory]"),
+  deploy: parseSingleDirectoryArg,
+  list: parseSingleDirectoryArg,
+  logs: parseEnvironmentArgs,
+  promote: parseSingleDirectoryArg,
+  register: parseSingleDirectoryArg,
+  rollback: parseSingleDirectoryArg,
+  status: parseEnvironmentArgs,
+  teardown: parseSingleDirectoryArg,
 };
 
 const handlerBinders: Record<CommandName, HandlerBinder> = {
