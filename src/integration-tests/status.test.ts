@@ -32,7 +32,6 @@ const makeDeps = (cwd: string, prompt: Prompt) => {
   const { observability, ...adapters } = createAdapterStubs();
   return {
     ...adapters,
-    cwd,
     filesystemWriter: new LocalFilesystemWriter(),
     layerResolver: new LayerCompositionService(),
     observability,
@@ -69,10 +68,15 @@ describe("status", () => {
     );
     const projectDir = join(rootDirectory, projectName);
 
-    const createResult = await route(["create"], routeDeps, observability);
+    const createResult = await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
     expect(createResult.exitCode).toBe(0);
 
-    const statusResult = await route(["status", projectDir], routeDeps, observability);
+    const statusResult = await route(
+      ["status", projectDir],
+      routeDeps,
+      { cwd: rootDirectory },
+      observability,
+    );
     expect(statusResult.exitCode).toBe(0);
     expect(statusResult.output).toContain(projectName);
     expect(statusResult.output).toContain("preview");
@@ -89,9 +93,14 @@ describe("status", () => {
     );
     const projectDir = join(rootDirectory, "status-failure");
 
-    await route(["create"], routeDeps, observability);
+    await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
 
-    const result = await route(["status", projectDir], routeDeps, observability);
+    const result = await route(
+      ["status", projectDir],
+      routeDeps,
+      { cwd: rootDirectory },
+      observability,
+    );
     expect(result.exitCode).toBeGreaterThan(0);
   });
 });

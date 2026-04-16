@@ -94,7 +94,6 @@ const makeDeps = (cwd: string, prompt: Prompt, options: MakeDepsOptions = {}) =>
   const { observability, ...adapters } = createAdapterStubs();
   return {
     ...adapters,
-    cwd,
     filesystemWriter: new LocalFilesystemWriter(),
     layerResolver: layerRegistry
       ? new LayerCompositionService(layerRegistry)
@@ -137,7 +136,7 @@ describe("create", () => {
     tempDirectories.push(rootDirectory);
 
     const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection));
-    const result = await route(["create"], routeDeps, observability);
+    const result = await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
 
     expect(result.exitCode).toBe(0);
     expect(existsSync(join(rootDirectory, selection.name))).toBe(true);
@@ -155,7 +154,7 @@ describe("create", () => {
     tempDirectories.push(rootDirectory);
 
     const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection));
-    const result = await route(["create"], routeDeps, observability);
+    const result = await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
 
     expect(result.exitCode).toBe(0);
     expect(existsSync(join(rootDirectory, selection.name))).toBe(true);
@@ -168,7 +167,7 @@ describe("create", () => {
     tempDirectories.push(rootDirectory);
 
     const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection));
-    const result = await route(["create"], routeDeps, observability);
+    const result = await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
 
     expect(result.exitCode).toBe(0);
     expect(existsSync(join(rootDirectory, selection.name))).toBe(true);
@@ -183,7 +182,12 @@ describe("create", () => {
       rootDirectory,
       createPromptPort(createStaticSelection("InvalidName")),
     );
-    const invalidNameResult = await route(["create"], routeDepsInvalid, obsInvalid);
+    const invalidNameResult = await route(
+      ["create"],
+      routeDepsInvalid,
+      { cwd: rootDirectory },
+      obsInvalid,
+    );
 
     expect(invalidNameResult.exitCode).toBeGreaterThan(0);
     expect(invalidNameResult.output).toContain("Invalid project name");
@@ -201,7 +205,12 @@ describe("create", () => {
         }),
       ),
     );
-    const firstCreateResult = await route(["create"], routeDepsFirst, obsFirst);
+    const firstCreateResult = await route(
+      ["create"],
+      routeDepsFirst,
+      { cwd: rootDirectory },
+      obsFirst,
+    );
 
     expect(firstCreateResult.exitCode).toBe(0);
 
@@ -216,7 +225,12 @@ describe("create", () => {
         }),
       ),
     );
-    const targetExistsResult = await route(["create"], routeDepsConflict, obsConflict);
+    const targetExistsResult = await route(
+      ["create"],
+      routeDepsConflict,
+      { cwd: rootDirectory },
+      obsConflict,
+    );
 
     expect(targetExistsResult.exitCode).toBeGreaterThan(0);
     expect(targetExistsResult.output).toContain("Target directory already exists");
@@ -264,7 +278,7 @@ describe("create", () => {
     const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection), {
       layerRegistry: customLayers,
     });
-    const result = await route(["create"], routeDeps, observability);
+    const result = await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
 
     expect(result.exitCode).toBe(0);
 
@@ -306,7 +320,7 @@ describe("create", () => {
     const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection), {
       layerRegistry: customLayers,
     });
-    const result = await route(["create"], routeDeps, observability);
+    const result = await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
 
     expect(result.exitCode).toBeGreaterThan(0);
     expect(result.output).toContain('File path conflict: "README.md"');
@@ -325,7 +339,7 @@ describe("create", () => {
     tempDirectories.push(rootDirectory);
 
     const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection));
-    const result = await route(["create"], routeDeps, observability);
+    const result = await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
 
     expect(result.exitCode).toBe(0);
 
@@ -346,7 +360,7 @@ describe("create", () => {
     tempDirectories.push(rootDirectory);
 
     const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection));
-    const result = await route(["create"], routeDeps, observability);
+    const result = await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
 
     expect(result.exitCode).toBe(0);
 
@@ -374,7 +388,7 @@ describe("create", () => {
     tempDirectories.push(rootDirectory);
 
     const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection));
-    const result = await route(["create"], routeDeps, observability);
+    const result = await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
 
     expect(result.exitCode).toBe(0);
 
@@ -401,7 +415,7 @@ describe("create", () => {
     const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection), {
       packageManagerService: { run },
     });
-    const result = await route(["create"], routeDeps, observability);
+    const result = await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
 
     expect(result.exitCode).toBe(0);
     expect(run).toHaveBeenCalledWith({
@@ -422,7 +436,7 @@ describe("create", () => {
     const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection), {
       packageManagerService: { run },
     });
-    const result = await route(["create"], routeDeps, observability);
+    const result = await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
 
     expect(result.exitCode).toBe(0);
     expect(run).not.toHaveBeenCalled();
@@ -445,7 +459,7 @@ describe("create", () => {
     const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection), {
       adapterOverrides: { repoInitialiser },
     });
-    const result = await route(["create"], routeDeps, observability);
+    const result = await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
 
     expect(result.exitCode).toBe(0);
     expect(repoInitialiser.initialise).toHaveBeenCalledWith(join(rootDirectory, name));
@@ -463,7 +477,7 @@ describe("create", () => {
     const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection), {
       adapterOverrides: { repoInitialiser },
     });
-    const result = await route(["create"], routeDeps, observability);
+    const result = await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
 
     expect(result.exitCode).toBe(0);
     expect(repoInitialiser.initialise).toHaveBeenCalledWith(join(rootDirectory, name));
@@ -476,7 +490,7 @@ describe("create", () => {
     tempDirectories.push(rootDirectory);
 
     const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection));
-    const result = await route(["create"], routeDeps, observability);
+    const result = await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
 
     expect(result.exitCode).toBe(0);
 

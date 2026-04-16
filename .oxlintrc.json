@@ -33,6 +33,7 @@
     /* Too dogmatic. A responsibility does not have to be contained with a
     single class */
     "max-classes-per-file": "off",
+    "max-params": ["error", { "max": 4 }],
     /* This is a useful code smell, but fixing it on the fly warps the codebase.
     It only makes sense as a refactoring hint */
     "import/max-dependencies": "off",

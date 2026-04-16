@@ -53,7 +53,6 @@ import type { CliResult, HandlerResult } from "./commands.js";
 import { runCli } from "./cli.js";
 
 interface RouteDeps {
-  cwd: string;
   deployClient: DeployClient;
   filesystemWriter: FilesystemWriter;
   layerResolver: LayerComposer;
@@ -70,6 +69,10 @@ interface RouteDeps {
   statusClient: StatusClient;
   teardownClient: TeardownClient;
   validator: CreateInputValidator;
+}
+
+interface RouteContext {
+  cwd: string;
 }
 
 const HELP_TEXT = `
@@ -92,124 +95,187 @@ Options:
 
 const VALID_ENVIRONMENTS = new Set(["preview", "production"]);
 
-const bindThunk = (argv: string[], deps: RouteDeps): (() => Promise<unknown>) => {
-  const [command] = argv;
-  const { cwd } = deps;
+type CommandName =
+  | "create"
+  | "deploy"
+  | "list"
+  | "logs"
+  | "promote"
+  | "register"
+  | "rollback"
+  | "status"
+  | "teardown";
 
-  if (command === undefined) {
-    throw new BadArgumentsError(`Unknown command: "". Run "universe --help" for usage.`);
-  }
+type Environment = "preview" | "production";
 
-  switch (command) {
-    case "create":
-      if (argv.length > 1) {
-        throw new BadArgumentsError(
-          'The "create" command is interactive-only in this spike. Run "universe create" with no additional arguments.',
-        );
-      }
-      return () => handleCreate({ cwd }, deps);
+interface ParsedOptions {
+  environment?: Environment;
+  projectDirectory?: string;
+}
 
-    case "deploy":
-      if (argv.length > 2) {
-        throw new BadArgumentsError("Too many arguments. Usage: universe deploy [directory]");
-      }
-      return () => handleDeploy({ projectDirectory: argv[1] ?? cwd }, deps);
+type ParseArgsResult =
+  | { command: "help" | CommandName; error?: never; options: ParsedOptions }
+  | { command?: never; error: BadArgumentsError; options?: never };
 
-    case "list":
-      if (argv.length > 2) {
-        throw new BadArgumentsError("Too many arguments. Usage: universe list [directory]");
-      }
-      return () => handleList({ projectDirectory: argv[1] ?? cwd }, deps);
+type ArgParser = (args: string[], command: CommandName) => ParseArgsResult;
+type HandlerThunk = () => Promise<HandlerResult>;
+type HandlerBinder = (
+  options: ParsedOptions,
+  context: RouteContext,
+  deps: RouteDeps,
+) => HandlerThunk;
 
-    case "logs": {
-      if (argv.length > 3) {
-        throw new BadArgumentsError(
-          "Too many arguments. Usage: universe logs [directory] [environment]",
-        );
-      }
-      const logsEnv = argv[2] ?? "preview";
-      if (!VALID_ENVIRONMENTS.has(logsEnv)) {
-        throw new BadArgumentsError(
-          `environment "${logsEnv}" — valid values are: preview, production`,
-        );
-      }
-      return () => handleLogs({ environment: logsEnv, projectDirectory: argv[1] ?? cwd }, deps);
+const parseSingleDirectoryArg =
+  (errorMessage: string): ArgParser =>
+  (args, command) => {
+    if (args.length > 1) {
+      return { error: new BadArgumentsError(errorMessage) };
     }
 
-    case "promote":
-      if (argv.length > 2) {
-        throw new BadArgumentsError("Too many arguments. Usage: universe promote [directory]");
-      }
-      return () => handlePromote({ projectDirectory: argv[1] ?? cwd }, deps);
-
-    case "register":
-      if (argv.length > 2) {
-        throw new BadArgumentsError("Too many arguments. Usage: universe register [directory]");
-      }
-      return () => handleRegister({ projectDirectory: argv[1] ?? cwd }, deps);
-
-    case "rollback":
-      if (argv.length > 2) {
-        throw new BadArgumentsError("Too many arguments. Usage: universe rollback [directory]");
-      }
-      return () => handleRollback({ projectDirectory: argv[1] ?? cwd }, deps);
-
-    case "status": {
-      if (argv.length > 3) {
-        throw new BadArgumentsError(
-          "Too many arguments. Usage: universe status [directory] [environment]",
-        );
-      }
-      const statusEnv = argv[2] ?? "preview";
-      if (!VALID_ENVIRONMENTS.has(statusEnv)) {
-        throw new BadArgumentsError(
-          `environment "${statusEnv}" — valid values are: preview, production`,
-        );
-      }
-      return () => handleStatus({ environment: statusEnv, projectDirectory: argv[1] ?? cwd }, deps);
+    const options: ParsedOptions = {};
+    const [projectDirectory] = args;
+    if (projectDirectory !== undefined) {
+      options.projectDirectory = projectDirectory;
     }
 
-    case "teardown":
-      if (argv.length > 2) {
-        throw new BadArgumentsError("Too many arguments. Usage: universe teardown [directory]");
-      }
-      return () => handleTeardown({ projectDirectory: argv[1] ?? cwd }, deps);
+    return {
+      command,
+      options,
+    };
+  };
 
-    default:
-      throw new BadArgumentsError(
-        `Unknown command: "${command}". Run "universe --help" for usage.`,
-      );
+const parseCreateArgs: ArgParser = (args, command) => {
+  if (args.length > 0) {
+    return {
+      error: new BadArgumentsError(
+        'The "create" command is interactive-only in this spike. Run "universe create" with no additional arguments.',
+      ),
+    };
   }
+
+  return { command, options: {} };
 };
+
+const parseEnvironmentArgs = (command: "logs" | "status", args: string[]): ParseArgsResult => {
+  if (args.length > 2) {
+    return {
+      error: new BadArgumentsError(
+        `Too many arguments. Usage: universe ${command} [directory] [environment]`,
+      ),
+    };
+  }
+
+  const environment = args[1] ?? "preview";
+  if (!VALID_ENVIRONMENTS.has(environment)) {
+    return {
+      error: new BadArgumentsError(
+        `environment "${environment}" — valid values are: preview, production`,
+      ),
+    };
+  }
+
+  return {
+    command,
+    options:
+      args[0] === undefined
+        ? { environment: environment as Environment }
+        : { environment: environment as Environment, projectDirectory: args[0] },
+  };
+};
+
+const argParsers: Record<CommandName, ArgParser> = {
+  create: parseCreateArgs,
+  deploy: parseSingleDirectoryArg("Too many arguments. Usage: universe deploy [directory]"),
+  list: parseSingleDirectoryArg("Too many arguments. Usage: universe list [directory]"),
+  logs: (args) => parseEnvironmentArgs("logs", args),
+  promote: parseSingleDirectoryArg("Too many arguments. Usage: universe promote [directory]"),
+  register: parseSingleDirectoryArg("Too many arguments. Usage: universe register [directory]"),
+  rollback: parseSingleDirectoryArg("Too many arguments. Usage: universe rollback [directory]"),
+  status: (args) => parseEnvironmentArgs("status", args),
+  teardown: parseSingleDirectoryArg("Too many arguments. Usage: universe teardown [directory]"),
+};
+
+const handlerBinders: Record<CommandName, HandlerBinder> = {
+  create: (_options, context, deps) => () => handleCreate({ cwd: context.cwd }, deps),
+  deploy: (options, context, deps) => () =>
+    handleDeploy({ projectDirectory: options.projectDirectory ?? context.cwd }, deps),
+  list: (options, context, deps) => () =>
+    handleList({ projectDirectory: options.projectDirectory ?? context.cwd }, deps),
+  logs: (options, context, deps) => () =>
+    handleLogs(
+      {
+        environment: options.environment ?? "preview",
+        projectDirectory: options.projectDirectory ?? context.cwd,
+      },
+      deps,
+    ),
+  promote: (options, context, deps) => () =>
+    handlePromote({ projectDirectory: options.projectDirectory ?? context.cwd }, deps),
+  register: (options, context, deps) => () =>
+    handleRegister({ projectDirectory: options.projectDirectory ?? context.cwd }, deps),
+  rollback: (options, context, deps) => () =>
+    handleRollback({ projectDirectory: options.projectDirectory ?? context.cwd }, deps),
+  status: (options, context, deps) => () =>
+    handleStatus(
+      {
+        environment: options.environment ?? "preview",
+        projectDirectory: options.projectDirectory ?? context.cwd,
+      },
+      deps,
+    ),
+  teardown: (options, context, deps) => () =>
+    handleTeardown({ projectDirectory: options.projectDirectory ?? context.cwd }, deps),
+};
+
+const isCommandName = (value: string): value is CommandName => value in argParsers;
+
+const parseArgs = (argv: string[]): ParseArgsResult => {
+  const [commandToken, ...args] = argv;
+
+  if (commandToken === undefined || commandToken === "--help" || commandToken === "-h") {
+    return { command: "help", options: {} };
+  }
+
+  if (!isCommandName(commandToken)) {
+    return {
+      error: new BadArgumentsError(
+        `Unknown command: "${commandToken}". Run "universe --help" for usage.`,
+      ),
+    };
+  }
+
+  return argParsers[commandToken](args, commandToken);
+};
+
+const bindHandler = (
+  command: CommandName,
+  options: ParsedOptions,
+  context: RouteContext,
+  deps: RouteDeps,
+): HandlerThunk => handlerBinders[command](options, context, deps);
 
 const route = async (
   argv: string[],
   deps: RouteDeps,
+  context: RouteContext,
   observability: ObservabilityClient,
 ): Promise<CliResult> => {
-  const [command] = argv;
-
-  if (command === undefined || command === "--help" || command === "-h") {
+  const parseResult = parseArgs(argv);
+  if (parseResult.command === "help") {
     return { exitCode: 0, output: HELP_TEXT };
   }
 
-  let thunk: () => Promise<unknown>;
-  try {
-    thunk = bindThunk(argv, deps);
-  } catch (error) {
-    if (error instanceof BadArgumentsError) {
-      return { exitCode: error.exitCode, output: error.message };
-    }
-    throw error;
+  if (parseResult.error !== undefined) {
+    return { exitCode: parseResult.error.exitCode, output: parseResult.error.message };
   }
 
-  const result = await runCli(command, thunk as () => Promise<HandlerResult>, observability);
+  const thunk = bindHandler(parseResult.command, parseResult.options, context, deps);
+  const result = await runCli(parseResult.command, thunk, observability);
   return result;
 };
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const deps: RouteDeps = {
-    cwd: process.cwd(),
     deployClient: new StubDeployClient(),
     filesystemWriter: new LocalFilesystemWriter(),
     layerResolver: new LayerCompositionService(),
@@ -230,8 +296,9 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     teardownClient: new StubTeardownClient(),
     validator: new CreateInputValidationService((path) => existsSync(path)),
   };
+  const context: RouteContext = { cwd: process.cwd() };
   const observability = new StubObservabilityClient();
-  const { exitCode, output } = await route(process.argv.slice(2), deps, observability);
+  const { exitCode, output } = await route(process.argv.slice(2), deps, context, observability);
 
   if (output.length > 0) {
     process.stdout.write(`${output}\n`);
@@ -240,5 +307,5 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   process.exitCode = exitCode;
 }
 
-export { route };
+export { parseArgs, route };
 export type { RouteDeps };

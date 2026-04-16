@@ -32,7 +32,6 @@ const makeDeps = (cwd: string, prompt: Prompt) => {
   const { observability, ...adapters } = createAdapterStubs();
   return {
     ...adapters,
-    cwd,
     filesystemWriter: new LocalFilesystemWriter(),
     layerResolver: new LayerCompositionService(),
     observability,
@@ -69,10 +68,15 @@ describe("deploy", () => {
     );
     const projectDir = join(rootDirectory, projectName);
 
-    const createResult = await route(["create"], routeDeps, observability);
+    const createResult = await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
     expect(createResult.exitCode).toBe(0);
 
-    const deployResult = await route(["deploy", projectDir], routeDeps, observability);
+    const deployResult = await route(
+      ["deploy", projectDir],
+      routeDeps,
+      { cwd: rootDirectory },
+      observability,
+    );
     expect(deployResult.exitCode).toBe(0);
     expect(deployResult.output).toContain(projectName);
     expect(deployResult.output).toContain("preview");
@@ -90,10 +94,15 @@ describe("deploy", () => {
     );
     const projectDir = join(rootDirectory, projectName);
 
-    await route(["create"], routeDeps, observability);
-    await route(["deploy", projectDir], routeDeps, observability);
+    await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
+    await route(["deploy", projectDir], routeDeps, { cwd: rootDirectory }, observability);
 
-    const secondResult = await route(["deploy", projectDir], routeDeps, observability);
+    const secondResult = await route(
+      ["deploy", projectDir],
+      routeDeps,
+      { cwd: rootDirectory },
+      observability,
+    );
     expect(secondResult.exitCode).toBe(0);
     expect(secondResult.output).toContain(`stub-${projectName}-preview-2`);
   });
@@ -108,9 +117,14 @@ describe("deploy", () => {
     );
     const projectDir = join(rootDirectory, "deploy-failure");
 
-    await route(["create"], routeDeps, observability);
+    await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
 
-    const result = await route(["deploy", projectDir], routeDeps, observability);
+    const result = await route(
+      ["deploy", projectDir],
+      routeDeps,
+      { cwd: rootDirectory },
+      observability,
+    );
     expect(result.exitCode).toBeGreaterThan(0);
   });
 });

@@ -32,7 +32,6 @@ const makeDeps = (cwd: string, prompt: Prompt) => {
   const { observability, ...adapters } = createAdapterStubs();
   return {
     ...adapters,
-    cwd,
     filesystemWriter: new LocalFilesystemWriter(),
     layerResolver: new LayerCompositionService(),
     observability,
@@ -69,10 +68,15 @@ describe("teardown", () => {
     );
     const projectDir = join(rootDirectory, projectName);
 
-    const createResult = await route(["create"], routeDeps, observability);
+    const createResult = await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
     expect(createResult.exitCode).toBe(0);
 
-    const teardownResult = await route(["teardown", projectDir], routeDeps, observability);
+    const teardownResult = await route(
+      ["teardown", projectDir],
+      routeDeps,
+      { cwd: rootDirectory },
+      observability,
+    );
     expect(teardownResult.exitCode).toBe(0);
     expect(teardownResult.output).toContain(projectName);
     expect(teardownResult.output).toContain(`stub-teardown-${projectName}-1`);
@@ -88,9 +92,14 @@ describe("teardown", () => {
     );
     const projectDir = join(rootDirectory, "teardown-failure");
 
-    await route(["create"], routeDeps, observability);
+    await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
 
-    const result = await route(["teardown", projectDir], routeDeps, observability);
+    const result = await route(
+      ["teardown", projectDir],
+      routeDeps,
+      { cwd: rootDirectory },
+      observability,
+    );
     expect(result.exitCode).toBeGreaterThan(0);
   });
 });

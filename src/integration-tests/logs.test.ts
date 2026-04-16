@@ -32,7 +32,6 @@ const makeDeps = (cwd: string, prompt: Prompt) => {
   const { observability, ...adapters } = createAdapterStubs();
   return {
     ...adapters,
-    cwd,
     filesystemWriter: new LocalFilesystemWriter(),
     layerResolver: new LayerCompositionService(),
     observability,
@@ -69,10 +68,15 @@ describe("logs", () => {
     );
     const projectDir = join(rootDirectory, projectName);
 
-    const createResult = await route(["create"], routeDeps, observability);
+    const createResult = await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
     expect(createResult.exitCode).toBe(0);
 
-    const logsResult = await route(["logs", projectDir], routeDeps, observability);
+    const logsResult = await route(
+      ["logs", projectDir],
+      routeDeps,
+      { cwd: rootDirectory },
+      observability,
+    );
     expect(logsResult.exitCode).toBe(0);
     expect(logsResult.output).toContain(projectName);
     expect(logsResult.output).toContain("preview");
@@ -88,9 +92,14 @@ describe("logs", () => {
     );
     const projectDir = join(rootDirectory, "logs-failure");
 
-    await route(["create"], routeDeps, observability);
+    await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
 
-    const result = await route(["logs", projectDir], routeDeps, observability);
+    const result = await route(
+      ["logs", projectDir],
+      routeDeps,
+      { cwd: rootDirectory },
+      observability,
+    );
     expect(result.exitCode).toBeGreaterThan(0);
   });
 });

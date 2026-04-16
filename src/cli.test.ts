@@ -5,7 +5,8 @@ import type { CreateSelections, Prompt } from "./prompt/prompt.port.js";
 import type { StatusResponse } from "./platform/status-client.port.js";
 import type { ResolvedLayerSet } from "./services/layer-composition-service.js";
 import type { PlatformManifest } from "./services/platform-manifest-service.js";
-import { route } from "./bin.js";
+import { parseArgs, route } from "./bin.js";
+import type { RouteDeps } from "./bin.js";
 import { runCli } from "./cli.js";
 import {
   DeploymentError,
@@ -146,8 +147,7 @@ const defaultRepoInitialiser = {
   initialise: (_dir: string) => Promise.resolve(),
 };
 
-const createRouteDeps = (overrides: Record<string, unknown> = {}) => ({
-  cwd: "/workspace",
+const createRouteDeps = (overrides: Partial<RouteDeps> = {}): RouteDeps => ({
   deployClient: defaultDeployClient,
   filesystemWriter: recordingWriter,
   layerResolver: passThroughLayerResolver,
@@ -166,6 +166,8 @@ const createRouteDeps = (overrides: Record<string, unknown> = {}) => ({
   validator: passThroughValidator,
   ...overrides,
 });
+
+const routeContext = { cwd: "/workspace" };
 
 // --- runCli: observability tracking ---
 
@@ -331,13 +333,13 @@ describe(runCli, () => {
 describe(route, () => {
   describe("--help", () => {
     it("exits with code 0", async () => {
-      const result = await route(["--help"], createRouteDeps(), client);
+      const result = await route(["--help"], createRouteDeps(), routeContext, client);
 
       expect(result.exitCode).toBe(0);
     });
 
     it("output lists all 9 commands", async () => {
-      const { output } = await route(["--help"], createRouteDeps(), client);
+      const { output } = await route(["--help"], createRouteDeps(), routeContext, client);
 
       expect(output).toMatchInlineSnapshot(`
         "Usage: universe <command>
@@ -369,7 +371,7 @@ describe(route, () => {
         track() {},
       };
 
-      await route(["--help"], createRouteDeps(), trackingObs);
+      await route(["--help"], createRouteDeps(), routeContext, trackingObs);
 
       expect(tracked).toHaveLength(0);
     });
@@ -377,7 +379,7 @@ describe(route, () => {
 
   describe("-h", () => {
     it("exits with code 0", async () => {
-      const result = await route(["-h"], createRouteDeps(), client);
+      const result = await route(["-h"], createRouteDeps(), routeContext, client);
 
       expect(result.exitCode).toBe(0);
     });
@@ -385,7 +387,7 @@ describe(route, () => {
 
   describe("no arguments", () => {
     it("exits with code 0 and prints help", async () => {
-      const result = await route([], createRouteDeps(), client);
+      const result = await route([], createRouteDeps(), routeContext, client);
 
       expect(result.exitCode).toBe(0);
       expect(result.output).toContain("Usage:");
@@ -394,7 +396,7 @@ describe(route, () => {
 
   describe("unknown command", () => {
     it("exits with a non-zero code", async () => {
-      const result = await route(["unknown-cmd"], createRouteDeps(), client);
+      const result = await route(["unknown-cmd"], createRouteDeps(), routeContext, client);
 
       expect(result.exitCode).toBeGreaterThan(0);
       expect(result.output).toContain("Unknown command");
@@ -411,7 +413,7 @@ describe(route, () => {
         track() {},
       };
 
-      await route(["unknown-cmd"], createRouteDeps(), trackingObs);
+      await route(["unknown-cmd"], createRouteDeps(), routeContext, trackingObs);
 
       expect(tracked).toHaveLength(0);
     });
@@ -419,7 +421,7 @@ describe(route, () => {
 
   describe("create", () => {
     it("is interactive-only and rejects extra args", async () => {
-      const result = await route(["create", "my-app"], createRouteDeps(), client);
+      const result = await route(["create", "my-app"], createRouteDeps(), routeContext, client);
 
       expect(result.exitCode).toBeGreaterThan(0);
       expect(result.output).toContain("interactive-only");
@@ -436,7 +438,7 @@ describe(route, () => {
         track() {},
       };
 
-      await route(["create", "my-app"], createRouteDeps(), trackingObs);
+      await route(["create", "my-app"], createRouteDeps(), routeContext, trackingObs);
 
       expect(tracked).toHaveLength(0);
     });
@@ -444,7 +446,12 @@ describe(route, () => {
 
   describe("register", () => {
     it("exits when more than one argument is provided", async () => {
-      const result = await route(["register", "/dir", "extra"], createRouteDeps(), client);
+      const result = await route(
+        ["register", "/dir", "extra"],
+        createRouteDeps(),
+        routeContext,
+        client,
+      );
 
       expect(result.exitCode).toBeGreaterThan(0);
       expect(result.output).toContain("Too many arguments");
@@ -453,7 +460,12 @@ describe(route, () => {
 
   describe("deploy", () => {
     it("exits when more than one argument is provided", async () => {
-      const result = await route(["deploy", "/dir", "extra"], createRouteDeps(), client);
+      const result = await route(
+        ["deploy", "/dir", "extra"],
+        createRouteDeps(),
+        routeContext,
+        client,
+      );
 
       expect(result.exitCode).toBeGreaterThan(0);
       expect(result.output).toContain("Too many arguments");
@@ -462,7 +474,12 @@ describe(route, () => {
 
   describe("promote", () => {
     it("exits when more than one argument is provided", async () => {
-      const result = await route(["promote", "/dir", "extra"], createRouteDeps(), client);
+      const result = await route(
+        ["promote", "/dir", "extra"],
+        createRouteDeps(),
+        routeContext,
+        client,
+      );
 
       expect(result.exitCode).toBeGreaterThan(0);
       expect(result.output).toContain("Too many arguments");
@@ -471,7 +488,12 @@ describe(route, () => {
 
   describe("rollback", () => {
     it("exits when more than one argument is provided", async () => {
-      const result = await route(["rollback", "/dir", "extra"], createRouteDeps(), client);
+      const result = await route(
+        ["rollback", "/dir", "extra"],
+        createRouteDeps(),
+        routeContext,
+        client,
+      );
 
       expect(result.exitCode).toBeGreaterThan(0);
       expect(result.output).toContain("Too many arguments");
@@ -480,7 +502,12 @@ describe(route, () => {
 
   describe("list", () => {
     it("exits when more than one argument is provided", async () => {
-      const result = await route(["list", "/dir", "extra"], createRouteDeps(), client);
+      const result = await route(
+        ["list", "/dir", "extra"],
+        createRouteDeps(),
+        routeContext,
+        client,
+      );
 
       expect(result.exitCode).toBeGreaterThan(0);
       expect(result.output).toContain("Too many arguments");
@@ -489,14 +516,24 @@ describe(route, () => {
 
   describe("logs", () => {
     it("exits when more than two arguments are provided", async () => {
-      const result = await route(["logs", "/dir", "preview", "extra"], createRouteDeps(), client);
+      const result = await route(
+        ["logs", "/dir", "preview", "extra"],
+        createRouteDeps(),
+        routeContext,
+        client,
+      );
 
       expect(result.exitCode).toBeGreaterThan(0);
       expect(result.output).toContain("Too many arguments");
     });
 
     it("exits when environment is not preview or production", async () => {
-      const result = await route(["logs", "/dir", "staging"], createRouteDeps(), client);
+      const result = await route(
+        ["logs", "/dir", "staging"],
+        createRouteDeps(),
+        routeContext,
+        client,
+      );
 
       expect(result.exitCode).toBeGreaterThan(0);
       expect(result.output).toContain('"staging"');
@@ -515,7 +552,12 @@ describe(route, () => {
         },
       };
 
-      await route(["logs"], createRouteDeps({ logsClient: trackingLogsClient }), client);
+      await route(
+        ["logs"],
+        createRouteDeps({ logsClient: trackingLogsClient }),
+        routeContext,
+        client,
+      );
 
       expect(requests[0]?.environment).toBe("preview");
     });
@@ -523,14 +565,24 @@ describe(route, () => {
 
   describe("status", () => {
     it("exits when more than two arguments are provided", async () => {
-      const result = await route(["status", "/dir", "preview", "extra"], createRouteDeps(), client);
+      const result = await route(
+        ["status", "/dir", "preview", "extra"],
+        createRouteDeps(),
+        routeContext,
+        client,
+      );
 
       expect(result.exitCode).toBeGreaterThan(0);
       expect(result.output).toContain("Too many arguments");
     });
 
     it("exits when environment is not preview or production", async () => {
-      const result = await route(["status", "/dir", "staging"], createRouteDeps(), client);
+      const result = await route(
+        ["status", "/dir", "staging"],
+        createRouteDeps(),
+        routeContext,
+        client,
+      );
 
       expect(result.exitCode).toBeGreaterThan(0);
       expect(result.output).toContain('"staging"');
@@ -553,7 +605,12 @@ describe(route, () => {
         },
       };
 
-      await route(["status"], createRouteDeps({ statusClient: trackingStatusClient }), client);
+      await route(
+        ["status"],
+        createRouteDeps({ statusClient: trackingStatusClient }),
+        routeContext,
+        client,
+      );
 
       expect(requests[0]?.environment).toBe("preview");
     });
@@ -561,10 +618,52 @@ describe(route, () => {
 
   describe("teardown", () => {
     it("exits when more than one argument is provided", async () => {
-      const result = await route(["teardown", "/dir", "extra"], createRouteDeps(), client);
+      const result = await route(
+        ["teardown", "/dir", "extra"],
+        createRouteDeps(),
+        routeContext,
+        client,
+      );
 
       expect(result.exitCode).toBeGreaterThan(0);
       expect(result.output).toContain("Too many arguments");
     });
+  });
+});
+
+describe(parseArgs, () => {
+  it("returns a help command when no arguments are provided", () => {
+    const result = parseArgs([]);
+
+    expect(result).toStrictEqual({ command: "help", options: {} });
+  });
+
+  it("returns an error without command/options for an unknown command", () => {
+    const result = parseArgs(["unknown-cmd"]);
+
+    expect(result.error).toBeInstanceOf(Error);
+    expect(result).not.toHaveProperty("command");
+    expect(result).not.toHaveProperty("options");
+  });
+
+  it("returns command/options without error for valid single-directory commands", () => {
+    const result = parseArgs(["deploy", "/dir"]);
+
+    expect(result).toStrictEqual({ command: "deploy", options: { projectDirectory: "/dir" } });
+    expect(result).not.toHaveProperty("error");
+  });
+
+  it("returns environment defaults for logs", () => {
+    const result = parseArgs(["logs"]);
+
+    expect(result).toStrictEqual({ command: "logs", options: { environment: "preview" } });
+  });
+
+  it("returns an error without command/options for invalid status environment", () => {
+    const result = parseArgs(["status", "/dir", "staging"]);
+
+    expect(result.error).toBeInstanceOf(Error);
+    expect(result).not.toHaveProperty("command");
+    expect(result).not.toHaveProperty("options");
   });
 });

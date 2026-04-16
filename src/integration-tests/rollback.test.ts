@@ -32,7 +32,6 @@ const makeDeps = (cwd: string, prompt: Prompt) => {
   const { observability, ...adapters } = createAdapterStubs();
   return {
     ...adapters,
-    cwd,
     filesystemWriter: new LocalFilesystemWriter(),
     layerResolver: new LayerCompositionService(),
     observability,
@@ -69,10 +68,15 @@ describe("rollback", () => {
     );
     const projectDir = join(rootDirectory, projectName);
 
-    const createResult = await route(["create"], routeDeps, observability);
+    const createResult = await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
     expect(createResult.exitCode).toBe(0);
 
-    const rollbackResult = await route(["rollback", projectDir], routeDeps, observability);
+    const rollbackResult = await route(
+      ["rollback", projectDir],
+      routeDeps,
+      { cwd: rootDirectory },
+      observability,
+    );
     expect(rollbackResult.exitCode).toBe(0);
     expect(rollbackResult.output).toContain(projectName);
     expect(rollbackResult.output).toContain("production");
@@ -90,10 +94,15 @@ describe("rollback", () => {
     );
     const projectDir = join(rootDirectory, projectName);
 
-    await route(["create"], routeDeps, observability);
-    await route(["rollback", projectDir], routeDeps, observability);
+    await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
+    await route(["rollback", projectDir], routeDeps, { cwd: rootDirectory }, observability);
 
-    const secondResult = await route(["rollback", projectDir], routeDeps, observability);
+    const secondResult = await route(
+      ["rollback", projectDir],
+      routeDeps,
+      { cwd: rootDirectory },
+      observability,
+    );
     expect(secondResult.exitCode).toBe(0);
     expect(secondResult.output).toContain(`stub-rollback-${projectName}-production-2`);
   });
@@ -108,9 +117,14 @@ describe("rollback", () => {
     );
     const projectDir = join(rootDirectory, "rollback-failure");
 
-    await route(["create"], routeDeps, observability);
+    await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
 
-    const result = await route(["rollback", projectDir], routeDeps, observability);
+    const result = await route(
+      ["rollback", projectDir],
+      routeDeps,
+      { cwd: rootDirectory },
+      observability,
+    );
     expect(result.exitCode).toBeGreaterThan(0);
   });
 });

@@ -32,7 +32,6 @@ const makeDeps = (cwd: string, prompt: Prompt) => {
   const { observability, ...adapters } = createAdapterStubs();
   return {
     ...adapters,
-    cwd,
     filesystemWriter: new LocalFilesystemWriter(),
     layerResolver: new LayerCompositionService(),
     observability,
@@ -69,10 +68,15 @@ describe("register", () => {
     );
     const projectDir = join(rootDirectory, projectName);
 
-    const createResult = await route(["create"], routeDeps, observability);
+    const createResult = await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
     expect(createResult.exitCode).toBe(0);
 
-    const registerResult = await route(["register", projectDir], routeDeps, observability);
+    const registerResult = await route(
+      ["register", projectDir],
+      routeDeps,
+      { cwd: rootDirectory },
+      observability,
+    );
     expect(registerResult.exitCode).toBe(0);
     expect(registerResult.output).toContain(projectName);
     expect(registerResult.output).toContain(`stub-${projectName}`);
@@ -89,10 +93,15 @@ describe("register", () => {
     );
     const projectDir = join(rootDirectory, projectName);
 
-    await route(["create"], routeDeps, observability);
-    await route(["register", projectDir], routeDeps, observability);
+    await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
+    await route(["register", projectDir], routeDeps, { cwd: rootDirectory }, observability);
 
-    const secondResult = await route(["register", projectDir], routeDeps, observability);
+    const secondResult = await route(
+      ["register", projectDir],
+      routeDeps,
+      { cwd: rootDirectory },
+      observability,
+    );
     expect(secondResult.exitCode).toBeGreaterThan(0);
   });
 });
