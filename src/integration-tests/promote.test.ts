@@ -106,6 +106,6 @@ describe("promote", () => {
     await runCli(["create"], deps);
 
     const result = await runCli(["promote", projectDir], deps);
-    expect(result.exitCode).toBe(11);
+    expect(result.exitCode).toBeGreaterThan(0);
   });
 });

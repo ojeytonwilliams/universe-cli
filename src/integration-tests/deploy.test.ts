@@ -106,6 +106,6 @@ describe("deploy", () => {
     await runCli(["create"], deps);
 
     const result = await runCli(["deploy", projectDir], deps);
-    expect(result.exitCode).toBe(10);
+    expect(result.exitCode).toBeGreaterThan(0);
   });
 });

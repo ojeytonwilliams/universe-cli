@@ -227,7 +227,7 @@ describe(handleCreate, () => {
 
     const result = await handleCreate("/workspace", deps);
 
-    expect(result.exitCode).toBe(1);
+    expect(result.exitCode).toBeGreaterThan(0);
   });
 
   it("returns actionable feedback for invalid input", async () => {

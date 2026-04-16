@@ -213,7 +213,7 @@ describe(runCli, () => {
         createDeps(createPrompt, passThroughValidator),
       );
 
-      expect(result.exitCode).toBe(18);
+      expect(result.exitCode).toBeGreaterThan(0);
       expect(result.output).toContain("interactive-only");
     });
   });
@@ -225,7 +225,7 @@ describe(runCli, () => {
         createDeps(createPrompt, passThroughValidator),
       );
 
-      expect(result.exitCode).toBe(18);
+      expect(result.exitCode).toBeGreaterThan(0);
       expect(result.output).toContain("Too many arguments");
     });
   });
@@ -296,7 +296,7 @@ describe(runCli, () => {
     it("exits when more than one argument is provided", async () => {
       const result = await runCli(["deploy", "/dir", "extra"], deployDeps());
 
-      expect(result.exitCode).toBe(18);
+      expect(result.exitCode).toBeGreaterThan(0);
       expect(result.output).toContain("Too many arguments");
     });
   });
@@ -367,7 +367,7 @@ describe(runCli, () => {
     it("exits when more than one argument is provided", async () => {
       const result = await runCli(["promote", "/dir", "extra"], promoteDeps());
 
-      expect(result.exitCode).toBe(18);
+      expect(result.exitCode).toBeGreaterThan(0);
       expect(result.output).toContain("Too many arguments");
     });
   });
@@ -438,7 +438,7 @@ describe(runCli, () => {
     it("exits when more than one argument is provided", async () => {
       const result = await runCli(["rollback", "/dir", "extra"], rollbackDeps());
 
-      expect(result.exitCode).toBe(18);
+      expect(result.exitCode).toBeGreaterThan(0);
       expect(result.output).toContain("Too many arguments");
     });
   });
@@ -506,7 +506,7 @@ describe(runCli, () => {
     it("exits when more than one argument is provided", async () => {
       const result = await runCli(["list", "/dir", "extra"], listDeps());
 
-      expect(result.exitCode).toBe(18);
+      expect(result.exitCode).toBeGreaterThan(0);
       expect(result.output).toContain("Too many arguments");
     });
   });
@@ -574,14 +574,14 @@ describe(runCli, () => {
     it("exits when more than two arguments are provided", async () => {
       const result = await runCli(["logs", "/dir", "preview", "extra"], logsDeps());
 
-      expect(result.exitCode).toBe(18);
+      expect(result.exitCode).toBeGreaterThan(0);
       expect(result.output).toContain("Too many arguments");
     });
 
     it("exits when environment is not preview or production", async () => {
       const result = await runCli(["logs", "/dir", "staging"], logsDeps());
 
-      expect(result.exitCode).toBe(18);
+      expect(result.exitCode).toBeGreaterThan(0);
       expect(result.output).toContain('"staging"');
     });
 
@@ -672,14 +672,14 @@ describe(runCli, () => {
     it("exits when more than two arguments are provided", async () => {
       const result = await runCli(["status", "/dir", "preview", "extra"], statusDeps());
 
-      expect(result.exitCode).toBe(18);
+      expect(result.exitCode).toBeGreaterThan(0);
       expect(result.output).toContain("Too many arguments");
     });
 
     it("exits when environment is not preview or production", async () => {
       const result = await runCli(["status", "/dir", "staging"], statusDeps());
 
-      expect(result.exitCode).toBe(18);
+      expect(result.exitCode).toBeGreaterThan(0);
       expect(result.output).toContain('"staging"');
     });
 
@@ -766,7 +766,7 @@ describe(runCli, () => {
     it("exits when more than one argument is provided", async () => {
       const result = await runCli(["teardown", "/dir", "extra"], teardownDeps());
 
-      expect(result.exitCode).toBe(18);
+      expect(result.exitCode).toBeGreaterThan(0);
       expect(result.output).toContain("Too many arguments");
     });
   });

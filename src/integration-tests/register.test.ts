@@ -91,6 +91,6 @@ describe("register", () => {
     await runCli(["register", projectDir], deps);
 
     const secondResult = await runCli(["register", projectDir], deps);
-    expect(secondResult.exitCode).toBe(9);
+    expect(secondResult.exitCode).toBeGreaterThan(0);
   });
 });

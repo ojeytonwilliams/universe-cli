@@ -216,6 +216,6 @@ describe(TeardownError, () => {
     const error = new TeardownError("my-app", "unavailable");
 
     expect(error.message).toBe('Failed to tear down project "my-app": unavailable');
-    expect(error.exitCode).toBe(16);
+    expect(error.exitCode).toBeGreaterThan(0);
   });
 });

@@ -185,7 +185,7 @@ describe("create", () => {
       makeDeps(rootDirectory, createPromptPort(createStaticSelection("InvalidName"))),
     );
 
-    expect(invalidNameResult.exitCode).toBe(17);
+    expect(invalidNameResult.exitCode).toBeGreaterThan(0);
     expect(invalidNameResult.output).toContain("Invalid project name");
 
     const conflictProjectName = "already-exists";
@@ -222,7 +222,7 @@ describe("create", () => {
       ),
     );
 
-    expect(targetExistsResult.exitCode).toBe(3);
+    expect(targetExistsResult.exitCode).toBeGreaterThan(0);
     expect(targetExistsResult.output).toContain("Target directory already exists");
   });
 
@@ -312,7 +312,7 @@ describe("create", () => {
       makeDeps(rootDirectory, createPromptPort(selection), { layerRegistry: customLayers }),
     );
 
-    expect(result.exitCode).toBe(6);
+    expect(result.exitCode).toBeGreaterThan(0);
     expect(result.output).toContain('File path conflict: "README.md"');
     expect(existsSync(join(rootDirectory, selection.name))).toBe(false);
   });

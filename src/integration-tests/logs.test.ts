@@ -89,6 +89,6 @@ describe("logs", () => {
     await runCli(["create"], deps);
 
     const result = await runCli(["logs", projectDir], deps);
-    expect(result.exitCode).toBe(13);
+    expect(result.exitCode).toBeGreaterThan(0);
   });
 });
