@@ -1,134 +1,83 @@
-# TODO — Create Extensibility: Framework Layers + Package Manager Selection
+# TODO — Ports/Adapters Reorganisation
 
-Requirements reference: `plans/universe-cli/framework-package-manager-prd.md`
-
----
-
-## Phase 1 — Create input and validation contract (FR-1, FR-2)
-
-- [x] CODE: Rename `node_ts` → `node`, add `typescript` framework option, and add package-manager selection to create prompt contract
-  - Feature: runtime value corrected to `node`; TypeScript promoted to a selectable framework; Node-only package-manager choice (`pnpm`, `bun`) captured in create selections
-  - Files: `src/ports/prompt.ts`, `src/adapters/clack-prompt-adapter.ts`, `src/adapters/clack-prompt-adapter.test.ts`
-  - Acceptance:
-    - `RUNTIME_OPTIONS.NODE_TS` renamed to `RUNTIME_OPTIONS.NODE` with value `"node"`; label remains "Node.js (TypeScript)" for now
-    - `FRAMEWORK_OPTIONS` gains `TYPESCRIPT: "typescript"`; `FRAMEWORK_LABELS` gains corresponding label
-    - `src/ports/prompt.ts` defines `PACKAGE_MANAGER_OPTIONS` (`pnpm`, `bun`), `PACKAGE_MANAGER_LABELS`, `PackageManagerOption` type, and `packageManager` field on `CreateSelections` (following the existing constants pattern)
-    - Prompt asks for package manager only when runtime is `node`
-    - Prompt confirmation includes selected package manager for Node
-    - Static flow remains unchanged and does not request package manager
-    - Tests are written first and initially fail, then pass after implementation
-
-- [x] CODE: Enforce runtime/framework/package-manager compatibility in validation
-  - Feature: invalid combinations fail before scaffold write
-  - Files: `src/services/create-input-validation-service.ts`, `src/services/create-input-validation-service.test.ts`
-  - Acceptance:
-    - `node` runtime requires a supported package manager (`pnpm` or `bun`)
-    - `static_web` rejects non-empty package-manager choice
-    - `static_web` rejects `typescript` or `express` framework choice
-    - Typed validation errors are asserted in tests
-    - Tests are written first and initially fail, then pass after implementation
-
-- [x] TASK: Document accepted selection tuples for this increment
-  - Acceptance:
-    - Matrix note added to planning docs covering all valid combinations: `node`+`typescript`+`pnpm`, `node`+`typescript`+`bun`, `node`+`express`+`pnpm`, `node`+`express`+`bun`, `node`+`none`+`pnpm`, `node`+`none`+`bun`, `static_web`+`none`+no-manager
+Requirements reference: `design/prd.md`
 
 ---
 
-## Phase 2 — Layer model refactor for extensibility (FR-3, FR-4, FR-5, FR-6, NFR-3)
+## Phase 1: Migrate `platform/` domain
 
-- [x] CODE: Add package-manager layer stage and data-driven framework resolution
-  - Feature: layer ordering includes manager stage for Node and removes hardcoded framework branching requirement for future additions
-  - Files: `src/services/layer-composition-service.ts`, `src/services/layer-composition-service.test.ts`
-  - Acceptance:
-    - Deterministic order: `always` → `base/{runtime}` → `package-managers/{manager}` (Node only) → `frameworks/{framework}` → `services/{service}`
-    - Layer resolver uses `selections.runtime === "node"` (not `"node_ts"`) to gate PM stage
-    - Missing layer and conflict error behavior remains typed and covered by tests
-    - Layer-resolution tests include Node+pnpm, Node+bun, Static
-    - Tests are written first and initially fail, then pass after implementation
+- [ ] TASK: Move and rename platform client port and stub files into `src/platform/`
+  - Move all 8 port files from `src/ports/` and all 8 stub implementation files + their test files from `src/adapters/` into `src/platform/`
+  - Apply dot secondary extension renaming per the file map in `design/prd.md`
+  - Stub class names are already correct (`StubDeployClient`, etc.) — no renames needed
+  - Update all import paths in `src/commands.ts`, `src/integration-tests/adapter-stubs.ts`, and all integration test files that reference these ports or stubs
+  - Verify `pnpm test` and `pnpm lint` pass
 
-- [x] CODE: Rename and slim down the runtime layer
-  - Feature: `base/node-js-typescript` becomes `base/node` containing only Node.js execution-environment primitives
-  - Files: `src/services/layers/base-node-js-typescript-layer.ts` → rename to `src/services/layers/base-node-layer.ts`, relevant layer tests/snapshots
-  - Acceptance:
-    - File renamed; all imports updated
-    - `base/node` contains: `Procfile`, `docker-compose.dev.yml` (command: `sh start.sh`)
-    - `base/node` excludes: TypeScript devDep, `tsconfig.json`, `src/index.ts`, all scripts (`build`, `dev`, `start`, `preinstall`), `pnpm-workspace.yaml`
-    - Tests/snapshots updated and passing
-    - Tests are written first and initially fail, then pass after implementation
+## Phase 2: Migrate `package-manager/` domain
 
-- [x] CODE: Introduce `frameworks/typescript`, update `frameworks/express`, and add PM-layer artifacts
-  - Feature: TypeScript is a framework; PM layers own `start.sh` and PM-specific scripts
-  - Files: `src/services/layers/frameworks-layer.ts`, `src/services/layers/package-managers-layer.ts` (new), integration snapshots/tests
-  - Acceptance:
-    - `frameworks/typescript` contributes: TypeScript devDependency, `tsconfig.json`, `src/index.ts` (minimal TS HTTP server), `build: "tsc -p tsconfig.json"`, `start: "node dist/index.js"`
-    - `frameworks/express` contributes: express dependency, TypeScript devDependency, express-specific `src/index.ts`, `build` and `start` scripts
-    - `frameworks/none` remains empty
-    - `package-managers/pnpm` layer contributes: `pnpm-workspace.yaml`, `start.sh` (content: `pnpm install && pnpm dev`), `dev: "pnpm run build && pnpm run start"` script, `preinstall: "npx only-allow pnpm"` script
-    - `package-managers/bun` layer contributes: `start.sh` (content: `bun install && bun dev`), `dev: "bun run build && bun run start"` script (no preinstall hook in v1)
-    - Static output excludes all Node package-manager artifacts
-    - Tests are written first and initially fail, then pass after implementation
+- [ ] TASK: Move and rename package manager port, adapters, stub, and service into `src/package-manager/`
+  - Move `src/ports/package-manager.ts` → `src/package-manager/package-manager.port.ts`
+  - Move `src/adapters/bun-package-manager-adapter.ts` → `src/package-manager/bun-package-manager.ts`; rename class `BunPackageManagerAdapter` → `BunPackageManager`
+  - Move `src/adapters/pnpm-package-manager-adapter.ts` → `src/package-manager/pnpm-package-manager.ts`; rename class `PnpmPackageManagerAdapter` → `PnpmPackageManager`
+  - Move `src/adapters/stub-package-manager-adapter.ts` → `src/package-manager/package-manager.stub.ts`; rename class `StubPackageManagerAdapter` → `StubPackageManager`
+  - Move `src/services/package-manager-service.ts` → `src/package-manager/package-manager.service.ts`
+  - Move all corresponding test files alongside their source files
+  - Update all import paths in `src/commands.ts`, `src/bin.ts`, `src/integration-tests/adapter-stubs.ts`, and any other consumers
+  - Verify `pnpm test` and `pnpm lint` pass
 
----
+## Phase 3: Migrate `io/` domain
 
-## Phase 3 — Package manager service orchestration (FR-7, NFR-2)
+- [ ] TASK: Move and rename IO ports, adapters, and stubs into `src/io/`
+  - Move `src/ports/filesystem-writer.ts` → `src/io/filesystem-writer.port.ts` (interface name unchanged)
+  - Move `src/adapters/local-filesystem-writer.ts` → `src/io/local-filesystem-writer.ts` (class name unchanged)
+  - Move `src/ports/project-reader.ts` → `src/io/project-reader.port.ts` (interface name unchanged)
+  - Move `src/adapters/local-project-reader.ts` → `src/io/local-project-reader.ts` (class name unchanged)
+  - Move `src/ports/repo-initialiser.ts` → `src/io/repo-initialiser.port.ts` (interface name unchanged)
+  - Move `src/adapters/git-repo-initialiser-adapter.ts` → `src/io/git-repo-initialiser.ts`; rename class `GitRepoInitialiserAdapter` → `GitRepoInitialiser`
+  - Move `src/adapters/stub-repo-initialiser-adapter.ts` → `src/io/repo-initialiser.stub.ts`; rename class `StubRepoInitialiserAdapter` → `StubRepoInitialiser`
+  - Move all corresponding test files alongside their source files
+  - Update all import paths in `src/commands.ts`, `src/integration-tests/adapter-stubs.ts`, and any other consumers
+  - Verify `pnpm test` and `pnpm lint` pass
 
-- [x] CODE: Introduce package manager service abstraction over manager adapters
-  - Feature: one service handles manager dispatch and install workflow
-  - Files: `src/services/package-manager-service.ts` (new), `src/ports/package-manager.ts`, service tests (new)
-  - Acceptance:
-    - Service API accepts validated selection context and target directory
-    - Service dispatches to pnpm or bun adapter based on selection
-    - Service encapsulates `specifyDeps` + `install` sequence for Node
-    - Service tests verify adapter dispatch and error propagation
-    - Tests are written first and initially fail, then pass after implementation
+## Phase 4: Migrate `prompt/` domain
 
-- [x] CODE: Add bun adapter and wire service into create flow
-  - Feature: Node create supports `bun` without changing command-handler complexity
-  - Files: `src/adapters/bun-package-manager-adapter.ts` (new), `src/adapters/bun-package-manager-adapter.test.ts` (new), `src/commands.ts`, `src/bin.ts`, `src/integration-tests/adapter-stubs.ts`
-  - Acceptance:
-    - `handleCreate` uses one package-manager service dependency
-    - Static runtime does not execute package-manager operations
-    - Bun adapter `specifyDeps` runs `bun install --frozen-lockfile` (lockfile-only resolution) then `bun list --json` to extract installed versions, then pins exact versions in `package.json` — matching pnpm's two-step approach
-    - Bun adapter `install` runs `bun install` to install pinned deps
-    - Bun adapter command behavior is covered by unit tests
-    - Existing pnpm behavior remains covered
-    - Tests are written first and initially fail, then pass after implementation
+- [ ] TASK: Move and rename prompt port and adapter into `src/prompt/`
+  - Move `src/ports/prompt.ts` → `src/prompt/prompt.port.ts` (exported types/constants unchanged)
+  - Move `src/adapters/clack-prompt-adapter.ts` → `src/prompt/clack-prompt.ts`; rename class `ClackPromptAdapter` → `ClackPrompt`
+  - Move corresponding test file alongside its source file
+  - Update all import paths in `src/commands.ts` and any other consumers
+  - Verify `pnpm test` and `pnpm lint` pass
 
----
+## Phase 5: Migrate `observability/` domain
 
-## Phase 4 — Integration stabilization and regression safety (FR-8, NFR-1)
+- [ ] TASK: Move and rename observability port, safe base, and stub into `src/observability/`
+  - Move `src/ports/observability-client.ts` → `src/observability/observability-client.port.ts` (interface name unchanged)
+  - Move `src/adapters/base-safe-observability-client.ts` → `src/observability/safe-observability-client.ts` (class name unchanged)
+  - Move `src/adapters/stub-observability-client.ts` → `src/observability/observability-client.stub.ts` (class name unchanged)
+  - Move all corresponding test files alongside their source files
+  - Update all import paths in `src/commands.ts`, `src/bin.ts`, `src/integration-tests/adapter-stubs.ts`, and any other consumers
+  - Verify `pnpm test` and `pnpm lint` pass
 
-- [ ] CODE: Expand create integration tests for manager/runtime/framework combinations
-  - Feature: create flow coverage includes Node+typescript+pnpm, Node+express+pnpm, Node+typescript+bun, Static
-  - Files: `src/integration-tests/create.test.ts`, `src/integration-tests/__snapshots__/create.test.ts.snap`, selection helpers in related tests if needed
-  - Acceptance:
-    - Integration scenarios assert correct package-manager service invocation for Node
-    - Static scenario asserts no package-manager service invocation
-    - Scaffold snapshots cover: `node`+`typescript`+`pnpm`, `node`+`express`+`pnpm`, `node`+`typescript`+`bun`, `static_web`+`none`
-    - Snapshots are deterministic and updated
-    - Tests are written first and initially fail, then pass after implementation
+## Phase 6: Remove legacy folders and verify
 
-- [ ] TASK: Run full validation gate
-  - Acceptance:
-    - `pnpm test` passes
-    - `pnpm lint` passes
-    - `pnpm check` passes
+- [ ] TASK: Delete now-empty `src/adapters/` and `src/ports/` directories
+  - Confirm both directories are empty before deleting
+  - Run `pnpm test`, `pnpm lint`, and `pnpm check`; fix any remaining issues
+  - Confirm the directory structure matches the target layout in `design/prd.md`
 
 ---
 
 ## Traceability Matrix
 
-| PRD Requirement ID | TODO Item                                                                                                                                 | Status |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- | ------ |
-| FR-1               | Phase 1 / CODE: Rename `node_ts` → `node`, add `typescript` framework option, and add package-manager selection to create prompt contract | mapped |
-| FR-2               | Phase 1 / CODE: Enforce runtime/framework/package-manager compatibility in validation                                                     | mapped |
-| FR-3               | Phase 2 / CODE: Add package-manager layer stage and data-driven framework resolution                                                      | mapped |
-| FR-4               | Phase 2 / CODE: Rename and slim down the runtime layer                                                                                    | mapped |
-| FR-5               | Phase 2 / CODE: Introduce `frameworks/typescript`, update `frameworks/express`, and add PM-layer artifacts                                | mapped |
-| FR-6               | Phase 2 / CODE: Introduce `frameworks/typescript`, update `frameworks/express`, and add PM-layer artifacts                                | mapped |
-| FR-7               | Phase 3 / CODE: Introduce package manager service abstraction over manager adapters                                                       | mapped |
-| FR-7               | Phase 3 / CODE: Add bun adapter and wire service into create flow                                                                         | mapped |
-| FR-8               | Phase 4 / CODE: Expand create integration tests for manager/runtime combinations                                                          | mapped |
-| NFR-1              | Phase 4 / CODE: Expand create integration tests for manager/runtime combinations                                                          | mapped |
-| NFR-2              | Phase 3 / CODE: Introduce package manager service abstraction over manager adapters                                                       | mapped |
-| NFR-3              | Phase 2 / CODE: Add package-manager layer stage and data-driven framework resolution                                                      | mapped |
+| Requirement ID | TODO Item                                                                           | Status |
+| -------------- | ----------------------------------------------------------------------------------- | ------ |
+| REQ-1          | Phase 1 / TASK: Move and rename platform client port and stub files                 | mapped |
+| REQ-2          | Phase 2 / TASK: Move and rename package manager port, adapters, stub, and service   | mapped |
+| REQ-3          | Phase 3 / TASK: Move and rename IO ports, adapters, and stubs                       | mapped |
+| REQ-4          | Phase 4 / TASK: Move and rename prompt port and adapter                             | mapped |
+| REQ-5          | Phase 5 / TASK: Move and rename observability port, safe base, and stub             | mapped |
+| REQ-6          | Phase 6 / TASK: Delete now-empty `src/adapters/` and `src/ports/` directories       | mapped |
+| REQ-7          | Phase 1–5 / TASK: Update all import paths in consuming files after each domain move | mapped |
+| NFR-1          | Phase 1–6 / TASK: Verify `pnpm test` and `pnpm lint` pass (repeated each phase)     | mapped |
+| NFR-2          | Phase 1–5 / TASK: Apply dot secondary extension naming throughout                   | mapped |
+| NFR-3          | Phase 2–4 / TASK: Rename classes to drop `-Adapter` suffix                          | mapped |
