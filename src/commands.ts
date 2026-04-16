@@ -1,23 +1,23 @@
 import { join } from "node:path";
-import type { DeployClient } from "./ports/deploy-client.js";
-import type { FilesystemWriter } from "./ports/filesystem-writer.js";
-import type { ListClient } from "./ports/list-client.js";
-import type { RepoInitialiser } from "./ports/repo-initialiser.js";
-import type { PromoteClient } from "./ports/promote-client.js";
-import type { Prompt } from "./ports/prompt.js";
-import type { ProjectReaderPort } from "./ports/project-reader.js";
-import type { RegistrationClient } from "./ports/registration-client.js";
-import type { RollbackClient } from "./ports/rollback-client.js";
-import type { StatusClient } from "./ports/status-client.js";
-import type { TeardownClient } from "./ports/teardown-client.js";
-import type { LogsClient } from "./ports/logs-client.js";
+import type { DeployClient } from "./platform/deploy-client.port.js";
+import type { FilesystemWriter } from "./io/filesystem-writer.port.js";
+import type { ListClient } from "./platform/list-client.port.js";
+import type { RepoInitialiser } from "./io/repo-initialiser.port.js";
+import type { PromoteClient } from "./platform/promote-client.port.js";
+import type { Prompt } from "./prompt/prompt.port.js";
+import type { ProjectReaderPort } from "./io/project-reader.port.js";
+import type { RegistrationClient } from "./platform/registration-client.port.js";
+import type { RollbackClient } from "./platform/rollback-client.port.js";
+import type { StatusClient } from "./platform/status-client.port.js";
+import type { TeardownClient } from "./platform/teardown-client.port.js";
+import type { LogsClient } from "./platform/logs-client.port.js";
 import type { LayerComposer } from "./services/layer-composition-service.js";
 import type {
   PlatformManifest,
   PlatformManifestGenerator,
 } from "./services/platform-manifest-service.js";
 import type { CreateInputValidator } from "./services/create-input-validation-service.js";
-import type { PackageManagerRunner } from "./services/package-manager-service.js";
+import type { PackageManagerRunner } from "./package-manager/package-manager.service.js";
 
 interface CliResult {
   exitCode: number;

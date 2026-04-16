@@ -1,5 +1,5 @@
 import { BadArgumentsError, CliError } from "./errors/cli-errors.js";
-import type { ObservabilityClient } from "./ports/observability-client.js";
+import type { ObservabilityClient } from "./observability/observability-client.port.js";
 import {
   handleCreate,
   handleDeploy,

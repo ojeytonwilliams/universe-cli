@@ -1,7 +1,11 @@
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { DATABASE_OPTIONS, PLATFORM_SERVICE_OPTIONS, RUNTIME_OPTIONS } from "../ports/prompt.js";
-import type { CreateSelections } from "../ports/prompt.js";
+import {
+  DATABASE_OPTIONS,
+  PLATFORM_SERVICE_OPTIONS,
+  RUNTIME_OPTIONS,
+} from "../prompt/prompt.port.js";
+import type { CreateSelections } from "../prompt/prompt.port.js";
 import { ManifestInvalidError } from "../errors/cli-errors.js";
 
 // ---------------------------------------------------------------------------

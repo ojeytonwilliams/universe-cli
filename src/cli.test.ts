@@ -1,7 +1,7 @@
-import type { FilesystemWriter } from "./ports/filesystem-writer.js";
-import type { ObservabilityClient } from "./ports/observability-client.js";
-import type { CreateSelections, Prompt } from "./ports/prompt.js";
-import type { StatusResponse } from "./ports/status-client.js";
+import type { FilesystemWriter } from "./io/filesystem-writer.port.js";
+import type { ObservabilityClient } from "./observability/observability-client.port.js";
+import type { CreateSelections, Prompt } from "./prompt/prompt.port.js";
+import type { StatusResponse } from "./platform/status-client.port.js";
 import type { ResolvedLayerSet } from "./services/layer-composition-service.js";
 import type { PlatformManifest } from "./services/platform-manifest-service.js";
 import { runCli } from "./cli.js";

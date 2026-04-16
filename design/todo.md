@@ -6,7 +6,7 @@ Requirements reference: `design/prd.md`
 
 ## Phase 1: Migrate `platform/` domain
 
-- [ ] TASK: Move and rename platform client port and stub files into `src/platform/`
+- [x] TASK: Move and rename platform client port and stub files into `src/platform/`
   - Move all 8 port files from `src/ports/` and all 8 stub implementation files + their test files from `src/adapters/` into `src/platform/`
   - Apply dot secondary extension renaming per the file map in `design/prd.md`
   - Stub class names are already correct (`StubDeployClient`, etc.) — no renames needed
@@ -15,7 +15,7 @@ Requirements reference: `design/prd.md`
 
 ## Phase 2: Migrate `package-manager/` domain
 
-- [ ] TASK: Move and rename package manager port, adapters, stub, and service into `src/package-manager/`
+- [x] TASK: Move and rename package manager port, adapters, stub, and service into `src/package-manager/`
   - Move `src/ports/package-manager.ts` → `src/package-manager/package-manager.port.ts`
   - Move `src/adapters/bun-package-manager-adapter.ts` → `src/package-manager/bun-package-manager.ts`; rename class `BunPackageManagerAdapter` → `BunPackageManager`
   - Move `src/adapters/pnpm-package-manager-adapter.ts` → `src/package-manager/pnpm-package-manager.ts`; rename class `PnpmPackageManagerAdapter` → `PnpmPackageManager`
@@ -27,7 +27,7 @@ Requirements reference: `design/prd.md`
 
 ## Phase 3: Migrate `io/` domain
 
-- [ ] TASK: Move and rename IO ports, adapters, and stubs into `src/io/`
+- [x] TASK: Move and rename IO ports, adapters, and stubs into `src/io/`
   - Move `src/ports/filesystem-writer.ts` → `src/io/filesystem-writer.port.ts` (interface name unchanged)
   - Move `src/adapters/local-filesystem-writer.ts` → `src/io/local-filesystem-writer.ts` (class name unchanged)
   - Move `src/ports/project-reader.ts` → `src/io/project-reader.port.ts` (interface name unchanged)
@@ -41,7 +41,7 @@ Requirements reference: `design/prd.md`
 
 ## Phase 4: Migrate `prompt/` domain
 
-- [ ] TASK: Move and rename prompt port and adapter into `src/prompt/`
+- [x] TASK: Move and rename prompt port and adapter into `src/prompt/`
   - Move `src/ports/prompt.ts` → `src/prompt/prompt.port.ts` (exported types/constants unchanged)
   - Move `src/adapters/clack-prompt-adapter.ts` → `src/prompt/clack-prompt.ts`; rename class `ClackPromptAdapter` → `ClackPrompt`
   - Move corresponding test file alongside its source file
@@ -50,7 +50,7 @@ Requirements reference: `design/prd.md`
 
 ## Phase 5: Migrate `observability/` domain
 
-- [ ] TASK: Move and rename observability port, safe base, and stub into `src/observability/`
+- [x] TASK: Move and rename observability port, safe base, and stub into `src/observability/`
   - Move `src/ports/observability-client.ts` → `src/observability/observability-client.port.ts` (interface name unchanged)
   - Move `src/adapters/base-safe-observability-client.ts` → `src/observability/safe-observability-client.ts` (class name unchanged)
   - Move `src/adapters/stub-observability-client.ts` → `src/observability/observability-client.stub.ts` (class name unchanged)
@@ -60,7 +60,7 @@ Requirements reference: `design/prd.md`
 
 ## Phase 6: Remove legacy folders and verify
 
-- [ ] TASK: Delete now-empty `src/adapters/` and `src/ports/` directories
+- [x] TASK: Delete now-empty `src/adapters/` and `src/ports/` directories
   - Confirm both directories are empty before deleting
   - Run `pnpm test`, `pnpm lint`, and `pnpm check`; fix any remaining issues
   - Confirm the directory structure matches the target layout in `design/prd.md`

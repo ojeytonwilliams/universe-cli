@@ -2,18 +2,21 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { createAdapterStubs } from "./adapter-stubs.js";
-import { StubPackageManagerAdapter } from "../adapters/stub-package-manager-adapter.js";
+import { StubPackageManager } from "../package-manager/package-manager.stub.js";
 import { LayerCompositionService } from "../services/layer-composition-service.js";
 import type { LayerRegistry } from "../services/layer-composition-service.js";
-import { PackageManagerService } from "../services/package-manager-service.js";
-import type { PackageManagerRunner, RunOptions } from "../services/package-manager-service.js";
+import { PackageManagerService } from "../package-manager/package-manager.service.js";
+import type {
+  PackageManagerRunner,
+  RunOptions,
+} from "../package-manager/package-manager.service.js";
 import { PlatformManifestService } from "../services/platform-manifest-service.js";
 import { CreateInputValidationService } from "../services/create-input-validation-service.js";
-import { LocalFilesystemWriter } from "../adapters/local-filesystem-writer.js";
-import { LocalProjectReader } from "../adapters/local-project-reader.js";
+import { LocalFilesystemWriter } from "../io/local-filesystem-writer.js";
+import { LocalProjectReader } from "../io/local-project-reader.js";
 import { runCli } from "../cli.js";
-import type { CreateSelections, Prompt } from "../ports/prompt.js";
-import type { RepoInitialiser } from "../ports/repo-initialiser.js";
+import type { CreateSelections, Prompt } from "../prompt/prompt.port.js";
+import type { RepoInitialiser } from "../io/repo-initialiser.port.js";
 
 interface AdapterOverrides {
   repoInitialiser?: RepoInitialiser;
@@ -106,8 +109,8 @@ const makeDeps = (cwd: string, prompt: Prompt, options: MakeDepsOptions = {}) =>
       packageManager:
         packageManagerService ??
         new PackageManagerService({
-          bun: new StubPackageManagerAdapter(),
-          pnpm: new StubPackageManagerAdapter(),
+          bun: new StubPackageManager(),
+          pnpm: new StubPackageManager(),
         }),
       platformManifestGenerator: new PlatformManifestService(),
       validator: new CreateInputValidationService((path) => existsSync(join(cwd, path))),
