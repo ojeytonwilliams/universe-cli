@@ -85,8 +85,18 @@ const handleCreate = async (
   await adapters.filesystemWriter.writeProject(targetDirectory, projectFiles);
 
   if (validatedInput.runtime === "node") {
-    await adapters.packageManager.specifyDeps(targetDirectory);
-    await adapters.packageManager.install(targetDirectory);
+    // Support both legacy adapter and new service
+    // oxlint-disable-next-line no-unsafe-member-access
+    if (typeof (adapters.packageManager as any).run === "function") {
+      // oxlint-disable-next-line no-unsafe-member-access, no-unsafe-call
+      await (adapters.packageManager as any).run({
+        manager: validatedInput.packageManager,
+        projectDirectory: targetDirectory,
+      });
+    } else {
+      await adapters.packageManager.specifyDeps(targetDirectory);
+      await adapters.packageManager.install(targetDirectory);
+    }
   }
 
   await adapters.repoInitialiser.initialise(targetDirectory);

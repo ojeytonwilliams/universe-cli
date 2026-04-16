@@ -6,6 +6,7 @@ import { LocalFilesystemWriter } from "./adapters/local-filesystem-writer.js";
 import { LocalProjectReader } from "./adapters/local-project-reader.js";
 import { GitRepoInitialiserAdapter } from "./adapters/git-repo-initialiser-adapter.js";
 import { PnpmPackageManagerAdapter } from "./adapters/pnpm-package-manager-adapter.js";
+import { BunPackageManagerAdapter } from "./adapters/bun-package-manager-adapter.js";
 import { CreateInputValidationService } from "./services/create-input-validation-service.js";
 import { LayerCompositionService } from "./services/layer-composition-service.js";
 import { PlatformManifestService } from "./services/platform-manifest-service.js";
@@ -19,11 +20,16 @@ import { StubRollbackClient } from "./adapters/stub-rollback-client.js";
 import { StubStatusClient } from "./adapters/stub-status-client.js";
 import { StubTeardownClient } from "./adapters/stub-teardown-client.js";
 import { runCli } from "./cli.js";
+import { PackageManagerService } from "./services/package-manager-service.js";
 
 const filesystemWriter = new LocalFilesystemWriter();
 const layerResolver = new LayerCompositionService();
 const manifestGenerator = new PlatformManifestService();
-const packageManager = new PnpmPackageManagerAdapter();
+
+const packageManager = new PackageManagerService({
+  bun: new BunPackageManagerAdapter(),
+  pnpm: new PnpmPackageManagerAdapter(),
+});
 const repoInitialiser = new GitRepoInitialiserAdapter();
 const projectReader = new LocalProjectReader();
 const prompt = new ClackPromptAdapter();

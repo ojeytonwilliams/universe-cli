@@ -9,6 +9,7 @@ import { StubRegistrationClient } from "../adapters/stub-registration-client.js"
 import { StubRollbackClient } from "../adapters/stub-rollback-client.js";
 import { StubStatusClient } from "../adapters/stub-status-client.js";
 import { StubTeardownClient } from "../adapters/stub-teardown-client.js";
+// Stub for BunPackageManagerAdapter (no-op for tests)
 
 /**
  * Returns a fresh set of stub adapter instances for use in tests.

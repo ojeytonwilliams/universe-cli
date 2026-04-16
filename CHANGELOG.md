@@ -1,5 +1,15 @@
 # Changelog
 
+## [3.3.0] - 2026-04-15
+
+### Package manager abstraction and Bun adapter
+
+- Introduced `PackageManagerService` abstraction to support multiple package managers.
+- Added Bun package manager adapter with full test coverage.
+- Updated CLI wiring and integration stubs for extensibility.
+- Enforced strict TDD, lint, and type-check compliance for all new code.
+- Improved error handling and test reliability for unknown managers and adapter failures.
+
 ## [3.2.0] - 2026-04-15
 
 ### Repartition layers: slim base/node, introduce package-manager and framework layers
