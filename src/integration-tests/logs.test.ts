@@ -9,6 +9,8 @@ import { LayerCompositionService } from "../services/layer-composition-service.j
 import { PlatformManifestService } from "../services/platform-manifest-service.js";
 import { runCli } from "../cli.js";
 import type { CreateSelections, Prompt } from "../ports/prompt.js";
+import { PackageManagerService } from "../services/package-manager-service.js";
+import { StubPackageManagerAdapter } from "../adapters/stub-package-manager-adapter.js";
 
 const createNodeSelection = (name: string): CreateSelections => ({
   confirmed: true,
@@ -39,6 +41,10 @@ const makeDeps = (cwd: string, prompt: Prompt) => {
     observability,
     services: {
       layerResolver: new LayerCompositionService(),
+      packageManager: new PackageManagerService({
+        bun: new StubPackageManagerAdapter(),
+        pnpm: new StubPackageManagerAdapter(),
+      }),
       platformManifestGenerator: new PlatformManifestService(),
       validator: new CreateInputValidationService((path) => existsSync(join(cwd, path))),
     },

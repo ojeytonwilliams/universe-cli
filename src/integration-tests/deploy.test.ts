@@ -2,10 +2,12 @@ import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createAdapterStubs } from "./adapter-stubs.js";
+import { StubPackageManagerAdapter } from "../adapters/stub-package-manager-adapter.js";
 import { LocalFilesystemWriter } from "../adapters/local-filesystem-writer.js";
 import { LocalProjectReader } from "../adapters/local-project-reader.js";
 import { CreateInputValidationService } from "../services/create-input-validation-service.js";
 import { LayerCompositionService } from "../services/layer-composition-service.js";
+import { PackageManagerService } from "../services/package-manager-service.js";
 import { PlatformManifestService } from "../services/platform-manifest-service.js";
 import { runCli } from "../cli.js";
 import type { CreateSelections, Prompt } from "../ports/prompt.js";
@@ -39,6 +41,10 @@ const makeDeps = (cwd: string, prompt: Prompt) => {
     observability,
     services: {
       layerResolver: new LayerCompositionService(),
+      packageManager: new PackageManagerService({
+        bun: new StubPackageManagerAdapter(),
+        pnpm: new StubPackageManagerAdapter(),
+      }),
       platformManifestGenerator: new PlatformManifestService(),
       validator: new CreateInputValidationService((path) => existsSync(join(cwd, path))),
     },

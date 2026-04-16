@@ -131,10 +131,6 @@ describe(handleCreate, () => {
             return Promise.resolve();
           },
         },
-        packageManager: {
-          install: (_dir: string) => Promise.resolve(),
-          specifyDeps: (_dir: string) => Promise.resolve(),
-        },
         prompt: {
           promptForCreateInputs() {
             return Promise.resolve(createPromptResult);
@@ -149,6 +145,9 @@ describe(handleCreate, () => {
           resolveLayers(_input: CreateSelections): ResolvedLayerSet {
             return { files: resolvedLayerFiles, layers: [] };
           },
+        },
+        packageManager: {
+          run: () => Promise.resolve(),
         },
         platformManifestGenerator: {
           generatePlatformManifest(_input: CreateSelections) {
@@ -188,14 +187,6 @@ describe(handleCreate, () => {
             return Promise.reject(new Error("filesystemWriter not used in this test"));
           },
         },
-        packageManager: {
-          install: (_dir: never): never => {
-            throw new Error("packageManager not used in this test");
-          },
-          specifyDeps: (_dir: never): never => {
-            throw new Error("packageManager not used in this test");
-          },
-        },
         prompt: {
           promptForCreateInputs() {
             return Promise.resolve(null);
@@ -211,6 +202,11 @@ describe(handleCreate, () => {
         layerResolver: {
           resolveLayers(_input: never): never {
             throw new Error("layerResolver not used in this test");
+          },
+        },
+        packageManager: {
+          run(): never {
+            throw new Error("packageManager not used in this test");
           },
         },
         platformManifestGenerator: {
@@ -243,14 +239,6 @@ describe(handleCreate, () => {
               throw new Error("filesystemWriter not used in this test");
             },
           },
-          packageManager: {
-            install: (_dir: never): never => {
-              throw new Error("packageManager not used in this test");
-            },
-            specifyDeps: (_dir: never): never => {
-              throw new Error("packageManager not used in this test");
-            },
-          },
           prompt: {
             promptForCreateInputs() {
               return Promise.resolve(createPromptResult);
@@ -266,6 +254,11 @@ describe(handleCreate, () => {
           layerResolver: {
             resolveLayers(_input: never): never {
               throw new Error("layerResolver not used in this test");
+            },
+          },
+          packageManager: {
+            run(): never {
+              throw new Error("packageManager not used in this test");
             },
           },
           platformManifestGenerator: {
@@ -297,14 +290,6 @@ describe(handleCreate, () => {
               );
             },
           },
-          packageManager: {
-            install: (_dir: never): never => {
-              throw new Error("packageManager not used in this test");
-            },
-            specifyDeps: (_dir: never): never => {
-              throw new Error("packageManager not used in this test");
-            },
-          },
           prompt: {
             promptForCreateInputs() {
               return Promise.resolve(createPromptResult);
@@ -320,6 +305,11 @@ describe(handleCreate, () => {
           layerResolver: {
             resolveLayers(_input: CreateSelections): ResolvedLayerSet {
               return { files: resolvedLayerFiles, layers: [] };
+            },
+          },
+          packageManager: {
+            run(): never {
+              throw new Error("packageManager not used in this test");
             },
           },
           platformManifestGenerator: {

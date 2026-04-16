@@ -2,7 +2,6 @@ import { join } from "node:path";
 import type { DeployClient } from "./ports/deploy-client.js";
 import type { FilesystemWriter } from "./ports/filesystem-writer.js";
 import type { ListClient } from "./ports/list-client.js";
-import type { PackageManager } from "./ports/package-manager.js";
 import type { RepoInitialiser } from "./ports/repo-initialiser.js";
 import type { PromoteClient } from "./ports/promote-client.js";
 import type { Prompt } from "./ports/prompt.js";
@@ -18,6 +17,7 @@ import type {
   PlatformManifestGenerator,
 } from "./services/platform-manifest-service.js";
 import type { CreateInputValidator } from "./services/create-input-validation-service.js";
+import type { PackageManagerRunner } from "./services/package-manager-service.js";
 
 interface CliResult {
   exitCode: number;
@@ -28,6 +28,7 @@ interface Services {
   layerResolver: LayerComposer;
   platformManifestGenerator: PlatformManifestGenerator;
   validator: CreateInputValidator;
+  packageManager: PackageManagerRunner;
 }
 
 interface Adapters {
@@ -35,7 +36,6 @@ interface Adapters {
   filesystemWriter: FilesystemWriter;
   listClient: ListClient;
   logsClient: LogsClient;
-  packageManager: PackageManager;
   projectReader: ProjectReaderPort;
   repoInitialiser: RepoInitialiser;
   promoteClient: PromoteClient;
@@ -62,8 +62,11 @@ const readAndValidateManifest = async (
 const handleCreate = async (
   cwd: string,
   deps: {
-    services: Pick<Services, "layerResolver" | "platformManifestGenerator" | "validator">;
-    adapters: Pick<Adapters, "filesystemWriter" | "packageManager" | "prompt" | "repoInitialiser">;
+    services: Pick<
+      Services,
+      "layerResolver" | "platformManifestGenerator" | "validator" | "packageManager"
+    >;
+    adapters: Pick<Adapters, "filesystemWriter" | "prompt" | "repoInitialiser">;
   },
 ): Promise<HandlerResult> => {
   const { services, adapters } = deps;
@@ -85,18 +88,10 @@ const handleCreate = async (
   await adapters.filesystemWriter.writeProject(targetDirectory, projectFiles);
 
   if (validatedInput.runtime === "node") {
-    // Support both legacy adapter and new service
-    // oxlint-disable-next-line no-unsafe-member-access
-    if (typeof (adapters.packageManager as any).run === "function") {
-      // oxlint-disable-next-line no-unsafe-member-access, no-unsafe-call
-      await (adapters.packageManager as any).run({
-        manager: validatedInput.packageManager,
-        projectDirectory: targetDirectory,
-      });
-    } else {
-      await adapters.packageManager.specifyDeps(targetDirectory);
-      await adapters.packageManager.install(targetDirectory);
-    }
+    await services.packageManager.run({
+      manager: validatedInput.packageManager!,
+      projectDirectory: targetDirectory,
+    });
   }
 
   await adapters.repoInitialiser.initialise(targetDirectory);

@@ -142,11 +142,6 @@ const defaultManifest: PlatformManifest = {
   stack: "app",
 };
 
-const defaultPackageManager = {
-  install: (_dir: string) => Promise.resolve(),
-  specifyDeps: (_dir: string) => Promise.resolve(),
-};
-
 const defaultRepoInitialiser = {
   initialise: (_dir: string) => Promise.resolve(),
 };
@@ -161,7 +156,6 @@ const createDeps = (
     filesystemWriter,
     listClient: defaultListClient,
     logsClient: defaultLogsClient,
-    packageManager: defaultPackageManager,
     projectReader: defaultProjectReader,
     promoteClient: defaultPromoteClient,
     prompt,
@@ -175,6 +169,7 @@ const createDeps = (
   observability: client,
   services: {
     layerResolver: passThroughLayerResolver,
+    packageManager: { run: () => Promise.resolve() },
     platformManifestGenerator: manifestGenerator,
     validator,
   },

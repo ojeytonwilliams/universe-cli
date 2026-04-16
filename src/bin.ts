@@ -40,7 +40,6 @@ const { exitCode, output } = await runCli(process.argv.slice(2), {
     filesystemWriter,
     listClient: new StubListClient(),
     logsClient: new StubLogsClient(),
-    packageManager,
     projectReader,
     promoteClient: new StubPromoteClient(),
     prompt,
@@ -54,6 +53,7 @@ const { exitCode, output } = await runCli(process.argv.slice(2), {
   observability: new StubObservabilityClient(),
   services: {
     layerResolver,
+    packageManager,
     platformManifestGenerator: manifestGenerator,
     validator: inputValidator,
   },
