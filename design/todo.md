@@ -1,87 +1,118 @@
-# TODO — CLI Layer Responsibility Refactor
+# TODO — Docker Layer System: Single-Service Dev Environment
 
-Requirements reference: `design/prd.md`
-
----
-
-## Phase 1 — Flatten `commands.ts` deps
-
-- [x] CODE: Remove `services`/`adapters` nesting from handler signatures in `commands.ts`
-  - Feature: Replace nested `{ services: { ... }, adapters: { ... } }` dep objects with a flat inline type per handler; no shared `Deps` interface is introduced
-  - Files:
-    - `src/commands.ts` — remove `Services` and `Adapters` interfaces; update all nine handler signatures and `readAndValidateManifest` to declare a flat inline dep type (e.g. `{ platformManifestGenerator: PlatformManifestGenerator; deployClient: DeployClient; projectReader: ProjectReaderPort }`) using only the members each handler actually needs; keep `HandlerResult` and `CliResult` as exports
-  - Acceptance:
-    - `Services` and `Adapters` interfaces are removed from `commands.ts`
-    - No shared merged `Deps` interface is introduced
-    - Every handler and `readAndValidateManifest` declares its own flat inline dep type with no `services:` or `adapters:` nesting
-    - `bin.ts` still compiles — it constructs and passes a flat object satisfying each handler's inline dep type
-
-- [x] CODE: Update `commands.test.ts` dep construction to flat shape
-  - Feature: Remove `services:` / `adapters:` nesting from all dep objects constructed in `commands.test.ts`
-  - Files:
-    - `src/commands.test.ts` — flatten all `{ services: { ... }, adapters: { ... } }` literals into a single flat object
-  - Acceptance:
-    - All `commands.test.ts` tests pass without modification to assertions
-    - No `services:` or `adapters:` keys appear in dep object literals in the file
-
-- [x] CODE: Update integration test dep construction to flat shape
-  - Feature: Remove `services:` / `adapters:` nesting from dep objects in all integration tests
-  - Files:
-    - `src/integration-tests/create.test.ts`
-    - `src/integration-tests/deploy.test.ts`
-    - `src/integration-tests/list.test.ts`
-    - `src/integration-tests/logs.test.ts`
-    - `src/integration-tests/promote.test.ts`
-    - `src/integration-tests/register.test.ts`
-    - `src/integration-tests/rollback.test.ts`
-    - `src/integration-tests/status.test.ts`
-    - `src/integration-tests/teardown.test.ts`
-  - Acceptance:
-    - All integration tests pass without modification to assertions
-    - No `services:` or `adapters:` keys appear in dep object literals in any of these files
-
-- [x] TASK: Validation gate — Phase 1
-  - `pnpm test` passes
-  - `pnpm lint` passes
-  - `pnpm check` passes
+Requirements reference: `plans/universe-cli/docker.md`
 
 ---
 
-## Phase 2 — Move routing and validation to `bin.ts`; slim `runCli`
+## Phase 1 — Layer type refactor
 
-- [x] CODE: Extract routing, validation, and help into a testable `route` function; update `runCli` signature
-  - Feature: `bin.ts` owns all argv parsing, `--help` handling, unknown-command detection, and per-command arg validation. `runCli` is reduced to a three-argument observability wrapper `(command, handler, observability)`. A named `route` function (exported for testing) encapsulates the dispatch logic so tests do not require a live process.
-  - Files:
-    - `src/bin.ts` — add exported `route(argv, deps, observability)` function containing: `--help`/`-h`/no-command branch (prints `HELP_TEXT`, returns `CliResult` directly), unknown-command branch (returns `BadArgumentsError` result directly), per-command arg-count and env-value validation (throws `BadArgumentsError` on failure), thunk binding (closes over deps), and call to `runCli(command, thunk, observability)`; top-level script calls `route(process.argv.slice(2), deps, observability)` and writes output
-    - `src/cli.ts` — replace `CliDependencies`, `CommandDef`, `CommandHandler`, `COMMANDS`, and the `argv`-based switch with the slimmed signature: `runCli(command: string, handler: () => Promise<HandlerResult>, observability: ObservabilityClient): Promise<CliResult>`; body calls `observability.safeTrack(start)`, awaits `handler()`, tracks success/failure, rethrows unknown errors; remove all imports of `Services`, `Adapters`, `BadArgumentsError`, `handleCreate`, etc.
-    - `src/cli.test.ts` — restructure: (a) tests for `--help`, unknown commands, and per-command bad-arg validation now call `route` instead of `runCli`; (b) observability tracking tests call `runCli` directly with a pre-bound stub thunk; (c) remove the `CliDependencies`-shaped `createDeps` helper; add a minimal `createDeps` that returns the three arguments `runCli` now expects
+- [ ] CODE: Migrate all layer objects to `{ files, dockerfileData }` shape
+  - Feature: Replace the current `Record<string, string>` layer type with `LayerData = { files: Record<string, string>, dockerfileData?: DockerfileData }` and update every layer except `services-layer` to the new shape
+  - Files: `src/services/layers/always-layer.ts`, `src/services/layers/base-node-layer.ts`, `src/services/layers/base-static-layer.ts`, `src/services/layers/frameworks-layer.ts`, `src/services/layers/package-managers-layer.ts`, `src/services/layer-composition-service.ts`
   - Acceptance:
-    - `runCli` signature is `(command: string, handler: () => Promise<HandlerResult>, observability: ObservabilityClient) => Promise<CliResult>`
-    - `cli.ts` imports only `ObservabilityClient` (port) and `HandlerResult`/`CliResult` (from `commands.ts`); zero imports of `Services`, `Adapters`, `BadArgumentsError`, or any command handler
-    - `--help` and `-h` and no-argument invocation return exit code 0 and the full help text without calling `runCli`
-    - Unknown command returns exit code matching `BadArgumentsError.exitCode` and an appropriate message without calling `runCli`
-    - Per-command over-argument calls (e.g. `deploy /dir extra`) return the expected `BadArgumentsError` message and exit code without calling `runCli`
-    - Invalid env-value calls (e.g. `logs /dir staging`) return the expected `BadArgumentsError` message and exit code without calling `runCli`
-    - Observability is tracked only for commands that reach `runCli`; no observability calls occur for help, unknown-command, or bad-arg branches
-    - All previously passing `cli.test.ts` assertions continue to pass under the restructured tests
+    - `LayerData` and `LayerRegistry` types are defined and exported
+    - All layers except `services-layer` export objects conforming to `LayerData`
+    - `services-layer` is unchanged; `layer-composition-service` contains a shim that normalises its flat `Record<string, Record<string, string>>` shape to `LayerData` before processing
+    - All existing tests pass without modification
 
-- [x] TASK: Validation gate — Phase 2
-  - `pnpm test` passes
-  - `pnpm lint` passes
-  - `pnpm check` passes
+- [ ] TASK: Run validation gate after refactor
+  - Acceptance:
+    - `pnpm test` passes
+    - `pnpm lint` passes
+    - `pnpm check` passes
+
+---
+
+## Phase 2 — DockerfileData schema and template
+
+- [ ] CODE: Define `DockerfileData` interface and `renderDockerfile` template function
+  - Feature: Introduce the `DockerfileData` type and a pure `renderDockerfile` function that renders a two-stage (`base` + `dev`) Dockerfile from a complete data object using a JS template literal
+  - Files: `src/services/layers/dockerfile-template.ts`
+  - Acceptance:
+    - `DockerfileData` is exported with optional fields: `baseImage`, `devInstall`, `devCopySource`, `devCmd`
+    - `renderDockerfile(data: Required<DockerfileData>): string` is exported
+    - Output contains a `base` stage with the given `baseImage` and `WORKDIR /app`
+    - Output contains a `dev` stage with `devInstall`, `devCopySource`, and `CMD` rendered from `devCmd` as a JSON array
+    - Unit tests cover at least one pnpm+express combination and verify the rendered string exactly
+
+- [ ] CODE: Wire `dockerfileData` merging and `Dockerfile` emission into the composition service
+  - Feature: After all layers are composed, the composition service merges each layer's `dockerfileData` (later values overwrite earlier for the same key) and, if all four slots are present, calls `renderDockerfile` and adds `Dockerfile` to the output file set
+  - Files: `src/services/layer-composition-service.ts`
+  - Acceptance:
+    - When composed layers collectively supply all four `DockerfileData` slots, `Dockerfile` appears in the output files with content matching `renderDockerfile`
+    - When no layer contributes `dockerfileData`, `Dockerfile` is absent from the output
+    - When `dockerfileData` is partially populated (some slots missing), `Dockerfile` is absent and no error is thrown
+    - Unit tests cover: all-slots-present emits file; no slots emits nothing; partial slots emits nothing
+
+- [ ] TASK: Run validation gate
+  - Acceptance:
+    - `pnpm test` passes
+    - `pnpm lint` passes
+    - `pnpm check` passes
+
+---
+
+## Phase 3 — Layer data contributions
+
+- [ ] CODE: Update `package-managers/pnpm` layer with `dockerfileData`, `.dockerignore`, and compose changes
+  - Feature: The pnpm layer contributes `devInstall` and `devCmd` via `dockerfileData`, adds `.dockerignore` to `files`, and updates the `docker-compose.dev.yml` fragment to use `build: { context: ./, target: dev }` and `develop.watch` (sync `./src` → `/app/src`; rebuild on `package.json` change)
+  - Files: `src/services/layers/package-managers-layer.ts`
+  - Acceptance:
+    - `dockerfileData.devInstall` copies `package.json` and `pnpm-lock.yaml` then enables pnpm via corepack and runs `pnpm install`
+    - `dockerfileData.devCmd` is `["pnpm", "run", "dev"]`
+    - `files[".dockerignore"]` contains `node_modules`, `dist`, and `.git`
+    - `files["docker-compose.dev.yml"]` YAML fragment includes `build.context`, `build.target: dev`, and `develop.watch` with `sync` and `rebuild` actions
+    - When merged with the `base/node` compose skeleton, the final `docker-compose.dev.yml` has no `image:` key and has the `build:` + `develop.watch` keys instead
+    - Unit tests cover the above assertions on the layer object directly
+
+- [ ] CODE: Update `frameworks/express` and `frameworks/typescript` layers with `dockerfileData`
+  - Feature: Both framework layers contribute `baseImage: "node:22-alpine"` and `devCopySource` (copying `src/` and `tsconfig.json`) via `dockerfileData`; `frameworks/none` contributes no `dockerfileData`
+  - Files: `src/services/layers/frameworks-layer.ts`
+  - Acceptance:
+    - `frameworks/express` and `frameworks/typescript` each have `dockerfileData.baseImage === "node:22-alpine"`
+    - `frameworks/express` and `frameworks/typescript` each have `dockerfileData.devCopySource` containing `COPY src/` and `COPY tsconfig.json`
+    - `frameworks/none` has no `dockerfileData` key (or `dockerfileData` is `undefined`)
+    - Unit tests assert these values on each framework layer object
+
+- [ ] TASK: Run validation gate
+  - Acceptance:
+    - `pnpm test` passes
+    - `pnpm lint` passes
+    - `pnpm check` passes
+
+---
+
+## Phase 4 — Integration tests and scaffold snapshots
+
+- [ ] CODE: Add integration test scenarios covering Docker scaffold output
+  - Feature: Integration tests assert that `universe create` with Node runtimes produces `Dockerfile`, `.dockerignore`, and an updated `docker-compose.dev.yml`; and that the static runtime produces none of these
+  - Files: `src/integration-tests/create.test.ts`, `src/integration-tests/__snapshots__/create.test.ts.snap`
+  - Acceptance:
+    - Scenario `node + express + pnpm`: scaffold snapshot includes `Dockerfile`, `.dockerignore`, and `docker-compose.dev.yml` with `build:` + `develop.watch`; no `image: node:22-alpine` key in compose
+    - Scenario `node + typescript + pnpm`: same Docker file assertions as above
+    - Scenario `static + none`: scaffold snapshot contains neither `Dockerfile` nor `.dockerignore`; `docker-compose.dev.yml` retains `image: node:22-alpine` (no build key)
+    - Snapshots are deterministic and committed
+    - Tests are written first and initially fail, then pass after prior phases are complete
+
+- [ ] TASK: Run full validation gate
+  - Acceptance:
+    - `pnpm test` passes
+    - `pnpm lint` passes
+    - `pnpm check` passes
 
 ---
 
 ## Traceability Matrix
 
-| Requirement ID                                       | TODO Item                                                                | Status |
-| ---------------------------------------------------- | ------------------------------------------------------------------------ | ------ |
-| Goal: flat deps in commands.ts                       | Phase 1 / CODE: Remove services/adapters nesting from handler signatures | mapped |
-| Goal: flat deps — test updates                       | Phase 1 / CODE: Update commands.test.ts dep construction                 | mapped |
-| Goal: flat deps — test updates                       | Phase 1 / CODE: Update integration test dep construction                 | mapped |
-| Goal: bin.ts owns argv/routing/validation            | Phase 2 / CODE: Extract route function; update runCli signature          | mapped |
-| Goal: runCli has no argv/Services/Adapters knowledge | Phase 2 / CODE: Extract route function; update runCli signature          | mapped |
-| Goal: --help handled in bin.ts only                  | Phase 2 / CODE: Extract route function; update runCli signature          | mapped |
-| Goal: observability only on real command execution   | Phase 2 / CODE: Extract route function; update runCli signature          | mapped |
-| Constraint: existing tests must continue to pass     | Phase 1 / TASK: Validation gate                                          | mapped |
-| Constraint: existing tests must continue to pass     | Phase 2 / TASK: Validation gate                                          | mapped |
+| Requirement ID | TODO Item                                                                                                        | Status |
+| -------------- | ---------------------------------------------------------------------------------------------------------------- | ------ |
+| REQ-1          | Phase 1 / CODE: Migrate all layer objects to `{ files, dockerfileData }` shape                                   | mapped |
+| REQ-2          | Phase 1 / CODE: Migrate all layer objects to `{ files, dockerfileData }` shape                                   | mapped |
+| REQ-3          | Phase 2 / CODE: Define `DockerfileData` interface and `renderDockerfile` template function                       | mapped |
+| REQ-4          | Phase 2 / CODE: Define `DockerfileData` interface and `renderDockerfile` template function                       | mapped |
+| REQ-5          | Phase 2 / CODE: Wire `dockerfileData` merging and `Dockerfile` emission into the composition service             | mapped |
+| REQ-6          | Phase 3 / CODE: Update `package-managers/pnpm` layer with `dockerfileData`, `.dockerignore`, and compose changes | mapped |
+| REQ-7          | Phase 3 / CODE: Update `frameworks/express` and `frameworks/typescript` layers with `dockerfileData`             | mapped |
+| REQ-8          | Phase 3 / CODE: Update `frameworks/express` and `frameworks/typescript` layers with `dockerfileData`             | mapped |
+| NFR-1          | Phase 1 / TASK: Run validation gate after refactor                                                               | mapped |
+| NFR-2          | Phase 4 / CODE: Add integration test scenarios covering Docker scaffold output                                   | mapped |
