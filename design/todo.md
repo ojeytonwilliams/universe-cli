@@ -25,7 +25,7 @@ Requirements reference: `plans/universe-cli/docker.md`
 
 ## Phase 2 — DockerfileData schema and template
 
-- [ ] CODE: Define `DockerfileData` interface and `renderDockerfile` template function
+- [x] CODE: Define `DockerfileData` interface and `renderDockerfile` template function
   - Feature: Introduce the `DockerfileData` type and a pure `renderDockerfile` function that renders a two-stage (`base` + `dev`) Dockerfile from a complete data object using a JS template literal
   - Files: `src/services/layers/dockerfile-template.ts`
   - Acceptance:
@@ -35,7 +35,7 @@ Requirements reference: `plans/universe-cli/docker.md`
     - Output contains a `dev` stage with `devInstall`, `devCopySource`, and `CMD` rendered from `devCmd` as a JSON array
     - Unit tests cover at least one pnpm+express combination and verify the rendered string exactly
 
-- [ ] CODE: Wire `dockerfileData` merging and `Dockerfile` emission into the composition service
+- [x] CODE: Wire `dockerfileData` merging and `Dockerfile` emission into the composition service
   - Feature: After all layers are composed, the composition service merges each layer's `dockerfileData` (later values overwrite earlier for the same key) and, if all four slots are present, calls `renderDockerfile` and adds `Dockerfile` to the output file set
   - Files: `src/services/layer-composition-service.ts`
   - Acceptance:
@@ -44,7 +44,7 @@ Requirements reference: `plans/universe-cli/docker.md`
     - When `dockerfileData` is partially populated (some slots missing), `Dockerfile` is absent and no error is thrown
     - Unit tests cover: all-slots-present emits file; no slots emits nothing; partial slots emits nothing
 
-- [ ] TASK: Run validation gate
+- [x] TASK: Run validation gate
   - Acceptance:
     - `pnpm test` passes
     - `pnpm lint` passes

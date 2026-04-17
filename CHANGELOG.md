@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.3.4] - 2026-04-17
+
+### Add `renderDockerfile` template and wire `dockerfileData` merging into the composition service
+
+- `dockerfile-template.ts` introduced with `DockerfileData` type and `renderDockerfile` function; renders a two-stage (`base` + `dev`) Dockerfile from a complete data object using a template literal.
+- `layer-composition-service.ts` now merges `dockerfileData` contributions from all resolved layers and emits a `Dockerfile` into the scaffold output when all four slots (`baseImage`, `devInstall`, `devCopySource`, `devCmd`) are present; emits nothing when data is absent or incomplete.
+- `DockerfileData` moved from `layer-composition-service.ts` to `dockerfile-template.ts` (its natural owner); re-exported from the composition service for consumers.
+
 ## [3.3.3] - 2026-04-17
 
 ### Extend layer type to `{ files, dockerfileData }` shape
