@@ -54,7 +54,7 @@ Requirements reference: `plans/universe-cli/docker.md`
 
 ## Phase 3 — Layer data contributions
 
-- [ ] CODE: Update `package-managers/pnpm` layer with `dockerfileData`, `.dockerignore`, and compose changes
+- [x] CODE: Update `package-managers/pnpm` layer with `dockerfileData`, `.dockerignore`, and compose changes
   - Feature: The pnpm layer contributes `devInstall` and `devCmd` via `dockerfileData`, adds `.dockerignore` to `files`, and updates the `docker-compose.dev.yml` fragment to use `build: { context: ./, target: dev }` and `develop.watch` (sync `./src` → `/app/src`; rebuild on `package.json` change)
   - Files: `src/services/layers/package-managers-layer.ts`
   - Acceptance:
@@ -65,7 +65,7 @@ Requirements reference: `plans/universe-cli/docker.md`
     - When merged with the `base/node` compose skeleton, the final `docker-compose.dev.yml` has no `image:` key and has the `build:` + `develop.watch` keys instead
     - Unit tests cover the above assertions on the layer object directly
 
-- [ ] CODE: Update `frameworks/express` and `frameworks/typescript` layers with `dockerfileData`
+- [x] CODE: Update `frameworks/express` and `frameworks/typescript` layers with `dockerfileData`
   - Feature: Both framework layers contribute `baseImage: "node:22-alpine"` and `devCopySource` (copying `src/` and `tsconfig.json`) via `dockerfileData`; `frameworks/none` contributes no `dockerfileData`
   - Files: `src/services/layers/frameworks-layer.ts`
   - Acceptance:
@@ -74,7 +74,7 @@ Requirements reference: `plans/universe-cli/docker.md`
     - `frameworks/none` has no `dockerfileData` key (or `dockerfileData` is `undefined`)
     - Unit tests assert these values on each framework layer object
 
-- [ ] TASK: Run validation gate
+- [x] TASK: Run validation gate
   - Acceptance:
     - `pnpm test` passes
     - `pnpm lint` passes

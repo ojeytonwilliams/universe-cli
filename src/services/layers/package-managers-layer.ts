@@ -10,7 +10,27 @@ const packageManagersLayer = {
     },
   },
   "package-managers/pnpm": {
+    dockerfileData: {
+      devCmd: ["pnpm", "run", "dev"],
+      devInstall: "COPY package.json pnpm-lock.yaml ./\nRUN corepack enable pnpm && pnpm install",
+    },
     files: {
+      ".dockerignore": ["node_modules", "dist", ".git", ""].join("\n"),
+      "docker-compose.dev.yml": [
+        "services:",
+        "  app:",
+        "    build:",
+        "      context: ./",
+        "      target: dev",
+        "    develop:",
+        "      watch:",
+        "        - action: sync",
+        "          path: ./src",
+        "          target: /app/src",
+        "        - action: rebuild",
+        "          path: ./package.json",
+        "",
+      ].join("\n"),
       "package.json": JSON.stringify({
         scripts: {
           dev: "pnpm run build && pnpm run start",

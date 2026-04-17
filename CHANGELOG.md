@@ -1,5 +1,15 @@
 # Changelog
 
+## [3.3.5] - 2026-04-17
+
+### Layer data contributions: pnpm and framework layers now supply `dockerfileData`
+
+- `package-managers/pnpm` layer now contributes `dockerfileData.devInstall` (copies `package.json` + `pnpm-lock.yaml`, enables pnpm via corepack, runs `pnpm install`) and `dockerfileData.devCmd` (`["pnpm", "run", "dev"]`).
+- `package-managers/pnpm` adds `.dockerignore` (excludes `node_modules`, `dist`, `.git`) and updates its `docker-compose.dev.yml` fragment to use `build: { context: ./, target: dev }` and `develop.watch` (sync `./src` → `/app/src`; rebuild on `package.json` change).
+- `base/node` compose fragment trimmed to `ports` only; `image:`, `working_dir`, `volumes`, and `command` removed as they are superseded by the Dockerfile and Compose Watch approach.
+- `frameworks/express` and `frameworks/typescript` each contribute `dockerfileData.baseImage: "node:22-alpine"` and `dockerfileData.devCopySource` (copies `src/` and `tsconfig.json`); `frameworks/none` contributes no `dockerfileData`.
+- `FrameworkLayer` interface introduced in `frameworks-layer.ts` (imports `DockerfileData` from `dockerfile-template.ts`) so the layer record is correctly typed.
+
 ## [3.3.4] - 2026-04-17
 
 ### Add `renderDockerfile` template and wire `dockerfileData` merging into the composition service

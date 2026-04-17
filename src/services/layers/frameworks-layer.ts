@@ -1,3 +1,10 @@
+import type { DockerfileData } from "./dockerfile-template.js";
+
+interface FrameworkLayer {
+  dockerfileData?: DockerfileData;
+  files: Record<string, string>;
+}
+
 const EXPRESS_VERSION = "^5";
 const TYPESCRIPT_VERSION = "^5";
 
@@ -22,8 +29,14 @@ const TYPESCRIPT_PACKAGE_JSON_FIELDS = JSON.stringify({
   },
 });
 
-const frameworksLayer = {
+const DEV_COPY_SOURCE_TS = "COPY src/ ./src/\nCOPY tsconfig.json ./";
+
+const frameworksLayer: Record<string, FrameworkLayer> = {
   "frameworks/express": {
+    dockerfileData: {
+      baseImage: "node:22-alpine",
+      devCopySource: DEV_COPY_SOURCE_TS,
+    },
     files: {
       "package.json": JSON.stringify({
         dependencies: {
@@ -56,6 +69,10 @@ const frameworksLayer = {
   },
   "frameworks/none": { files: {} },
   "frameworks/typescript": {
+    dockerfileData: {
+      baseImage: "node:22-alpine",
+      devCopySource: DEV_COPY_SOURCE_TS,
+    },
     files: {
       "package.json": TYPESCRIPT_PACKAGE_JSON_FIELDS,
       "src/index.ts": [
