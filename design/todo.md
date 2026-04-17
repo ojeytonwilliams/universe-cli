@@ -84,7 +84,7 @@ Requirements reference: `plans/universe-cli/docker.md`
 
 ## Phase 4 — Integration tests and scaffold snapshots
 
-- [ ] CODE: Add integration test scenarios covering Docker scaffold output
+- [x] CODE: Add integration test scenarios covering Docker scaffold output
   - Feature: Integration tests assert that `universe create` with Node runtimes produces `Dockerfile`, `.dockerignore`, and an updated `docker-compose.dev.yml`; and that the static runtime produces none of these
   - Files: `src/integration-tests/create.test.ts`, `src/integration-tests/__snapshots__/create.test.ts.snap`
   - Acceptance:
@@ -94,7 +94,7 @@ Requirements reference: `plans/universe-cli/docker.md`
     - Snapshots are deterministic and committed
     - Tests are written first and initially fail, then pass after prior phases are complete
 
-- [ ] TASK: Run full validation gate
+- [x] TASK: Run full validation gate
   - Acceptance:
     - `pnpm test` passes
     - `pnpm lint` passes

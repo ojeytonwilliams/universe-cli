@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.3.6] - 2026-04-17
+
+### Integration tests for Docker scaffold output
+
+- Added 5 targeted integration tests in a `"docker scaffold output"` describe block covering: `node + express + pnpm` Dockerfile content, `node + express + pnpm` `.dockerignore` and compose shape, `node + typescript + pnpm` Dockerfile content, `node + typescript + pnpm` compose shape, and `static + none` absence of Docker artefacts.
+- Static scaffold test confirms `docker-compose.dev.yml` retains `image: node:22-alpine` and has no `build:` key.
+- `parse as parseYaml` from `yaml` imported into the integration test file to enable compose fragment assertions.
+
 ## [3.3.5] - 2026-04-17
 
 ### Layer data contributions: pnpm and framework layers now supply `dockerfileData`

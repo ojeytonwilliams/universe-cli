@@ -1,6 +1,7 @@
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
+import { parse as parseYaml } from "yaml";
 import { createAdapterStubs } from "./adapter-stubs.js";
 import { StubPackageManager } from "../package-manager/package-manager.stub.js";
 import { LayerCompositionService } from "../services/layer-composition-service.js";
@@ -458,5 +459,118 @@ describe("create", () => {
     const generatedFiles = collectGeneratedFiles(join(rootDirectory, selection.name));
 
     expect(generatedFiles).toMatchSnapshot();
+  });
+
+  describe("docker scaffold output", () => {
+    it("node + express + pnpm Dockerfile contains base image and build steps", async () => {
+      const selection = createNodeSelection({
+        databases: ["none"],
+        framework: "express",
+        name: "docker-express-dockerfile",
+        platformServices: ["none"],
+      });
+
+      const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection));
+      await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
+
+      const files = collectGeneratedFiles(join(rootDirectory, selection.name));
+
+      expect(files["Dockerfile"]).toContain("FROM node:22-alpine AS base");
+      expect(files["Dockerfile"]).toContain("COPY src/ ./src/");
+      expect(files["Dockerfile"]).toContain("COPY tsconfig.json ./");
+      expect(files["Dockerfile"]).toContain('CMD ["pnpm","run","dev"]');
+    });
+
+    it("node + express + pnpm .dockerignore and compose have correct docker config", async () => {
+      const selection = createNodeSelection({
+        databases: ["none"],
+        framework: "express",
+        name: "docker-express-compose",
+        platformServices: ["none"],
+      });
+
+      const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection));
+      await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
+
+      const files = collectGeneratedFiles(join(rootDirectory, selection.name));
+
+      expect(files[".dockerignore"]).toContain("node_modules");
+
+      const compose = parseYaml(files["docker-compose.dev.yml"]!) as Record<string, unknown>;
+      const app = (compose["services"] as Record<string, unknown>)["app"] as Record<
+        string,
+        unknown
+      >;
+
+      expect(app["image"]).toBeUndefined();
+      expect(app["build"]).toBeDefined();
+      expect(app["develop"]).toBeDefined();
+    });
+
+    it("node + typescript + pnpm Dockerfile contains base image and build steps", async () => {
+      const selection = createNodeSelection({
+        databases: ["none"],
+        framework: "typescript",
+        name: "docker-typescript-dockerfile",
+        platformServices: ["none"],
+      });
+
+      const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection));
+      await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
+
+      const files = collectGeneratedFiles(join(rootDirectory, selection.name));
+
+      expect(files["Dockerfile"]).toContain("FROM node:22-alpine AS base");
+      expect(files["Dockerfile"]).toContain("COPY src/ ./src/");
+      expect(files["Dockerfile"]).toContain("COPY tsconfig.json ./");
+      expect(files["Dockerfile"]).toContain('CMD ["pnpm","run","dev"]');
+    });
+
+    it("node + typescript + pnpm .dockerignore and compose have correct docker config", async () => {
+      const selection = createNodeSelection({
+        databases: ["none"],
+        framework: "typescript",
+        name: "docker-typescript-compose",
+        platformServices: ["none"],
+      });
+
+      const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection));
+      await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
+
+      const files = collectGeneratedFiles(join(rootDirectory, selection.name));
+
+      expect(files[".dockerignore"]).toContain("node_modules");
+
+      const compose = parseYaml(files["docker-compose.dev.yml"]!) as Record<string, unknown>;
+      const app = (compose["services"] as Record<string, unknown>)["app"] as Record<
+        string,
+        unknown
+      >;
+
+      expect(app["image"]).toBeUndefined();
+      expect(app["build"]).toBeDefined();
+      expect(app["develop"]).toBeDefined();
+    });
+
+    it("static + none scaffold produces no Dockerfile or .dockerignore", async () => {
+      const selection = createStaticSelection("docker-static-test");
+
+      const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection));
+      await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
+
+      const files = collectGeneratedFiles(join(rootDirectory, selection.name));
+
+      expect(files["Dockerfile"]).toBeUndefined();
+      expect(files[".dockerignore"]).toBeUndefined();
+
+      const compose = parseYaml(files["docker-compose.dev.yml"]!) as Record<string, unknown>;
+      const web = (compose["services"] as Record<string, unknown>)["web"] as Record<
+        string,
+        unknown
+      >;
+
+      expect(web["image"]).toBe("node:22-alpine");
+      expect(web["build"]).toBeUndefined();
+    });
   });
 });
