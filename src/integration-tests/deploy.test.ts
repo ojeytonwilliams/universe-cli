@@ -47,20 +47,17 @@ const makeDeps = (cwd: string, prompt: Prompt) => {
 };
 
 describe("deploy", () => {
-  const tempDirectories: string[] = [];
+  let rootDirectory: string;
+
+  beforeEach(() => {
+    rootDirectory = mkdtempSync(join(tmpdir(), "universe-deploy-e2e-"));
+  });
 
   afterEach(() => {
-    for (const directory of tempDirectories) {
-      rmSync(directory, { force: true, recursive: true });
-    }
-
-    tempDirectories.length = 0;
+    rmSync(rootDirectory, { force: true, recursive: true });
   });
 
   it("deploys a project scaffolded by universe create", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-deploy-e2e-"));
-    tempDirectories.push(rootDirectory);
-
     const projectName = "e2e-deploy-app";
     const { observability, ...routeDeps } = makeDeps(
       rootDirectory,
@@ -84,9 +81,6 @@ describe("deploy", () => {
   });
 
   it("returns a deterministic incremented deployment ID on repeated deploys", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-deploy-e2e-"));
-    tempDirectories.push(rootDirectory);
-
     const projectName = "e2e-repeat-deploy";
     const { observability, ...routeDeps } = makeDeps(
       rootDirectory,
@@ -108,9 +102,6 @@ describe("deploy", () => {
   });
 
   it("exits for the sentinel failure project name", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-deploy-e2e-"));
-    tempDirectories.push(rootDirectory);
-
     const { observability, ...routeDeps } = makeDeps(
       rootDirectory,
       createPromptPort(createNodeSelection("deploy-failure")),

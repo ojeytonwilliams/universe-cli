@@ -47,20 +47,17 @@ const makeDeps = (cwd: string, prompt: Prompt) => {
 };
 
 describe("promote", () => {
-  const tempDirectories: string[] = [];
+  let rootDirectory: string;
+
+  beforeEach(() => {
+    rootDirectory = mkdtempSync(join(tmpdir(), "universe-promote-"));
+  });
 
   afterEach(() => {
-    for (const directory of tempDirectories) {
-      rmSync(directory, { force: true, recursive: true });
-    }
-
-    tempDirectories.length = 0;
+    rmSync(rootDirectory, { force: true, recursive: true });
   });
 
   it("promotes a project scaffolded by universe create", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-promote-"));
-    tempDirectories.push(rootDirectory);
-
     const projectName = "promote-app";
     const { observability, ...routeDeps } = makeDeps(
       rootDirectory,
@@ -84,9 +81,6 @@ describe("promote", () => {
   });
 
   it("returns a deterministic incremented promotion ID on repeated promotes", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-promote-"));
-    tempDirectories.push(rootDirectory);
-
     const projectName = "repeat-promote";
     const { observability, ...routeDeps } = makeDeps(
       rootDirectory,
@@ -108,9 +102,6 @@ describe("promote", () => {
   });
 
   it("exits for the sentinel failure project name", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-promote-"));
-    tempDirectories.push(rootDirectory);
-
     const { observability, ...routeDeps } = makeDeps(
       rootDirectory,
       createPromptPort(createNodeSelection("promote-failure")),

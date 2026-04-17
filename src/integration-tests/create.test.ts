@@ -114,26 +114,23 @@ const makeDeps = (cwd: string, prompt: Prompt, options: MakeDepsOptions = {}) =>
 };
 
 describe("create", () => {
-  const tempDirectories: string[] = [];
+  let rootDirectory: string;
+
+  beforeEach(() => {
+    rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-"));
+  });
 
   afterEach(() => {
-    for (const directory of tempDirectories) {
-      rmSync(directory, { force: true, recursive: true });
-    }
-
-    tempDirectories.length = 0;
+    rmSync(rootDirectory, { force: true, recursive: true });
   });
 
   it("scaffolds Node.js + Express with all services", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-"));
     const selection = createNodeSelection({
       databases: ["postgresql", "redis"],
       framework: "express",
       name: "node-express-full",
       platformServices: ["analytics", "auth", "email"],
     });
-
-    tempDirectories.push(rootDirectory);
 
     const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection));
     const result = await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
@@ -143,15 +140,12 @@ describe("create", () => {
   });
 
   it("scaffolds Node.js + no framework + no services", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-"));
     const selection = createNodeSelection({
       databases: ["none"],
       framework: "none",
       name: "node-bare",
       platformServices: ["none"],
     });
-
-    tempDirectories.push(rootDirectory);
 
     const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection));
     const result = await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
@@ -161,10 +155,7 @@ describe("create", () => {
   });
 
   it("scaffolds Static", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-"));
     const selection = createStaticSelection("static-smoke");
-
-    tempDirectories.push(rootDirectory);
 
     const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection));
     const result = await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
@@ -174,10 +165,6 @@ describe("create", () => {
   });
 
   it("covers create validation failure and target-directory conflict failure", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-"));
-
-    tempDirectories.push(rootDirectory);
-
     const { observability: obsInvalid, ...routeDepsInvalid } = makeDeps(
       rootDirectory,
       createPromptPort(createStaticSelection("InvalidName")),
@@ -237,7 +224,6 @@ describe("create", () => {
   });
 
   it("covers config merge overwrite behavior in a create flow", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-"));
     const selection = createNodeSelection({
       databases: ["none"],
       framework: "express",
@@ -273,8 +259,6 @@ describe("create", () => {
       "package-managers/pnpm": {},
     };
 
-    tempDirectories.push(rootDirectory);
-
     const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection), {
       layerRegistry: customLayers,
     });
@@ -293,7 +277,6 @@ describe("create", () => {
   });
 
   it("covers non-config collision failure behavior in a create flow", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-"));
     const selection = createNodeSelection({
       databases: ["none"],
       framework: "express",
@@ -315,8 +298,6 @@ describe("create", () => {
       "package-managers/pnpm": {},
     };
 
-    tempDirectories.push(rootDirectory);
-
     const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection), {
       layerRegistry: customLayers,
     });
@@ -328,15 +309,12 @@ describe("create", () => {
   });
 
   it("snapshots generated Node.js scaffold output", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-"));
     const selection = createNodeSelection({
       databases: ["postgresql", "redis"],
       framework: "express",
       name: "snapshot-node-app",
       platformServices: ["analytics", "auth", "email"],
     });
-
-    tempDirectories.push(rootDirectory);
 
     const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection));
     const result = await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
@@ -349,15 +327,12 @@ describe("create", () => {
   });
 
   it("includes pnpm security artefacts in Node.js scaffold", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-"));
     const selection = createNodeSelection({
       databases: ["none"],
       framework: "none",
       name: "pnpm-security-app",
       platformServices: ["none"],
     });
-
-    tempDirectories.push(rootDirectory);
 
     const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection));
     const result = await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
@@ -382,10 +357,7 @@ describe("create", () => {
   });
 
   it("static scaffold pnpm-workspace.yaml is empty", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-"));
     const selection = createStaticSelection("static-workspace-check");
-
-    tempDirectories.push(rootDirectory);
 
     const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection));
     const result = await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
@@ -399,7 +371,6 @@ describe("create", () => {
   });
 
   it("calls packageManager.run with the target directory for Node.js scaffold", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-"));
     const name = "node-install-spy";
     const selection = createNodeSelection({
       databases: ["none"],
@@ -407,8 +378,6 @@ describe("create", () => {
       name,
       platformServices: ["none"],
     });
-
-    tempDirectories.push(rootDirectory);
 
     const run = vi.fn((_opts: RunOptions) => Promise.resolve());
 
@@ -425,11 +394,8 @@ describe("create", () => {
   });
 
   it("does not call packageManager.run for Static scaffold", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-"));
     const name = "static-no-install-spy";
     const selection = createStaticSelection(name);
-
-    tempDirectories.push(rootDirectory);
 
     const run = vi.fn((_opts: RunOptions) => Promise.resolve());
 
@@ -443,7 +409,6 @@ describe("create", () => {
   });
 
   it("calls repoInitialiser.initialise with the target directory for Node.js scaffold", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-"));
     const name = "node-repo-init-spy";
     const selection = createNodeSelection({
       databases: ["none"],
@@ -451,8 +416,6 @@ describe("create", () => {
       name,
       platformServices: ["none"],
     });
-
-    tempDirectories.push(rootDirectory);
 
     const repoInitialiser = { initialise: vi.fn((_dir: string) => Promise.resolve()) };
 
@@ -466,11 +429,8 @@ describe("create", () => {
   });
 
   it("calls repoInitialiser.initialise with the target directory for Static scaffold", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-"));
     const name = "static-repo-init-spy";
     const selection = createStaticSelection(name);
-
-    tempDirectories.push(rootDirectory);
 
     const repoInitialiser = { initialise: vi.fn((_dir: string) => Promise.resolve()) };
 
@@ -484,10 +444,7 @@ describe("create", () => {
   });
 
   it("snapshots generated Static scaffold output", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-create-"));
     const selection = createStaticSelection("snapshot-static-app");
-
-    tempDirectories.push(rootDirectory);
 
     const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection));
     const result = await route(["create"], routeDeps, { cwd: rootDirectory }, observability);

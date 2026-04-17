@@ -47,20 +47,17 @@ const makeDeps = (cwd: string, prompt: Prompt) => {
 };
 
 describe("teardown", () => {
-  const tempDirectories: string[] = [];
+  let rootDirectory: string;
+
+  beforeEach(() => {
+    rootDirectory = mkdtempSync(join(tmpdir(), "universe-teardown-"));
+  });
 
   afterEach(() => {
-    for (const directory of tempDirectories) {
-      rmSync(directory, { force: true, recursive: true });
-    }
-
-    tempDirectories.length = 0;
+    rmSync(rootDirectory, { force: true, recursive: true });
   });
 
   it("tears down a project scaffolded by universe create", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-teardown-"));
-    tempDirectories.push(rootDirectory);
-
     const projectName = "teardown-app";
     const { observability, ...routeDeps } = makeDeps(
       rootDirectory,
@@ -83,9 +80,6 @@ describe("teardown", () => {
   });
 
   it("exits for the sentinel failure project name", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-teardown-"));
-    tempDirectories.push(rootDirectory);
-
     const { observability, ...routeDeps } = makeDeps(
       rootDirectory,
       createPromptPort(createNodeSelection("teardown-failure")),

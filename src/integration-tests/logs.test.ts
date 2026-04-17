@@ -47,20 +47,17 @@ const makeDeps = (cwd: string, prompt: Prompt) => {
 };
 
 describe("logs", () => {
-  const tempDirectories: string[] = [];
+  let rootDirectory: string;
+
+  beforeEach(() => {
+    rootDirectory = mkdtempSync(join(tmpdir(), "universe-logs-"));
+  });
 
   afterEach(() => {
-    for (const directory of tempDirectories) {
-      rmSync(directory, { force: true, recursive: true });
-    }
-
-    tempDirectories.length = 0;
+    rmSync(rootDirectory, { force: true, recursive: true });
   });
 
   it("retrieves logs for a project scaffolded by universe create", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-logs-"));
-    tempDirectories.push(rootDirectory);
-
     const projectName = "logs-app";
     const { observability, ...routeDeps } = makeDeps(
       rootDirectory,
@@ -83,9 +80,6 @@ describe("logs", () => {
   });
 
   it("exits for the sentinel failure project name", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-logs-"));
-    tempDirectories.push(rootDirectory);
-
     const { observability, ...routeDeps } = makeDeps(
       rootDirectory,
       createPromptPort(createNodeSelection("logs-failure")),

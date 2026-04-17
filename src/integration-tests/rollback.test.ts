@@ -47,20 +47,17 @@ const makeDeps = (cwd: string, prompt: Prompt) => {
 };
 
 describe("rollback", () => {
-  const tempDirectories: string[] = [];
+  let rootDirectory: string;
+
+  beforeEach(() => {
+    rootDirectory = mkdtempSync(join(tmpdir(), "universe-rollback-"));
+  });
 
   afterEach(() => {
-    for (const directory of tempDirectories) {
-      rmSync(directory, { force: true, recursive: true });
-    }
-
-    tempDirectories.length = 0;
+    rmSync(rootDirectory, { force: true, recursive: true });
   });
 
   it("rolls back a project scaffolded by universe create", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-rollback-"));
-    tempDirectories.push(rootDirectory);
-
     const projectName = "rollback-app";
     const { observability, ...routeDeps } = makeDeps(
       rootDirectory,
@@ -84,9 +81,6 @@ describe("rollback", () => {
   });
 
   it("returns a deterministic incremented rollback ID on repeated rollbacks", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-rollback-"));
-    tempDirectories.push(rootDirectory);
-
     const projectName = "repeat-rollback";
     const { observability, ...routeDeps } = makeDeps(
       rootDirectory,
@@ -108,9 +102,6 @@ describe("rollback", () => {
   });
 
   it("exits for the sentinel failure project name", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-rollback-"));
-    tempDirectories.push(rootDirectory);
-
     const { observability, ...routeDeps } = makeDeps(
       rootDirectory,
       createPromptPort(createNodeSelection("rollback-failure")),

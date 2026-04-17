@@ -47,20 +47,17 @@ const makeDeps = (cwd: string, prompt: Prompt) => {
 };
 
 describe("register", () => {
-  const tempDirectories: string[] = [];
+  let rootDirectory: string;
+
+  beforeEach(() => {
+    rootDirectory = mkdtempSync(join(tmpdir(), "universe-register-"));
+  });
 
   afterEach(() => {
-    for (const directory of tempDirectories) {
-      rmSync(directory, { force: true, recursive: true });
-    }
-
-    tempDirectories.length = 0;
+    rmSync(rootDirectory, { force: true, recursive: true });
   });
 
   it("registers a project scaffolded by universe create", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-register-"));
-    tempDirectories.push(rootDirectory);
-
     const projectName = "register-app";
     const { observability, ...routeDeps } = makeDeps(
       rootDirectory,
@@ -83,9 +80,6 @@ describe("register", () => {
   });
 
   it("exits when the same project is registered twice", async () => {
-    const rootDirectory = mkdtempSync(join(tmpdir(), "universe-register-"));
-    tempDirectories.push(rootDirectory);
-
     const projectName = "duplicate-app";
     const { observability, ...routeDeps } = makeDeps(
       rootDirectory,
