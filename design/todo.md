@@ -6,7 +6,7 @@ Requirements reference: `plans/universe-cli/docker.md`
 
 ## Phase 1 — Layer type refactor
 
-- [ ] CODE: Migrate all layer objects to `{ files, dockerfileData }` shape
+- [x] CODE: Migrate all layer objects to `{ files, dockerfileData }` shape
   - Feature: Replace the current `Record<string, string>` layer type with `LayerData = { files: Record<string, string>, dockerfileData?: DockerfileData }` and update every layer except `services-layer` to the new shape
   - Files: `src/services/layers/always-layer.ts`, `src/services/layers/base-node-layer.ts`, `src/services/layers/base-static-layer.ts`, `src/services/layers/frameworks-layer.ts`, `src/services/layers/package-managers-layer.ts`, `src/services/layer-composition-service.ts`
   - Acceptance:
@@ -15,7 +15,7 @@ Requirements reference: `plans/universe-cli/docker.md`
     - `services-layer` is unchanged; `layer-composition-service` contains a shim that normalises its flat `Record<string, Record<string, string>>` shape to `LayerData` before processing
     - All existing tests pass without modification
 
-- [ ] TASK: Run validation gate after refactor
+- [x] TASK: Run validation gate after refactor
   - Acceptance:
     - `pnpm test` passes
     - `pnpm lint` passes

@@ -1,5 +1,14 @@
 # Changelog
 
+## [3.3.3] - 2026-04-17
+
+### Extend layer type to `{ files, dockerfileData }` shape
+
+- All layer objects (`always`, `base/node`, `base/static`, `frameworks/*`, `package-managers/*`) now export `{ files: Record<string, string>, dockerfileData?: DockerfileData }` instead of a flat `Record<string, string>`.
+- `DockerfileData` and `LayerData` interfaces added to `layer-composition-service.ts` and exported; `LayerRegistry` updated to `Record<string, LayerData | undefined>`.
+- `services-layer` left in the old flat shape for now; a shim in `defaultLayerRegistry` normalises it transparently until migration is done.
+- No change to scaffolded project output or any external behaviour.
+
 ## [3.3.2] - 2026-04-16
 
 ### Move routing and validation to `bin.ts`; slim `runCli`

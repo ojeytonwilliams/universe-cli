@@ -16,7 +16,20 @@ import { servicesLayer } from "./layers/services-layer.js";
 
 type LayerStage = "always" | "base" | "frameworks" | "package-managers" | "services";
 type JsonValue = boolean | JsonObject | JsonValue[] | null | number | string;
-type LayerRegistry = Record<string, Record<string, string> | undefined>;
+
+interface DockerfileData {
+  baseImage?: string;
+  devCmd?: string[];
+  devCopySource?: string;
+  devInstall?: string;
+}
+
+interface LayerData {
+  dockerfileData?: DockerfileData;
+  files: Record<string, string>;
+}
+
+type LayerRegistry = Record<string, LayerData | undefined>;
 
 interface JsonObject {
   [key: string]: JsonValue;
@@ -49,13 +62,19 @@ const NONE_VALUE = DATABASE_OPTIONS.NONE;
 const NODE_RUNTIME_LAYER = "base/node";
 const STATIC_RUNTIME_LAYER = "base/static";
 
+// ServicesLayer still uses the old flat shape; shim it into LayerData here.
+// Migration is deferred.
+const shimmedServicesLayer: LayerRegistry = Object.fromEntries(
+  Object.entries(servicesLayer).map(([key, files]) => [key, { files }]),
+);
+
 const defaultLayerRegistry: LayerRegistry = {
   always: alwaysLayer,
   "base/node": baseNodeLayer,
   "base/static": baseStaticLayer,
   ...frameworksLayer,
   ...packageManagersLayer,
-  ...servicesLayer,
+  ...shimmedServicesLayer,
 };
 
 interface LayerComposer {
@@ -150,7 +169,7 @@ class LayerCompositionService implements LayerComposer {
       }
 
       return {
-        files: layer,
+        files: layer.files,
         name: layerName,
         stage: this.resolveStage(layerName),
       };
@@ -277,4 +296,12 @@ class LayerCompositionService implements LayerComposer {
 }
 
 export { defaultLayerRegistry, LayerCompositionService, LayerTemplateRenderer };
-export type { LayerRegistry, ResolvedLayer, ResolvedLayerSet, LayerComposer, TemplateContext };
+export type {
+  DockerfileData,
+  LayerComposer,
+  LayerData,
+  LayerRegistry,
+  ResolvedLayer,
+  ResolvedLayerSet,
+  TemplateContext,
+};

@@ -232,31 +232,35 @@ describe("create", () => {
     });
     const customLayers: LayerRegistry = {
       always: {
-        "README.md": "# __PROJECT_NAME__\n",
+        files: { "README.md": "# __PROJECT_NAME__\n" },
       },
       "base/node": {
-        "package.json": JSON.stringify({
-          scripts: {
-            build: "tsc -p tsconfig.json",
-            dev: "node base-dev.js",
-          },
-        }),
+        files: {
+          "package.json": JSON.stringify({
+            scripts: {
+              build: "tsc -p tsconfig.json",
+              dev: "node base-dev.js",
+            },
+          }),
+        },
       },
       "base/static": {
-        "public/index.html": "<h1>Static</h1>\n",
+        files: { "public/index.html": "<h1>Static</h1>\n" },
       },
       "frameworks/express": {
-        "package.json": JSON.stringify({
-          dependencies: {
-            express: "5.1.0",
-          },
-          scripts: {
-            dev: "node framework-dev.js",
-          },
-        }),
+        files: {
+          "package.json": JSON.stringify({
+            dependencies: {
+              express: "5.1.0",
+            },
+            scripts: {
+              dev: "node framework-dev.js",
+            },
+          }),
+        },
       },
-      "frameworks/none": {},
-      "package-managers/pnpm": {},
+      "frameworks/none": { files: {} },
+      "package-managers/pnpm": { files: {} },
     };
 
     const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection), {
@@ -285,17 +289,17 @@ describe("create", () => {
     });
     const customLayers: LayerRegistry = {
       always: {
-        "README.md": "# from always\n",
+        files: { "README.md": "# from always\n" },
       },
       "base/node": {
-        "README.md": "# from base\n",
+        files: { "README.md": "# from base\n" },
       },
       "base/static": {
-        "public/index.html": "<h1>Static</h1>\n",
+        files: { "public/index.html": "<h1>Static</h1>\n" },
       },
-      "frameworks/express": {},
-      "frameworks/none": {},
-      "package-managers/pnpm": {},
+      "frameworks/express": { files: {} },
+      "frameworks/none": { files: {} },
+      "package-managers/pnpm": { files: {} },
     };
 
     const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection), {
