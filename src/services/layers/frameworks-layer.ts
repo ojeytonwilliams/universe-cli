@@ -21,6 +21,7 @@ const TSCONFIG = JSON.stringify({
 
 const TYPESCRIPT_PACKAGE_JSON_FIELDS = JSON.stringify({
   devDependencies: {
+    "@types/node": "^24",
     typescript: TYPESCRIPT_VERSION,
   },
   scripts: {
@@ -43,6 +44,8 @@ const frameworksLayer: Record<string, FrameworkLayer> = {
           express: EXPRESS_VERSION,
         },
         devDependencies: {
+          "@types/express": EXPRESS_VERSION,
+          "@types/node": "^24",
           typescript: TYPESCRIPT_VERSION,
         },
         scripts: {

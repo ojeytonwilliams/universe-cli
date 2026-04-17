@@ -18,6 +18,7 @@
     "lint:fix": "oxlint --fix",
     "start": "node dist/bin.js",
     "test": "vitest run",
+    "test:e2e": "vitest run --config vitest.e2e.config.ts",
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check",
     "prepare": "husky"
