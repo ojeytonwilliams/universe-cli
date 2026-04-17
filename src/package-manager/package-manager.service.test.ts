@@ -7,10 +7,17 @@ const makeMockManager = (): PackageManager => ({
 });
 
 describe(PackageManagerService, () => {
+  let pnpm: PackageManager;
+  let bun: PackageManager;
+  let svc: PackageManagerService;
+
+  beforeEach(() => {
+    pnpm = makeMockManager();
+    bun = makeMockManager();
+    svc = new PackageManagerService({ bun, pnpm });
+  });
+
   it("dispatches to pnpm adapter for pnpm selection", async () => {
-    const pnpm = makeMockManager();
-    const bun = makeMockManager();
-    const svc = new PackageManagerService({ bun, pnpm });
     await svc.run({ manager: "pnpm", projectDirectory: "/proj" });
     expect(pnpm.specifyDeps).toHaveBeenCalledWith("/proj"); // oxlint-disable-line unbound-method
     expect(pnpm.install).toHaveBeenCalledWith("/proj"); // oxlint-disable-line unbound-method
@@ -19,9 +26,6 @@ describe(PackageManagerService, () => {
   });
 
   it("dispatches to bun adapter for bun selection", async () => {
-    const pnpm = makeMockManager();
-    const bun = makeMockManager();
-    const svc = new PackageManagerService({ bun, pnpm });
     await svc.run({ manager: "bun", projectDirectory: "/proj" });
     expect(bun.specifyDeps).toHaveBeenCalledWith("/proj"); // oxlint-disable-line unbound-method
     expect(bun.install).toHaveBeenCalledWith("/proj"); // oxlint-disable-line unbound-method
@@ -30,19 +34,13 @@ describe(PackageManagerService, () => {
   });
 
   it("throws for unknown manager", async () => {
-    const pnpm = makeMockManager();
-    const bun = makeMockManager();
-    const svc = new PackageManagerService({ bun, pnpm });
     await expect(
       svc.run({ manager: "yarn" as unknown as "bun", projectDirectory: "/proj" }),
     ).rejects.toThrow(/Unknown package manager/);
   });
 
   it("propagates errors from adapters", async () => {
-    const pnpm = makeMockManager();
     vi.spyOn(pnpm, "install").mockRejectedValue(new Error("fail"));
-    const bun = makeMockManager();
-    const svc = new PackageManagerService({ bun, pnpm });
     await expect(svc.run({ manager: "pnpm", projectDirectory: "/proj" })).rejects.toThrow("fail");
   });
 });
