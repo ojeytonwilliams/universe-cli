@@ -29,8 +29,8 @@
     - Signature: `buildComposeDevYaml(framework: FrameworkLayerData, packageManager: PackageManagerLayerData): string`
     - Generated YAML has `services.app.build.context: "./"` and `services.app.build.target: "dev"`
     - `services.app.ports` is `["<port>:<port>"]` where `<port>` equals `framework.port`
-    - `develop.watch` contains one `action: sync` entry per entry in `framework.watchSync`, with matching `path` and `target`
-    - `develop.watch` contains one `action: rebuild` entry per entry in `packageManager.watchRebuild`, with matching `path`
+    - `services.app.develop.watch` contains one `action: sync` entry per entry in `framework.watchSync`, with matching `path` and `target`
+    - `services.app.develop.watch` contains one `action: rebuild` entry per entry in `packageManager.watchRebuild`, with matching `path`
     - `pnpm test` passes
 
 ## Phase 2: Wire node layers to new shapes and update composition service
@@ -160,7 +160,7 @@
   - Feature: `package-managers/bun` gains `devInstall`, `devCmd`, `watchRebuild` per REQ-8
   - Files: `src/commands/create/layers-composition/layers/package-managers-layer.ts`
   - Acceptance:
-    - `devInstall` contains a `RUN npm install -g bun` step followed by `COPY` of lockfile and a `RUN bun install`
+    - `devInstall` is `"RUN npm install -g bun\nCOPY package.json bun.lock ./\nRUN bun install"`
     - `devCmd` is `["bun", "run", "dev"]`
     - `watchRebuild` is `[{ path: "./package.json" }, { path: "./bun.lock" }]`
     - `pnpm test` passes
@@ -170,7 +170,7 @@
   - Files: `src/commands/create/layers-composition/layers/frameworks-layer.ts`
   - Acceptance:
     - `port: 5173`
-    - `devCopySource` copies `src/`, `index.html`, `vite.config.ts`, and all tsconfig files
+    - `devCopySource` is `"COPY src src\nCOPY index.html .\nCOPY vite.config.ts .\nCOPY tsconfig*.json ."`
     - `watchSync: [{ path: "./src", target: "/app/src" }]`
     - `scripts.dev` in `package.json` includes `--host` (e.g. `"dev": "vite --host"`)
     - `dockerfileData` absent from entry

@@ -1,10 +1,10 @@
 ---
 name: workflow
-description: Implements the continue workflow: find next unchecked todo item, complete it using the correct method (CODE=TDD, TASK=direct), mark it done, and when a phase is complete create a changelog entry and commit.
+description: Implements the todo implementation workflow. Finds next unchecked todo item, completes it using the correct method (CODE=TDD, TASK=direct), mark it done, and when a phase is complete creates a changelog entry and commit.
 argument-hint: "[phases to complete, e.g. '2 and 3' or 'all remaining']"
 ---
 
-# Continue Workflow
+# TODO Workflow
 
 ## Overview
 

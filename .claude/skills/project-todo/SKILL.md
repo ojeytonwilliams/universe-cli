@@ -103,6 +103,7 @@ Rules for TODO generation:
 - each phase is self-contained; if recurring work is needed each phase, repeat explicit tasks
 - references to external documents are allowed if explicit (for example `plans/assets.md`)
 - references to external documents are not allowed if vague (for example "ADR7" without a path)
+- each TODO item should make sense without needing to read the requirements document; if a TODO item is not self-contained, add necessary context
 
 ### Final Consistency Check
 
