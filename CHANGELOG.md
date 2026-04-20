@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.11.0] - 2026-04-20
+
+### feat: Add typed layer data interfaces and pure assembly functions
+
+- Defined `RuntimeLayerData`, `FrameworkLayerData`, `PackageManagerLayerData`, `WatchSyncEntry`, and `WatchRebuildEntry` interfaces in `layer-types.ts`, giving each layer kind an explicit contract rather than an open-ended object shape.
+- Added `buildDockerfileData` pure function that assembles `Required<DockerfileData>` from the three typed layer objects, replacing the runtime merge + completeness-guard pattern.
+- Added `buildComposeDevYaml` pure function that generates a complete `docker-compose.dev.yml` YAML string from typed layer data, including build context, port mapping, and file-watch entries.
+
 ## [3.10.0] - 2026-04-20
 
 ### feat: Add Dockerfile to static web scaffold

@@ -2,7 +2,7 @@
 
 ## Phase 1: Layer type interfaces and pure assembly functions
 
-- [ ] TASK: Define typed layer data interfaces
+- [x] TASK: Define typed layer data interfaces
   - Create `src/commands/create/layers-composition/layers/layer-types.ts` exporting `RuntimeLayerData`, `FrameworkLayerData`, `PackageManagerLayerData`, `WatchSyncEntry`, `WatchRebuildEntry` as specified in REQ-1
   - `RuntimeLayerData` has `baseImage: string` and `files: Record<string, string>`
   - `FrameworkLayerData` has `devCopySource: string`, `port: number`, `watchSync: WatchSyncEntry[]`, `files: Record<string, string>`
@@ -10,7 +10,7 @@
   - `WatchSyncEntry` has `path: string` and `target: string`; `WatchRebuildEntry` has `path: string`
   - `pnpm check` passes
 
-- [ ] CODE: `buildDockerfileData` assembly function
+- [x] CODE: `buildDockerfileData` assembly function
   - Feature: Pure function that assembles `Required<DockerfileData>` from typed layer inputs, replacing the `mergeDockerfileData` + `isCompleteDockerfileData` pattern per REQ-2
   - Files: `src/commands/create/layers-composition/build-dockerfile-data.ts`
   - Acceptance:
@@ -22,7 +22,7 @@
     - Return type is `Required<DockerfileData>` — TypeScript guarantees all four slots are present with no runtime guard
     - `pnpm test` passes
 
-- [ ] CODE: `buildComposeDevYaml` assembly function
+- [x] CODE: `buildComposeDevYaml` assembly function
   - Feature: Pure function that generates a complete `docker-compose.dev.yml` YAML string from typed layer data, replacing YAML deep-merge per REQ-3
   - Files: `src/commands/create/layers-composition/build-compose-dev-yaml.ts`
   - Acceptance:
