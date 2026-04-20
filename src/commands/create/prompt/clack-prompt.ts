@@ -1,13 +1,10 @@
 import { confirm, isCancel, multiselect, select, text } from "@clack/prompts";
+import { allowedCombinations } from "../allowed-layer-combinations.js";
 import {
   DATABASE_LABELS,
-  DATABASE_OPTIONS,
   FRAMEWORK_LABELS,
-  FRAMEWORK_OPTIONS,
   PACKAGE_MANAGER_LABELS,
-  PACKAGE_MANAGER_OPTIONS,
   PLATFORM_SERVICE_LABELS,
-  PLATFORM_SERVICE_OPTIONS,
   RUNTIME_LABELS,
   RUNTIME_OPTIONS,
 } from "./prompt.port.js";
@@ -60,36 +57,6 @@ const RUNTIME_PROMPT_OPTIONS: { label: string; value: RuntimeOption }[] = [
   },
 ];
 
-const NODE_FRAMEWORK_OPTIONS: FrameworkOption[] = [
-  FRAMEWORK_OPTIONS.TYPESCRIPT,
-  FRAMEWORK_OPTIONS.EXPRESS,
-  FRAMEWORK_OPTIONS.NONE,
-];
-const STATIC_FRAMEWORK_OPTIONS: FrameworkOption[] = [
-  FRAMEWORK_OPTIONS.REACT_VITE,
-  FRAMEWORK_OPTIONS.NONE,
-];
-
-const NODE_DATABASE_OPTIONS: DatabaseOption[] = [
-  DATABASE_OPTIONS.POSTGRESQL,
-  DATABASE_OPTIONS.REDIS,
-  DATABASE_OPTIONS.NONE,
-];
-const STATIC_DATABASE_OPTIONS: DatabaseOption[] = [DATABASE_OPTIONS.NONE];
-
-const NODE_SERVICE_OPTIONS: PlatformServiceOption[] = [
-  PLATFORM_SERVICE_OPTIONS.AUTH,
-  PLATFORM_SERVICE_OPTIONS.EMAIL,
-  PLATFORM_SERVICE_OPTIONS.ANALYTICS,
-  PLATFORM_SERVICE_OPTIONS.NONE,
-];
-const STATIC_SERVICE_OPTIONS: PlatformServiceOption[] = [PLATFORM_SERVICE_OPTIONS.NONE];
-
-const NODE_PACKAGE_MANAGER_OPTIONS: PackageManagerOption[] = [
-  PACKAGE_MANAGER_OPTIONS.PNPM,
-  PACKAGE_MANAGER_OPTIONS.BUN,
-];
-
 const toPromptOptions = <T extends string>(
   values: T[],
   labels: Record<T, string>,
@@ -102,29 +69,14 @@ const toPromptOptions = <T extends string>(
 const toLabelList = <T extends string>(values: T[], labels: Record<T, string>): string =>
   values.map((value) => labels[value]).join(", ");
 
-const getFrameworkOptions = (runtime: RuntimeOption): FrameworkOption[] => {
-  if (runtime === RUNTIME_OPTIONS.NODE) {
-    return NODE_FRAMEWORK_OPTIONS;
-  }
+const getFrameworkOptions = (runtime: RuntimeOption): FrameworkOption[] =>
+  (allowedCombinations[runtime]?.frameworks ?? []) as FrameworkOption[];
 
-  return STATIC_FRAMEWORK_OPTIONS;
-};
+const getDatabaseOptions = (runtime: RuntimeOption): DatabaseOption[] =>
+  (allowedCombinations[runtime]?.databases ?? []) as DatabaseOption[];
 
-const getDatabaseOptions = (runtime: RuntimeOption): DatabaseOption[] => {
-  if (runtime === RUNTIME_OPTIONS.NODE) {
-    return NODE_DATABASE_OPTIONS;
-  }
-
-  return STATIC_DATABASE_OPTIONS;
-};
-
-const getServiceOptions = (runtime: RuntimeOption): PlatformServiceOption[] => {
-  if (runtime === RUNTIME_OPTIONS.NODE) {
-    return NODE_SERVICE_OPTIONS;
-  }
-
-  return STATIC_SERVICE_OPTIONS;
-};
+const getServiceOptions = (runtime: RuntimeOption): PlatformServiceOption[] =>
+  (allowedCombinations[runtime]?.platformServices ?? []) as PlatformServiceOption[];
 
 class ClackPrompt implements Prompt {
   private readonly api: ClackPromptApi;
@@ -169,10 +121,11 @@ class ClackPrompt implements Prompt {
     }
 
     let packageManager: string | symbol | undefined;
-    if (runtime === RUNTIME_OPTIONS.NODE) {
+    const packageManagers = allowedCombinations[runtime as RuntimeOption]?.packageManagers ?? [];
+    if (packageManagers.length > 0) {
       packageManager = await this.api.select({
         message: "Select package manager",
-        options: toPromptOptions(NODE_PACKAGE_MANAGER_OPTIONS, PACKAGE_MANAGER_LABELS),
+        options: toPromptOptions(packageManagers as PackageManagerOption[], PACKAGE_MANAGER_LABELS),
       });
 
       if (this.api.isCancel(packageManager)) {

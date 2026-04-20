@@ -108,47 +108,6 @@ describe(ClackPrompt, () => {
     ]);
   });
 
-  it("filters framework options for Static runtime", async () => {
-    const frameworkOptions: { label: string; value: string }[][] = [];
-    const selectQueue = ["static_web", "none"];
-    const mockApi: ClackPromptApi = {
-      ...createMockApi(["static_web", "none"], [["none"], ["none"]]),
-      select(options) {
-        frameworkOptions.push(options.options);
-        const nextSelection = selectQueue.shift() as string;
-        return Promise.resolve(nextSelection);
-      },
-    };
-
-    const adapter = new ClackPrompt(mockApi);
-
-    await adapter.promptForCreateInputs();
-
-    expect(frameworkOptions[1]).toStrictEqual([
-      { label: "React (Vite)", value: "react-vite" },
-      { label: "None", value: "none" },
-    ]);
-  });
-
-  it("includes TypeScript in framework options for Node runtime", async () => {
-    const frameworkOptions: { label: string; value: string }[][] = [];
-    const selectQueue = ["node", "typescript", "pnpm"];
-    const mockApi: ClackPromptApi = {
-      ...createMockApi(["node", "typescript", "pnpm"], [["none"], ["none"]]),
-      select(options) {
-        frameworkOptions.push(options.options);
-        const nextSelection = selectQueue.shift() as string;
-        return Promise.resolve(nextSelection);
-      },
-    };
-
-    const adapter = new ClackPrompt(mockApi);
-
-    await adapter.promptForCreateInputs();
-
-    expect(frameworkOptions[1]).toContainEqual({ label: "TypeScript", value: "typescript" });
-  });
-
   it("returns null when cancelled", async () => {
     const mockApi: ClackPromptApi = {
       ...createMockApi(),

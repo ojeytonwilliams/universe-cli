@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.8.0] - 2026-04-20
+
+### Refactor: Drive clack-prompt from allowed-layer-combinations config
+
+- Removed seven hardcoded option arrays (`NODE_FRAMEWORK_OPTIONS`, `STATIC_FRAMEWORK_OPTIONS`, `NODE_DATABASE_OPTIONS`, `STATIC_DATABASE_OPTIONS`, `NODE_SERVICE_OPTIONS`, `STATIC_SERVICE_OPTIONS`, `NODE_PACKAGE_MANAGER_OPTIONS`) from `clack-prompt.ts`, replacing them with `getFrameworkOptions`, `getDatabaseOptions`, and `getServiceOptions` helpers that read directly from `allowedCombinations`.
+- The package manager prompt is now driven by config: shown only when `allowedCombinations[runtime].packageManagers.length > 0` and populated from that array.
+- Removed two config-data tests from `clack-prompt.test.ts` (`filters framework options for Static runtime`, `includes TypeScript in framework options for Node runtime`) — these were asserting config contents, not prompt logic.
+
 ## [3.7.0] - 2026-04-20
 
 ### Refactor: Drive validation service from allowed-layer-combinations config

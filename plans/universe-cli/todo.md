@@ -50,7 +50,7 @@
 
 ## Phase 3: Refactor prompt
 
-- [ ] CODE: Drive `clack-prompt.ts` from config
+- [x] CODE: Drive `clack-prompt.ts` from config
   - Feature: Prompt reads framework, database, service, and package manager options from `allowedCombinations` at runtime instead of hardcoded arrays
   - Files: `src/commands/create/prompt/clack-prompt.ts`
   - Acceptance:
@@ -60,7 +60,7 @@
     - Any `FRAMEWORK_OPTIONS.*` references that were only used to populate the now-deleted arrays are removed
     - `pnpm test` passes
 
-- [ ] TASK: Remove config-data tests from `src/commands/create/prompt/clack-prompt.test.ts`
+- [x] TASK: Remove config-data tests from `src/commands/create/prompt/clack-prompt.test.ts`
   - Remove `"filters framework options for Static runtime"`
   - Remove `"includes TypeScript in framework options for Node runtime"`
   - `pnpm test` passes with those two tests gone
