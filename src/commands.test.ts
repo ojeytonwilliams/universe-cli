@@ -22,17 +22,15 @@ import type { CreateSelections } from "./commands/create/prompt/prompt.port.js";
 import type { StatusResponse } from "./platform/status-client.port.js";
 import type { TeardownReceipt } from "./platform/teardown-client.port.js";
 import type { ResolvedLayerSet } from "./services/layer-composition-service.js";
-import {
-  handleCreate,
-  handleDeploy,
-  handleList,
-  handleLogs,
-  handlePromote,
-  handleRegister,
-  handleRollback,
-  handleStatus,
-  handleTeardown,
-} from "./commands.js";
+import { handleCreate } from "./commands/create/index.js";
+import { handleRegister } from "./commands/register/index.js";
+import { handleDeploy } from "./commands/deploy/index.js";
+import { handlePromote } from "./commands/promote/index.js";
+import { handleRollback } from "./commands/rollback/index.js";
+import { handleLogs } from "./commands/logs/index.js";
+import { handleList } from "./commands/list/index.js";
+import { handleStatus } from "./commands/status/index.js";
+import { handleTeardown } from "./commands/teardown/index.js";
 
 const stubManifest: AppPlatformManifest = {
   domain: { preview: "my-app.preview.example.com", production: "my-app.example.com" },

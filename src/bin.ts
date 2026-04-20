@@ -38,18 +38,16 @@ import { StubRollbackClient } from "./platform/rollback-client.stub.js";
 import { StubStatusClient } from "./platform/status-client.stub.js";
 import { StubTeardownClient } from "./platform/teardown-client.stub.js";
 import { PackageManagerService } from "./commands/create/package-manager/package-manager.service.js";
-import {
-  handleCreate,
-  handleDeploy,
-  handleList,
-  handleLogs,
-  handlePromote,
-  handleRegister,
-  handleRollback,
-  handleStatus,
-  handleTeardown,
-} from "./commands.js";
-import type { CliResult, HandlerResult } from "./commands.js";
+import { handleCreate } from "./commands/create/index.js";
+import { handleRegister } from "./commands/register/index.js";
+import { handleDeploy } from "./commands/deploy/index.js";
+import { handlePromote } from "./commands/promote/index.js";
+import { handleRollback } from "./commands/rollback/index.js";
+import { handleLogs } from "./commands/logs/index.js";
+import { handleList } from "./commands/list/index.js";
+import { handleStatus } from "./commands/status/index.js";
+import { handleTeardown } from "./commands/teardown/index.js";
+import type { HandlerResult } from "./commands/create/index.js";
 import { runCli } from "./cli.js";
 
 interface RouteDeps {
@@ -267,7 +265,7 @@ const route = async (
   deps: RouteDeps,
   context: RouteContext,
   observability: ObservabilityClient,
-): Promise<CliResult> => {
+): Promise<{ exitCode: number; output: string }> => {
   const parseResult = parseArgs(argv);
   if (parseResult.command === "help") {
     return { exitCode: 0, output: HELP_TEXT };

@@ -1,12 +1,12 @@
 import { CliError } from "./errors/cli-errors.js";
 import type { ObservabilityClient } from "./observability/observability-client.port.js";
-import type { CliResult, HandlerResult } from "./commands.js";
+import type { HandlerResult } from "./commands/create/index.js";
 
 const runCli = async (
   command: string,
   handler: () => Promise<HandlerResult>,
   observability: ObservabilityClient,
-): Promise<CliResult> => {
+): Promise<{ exitCode: number; output: string }> => {
   observability.safeTrack(`${command}.start`);
   try {
     const result = await handler();
@@ -25,4 +25,9 @@ const runCli = async (
 };
 
 export { runCli };
-export type { CliResult };
+
+export interface CliResult {
+  exitCode: number;
+  output: string;
+}
+// Export type { CliResult };

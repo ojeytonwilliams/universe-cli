@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.5.0] - 2026-04-20
+
+### Refactor: Split command handlers and modularize CLI
+
+- Split all command handlers into per-command directories under `src/commands/`, clarifying code ownership and reducing coupling. Updated all imports and removed the old central `commands.ts` file. This modularization improves maintainability and makes it easier to extend or modify individual commands without risk of cross-command breakage. No user-facing behavior was changed.
+
 ## [3.4.0] - 2026-04-20
 
 ### Refactor: Move internal modules for maintainability

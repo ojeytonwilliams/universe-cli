@@ -6,6 +6,7 @@ import {
   RUNTIME_OPTIONS,
 } from "../commands/create/prompt/prompt.port.js";
 import type { CreateSelections } from "../commands/create/prompt/prompt.port.js";
+import type { ProjectReaderPort } from "../io/project-reader.port.js";
 import { ManifestInvalidError } from "../errors/cli-errors.js";
 
 // ---------------------------------------------------------------------------
@@ -78,6 +79,15 @@ interface PlatformManifestGenerator {
   validateManifest(yaml: string, yamlPath: string): PlatformManifest;
 }
 
+const readAndValidateManifest = async (
+  projectDirectory: string,
+  deps: { platformManifestGenerator: PlatformManifestGenerator; projectReader: ProjectReaderPort },
+): Promise<PlatformManifest> => {
+  const platformYamlPath = (await import("node:path")).join(projectDirectory, "platform.yaml");
+  const yaml = await deps.projectReader.readFile(platformYamlPath);
+  return deps.platformManifestGenerator.validateManifest(yaml, platformYamlPath);
+};
+
 class PlatformManifestService implements PlatformManifestGenerator {
   generatePlatformManifest(input: CreateSelections): string {
     const manifest = this.buildManifest(input);
@@ -130,7 +140,7 @@ class PlatformManifestService implements PlatformManifestGenerator {
   }
 }
 
-export { PlatformManifestSchema, PlatformManifestService };
+export { PlatformManifestSchema, PlatformManifestService, readAndValidateManifest };
 export type {
   AppPlatformManifest,
   PlatformManifest,

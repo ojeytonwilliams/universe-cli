@@ -1,4 +1,4 @@
-import type { HandlerResult } from "./commands.js";
+import type { HandlerResult } from "./commands/create/index.js";
 import type { ObservabilityClient } from "./observability/observability-client.port.js";
 
 import { runCli } from "./cli.js";
