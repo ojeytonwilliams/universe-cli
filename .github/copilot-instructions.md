@@ -2,7 +2,7 @@
 
 ## Skills to use (not exclusive)
 
-- Use the `workflow` skill when asked to "continue".
+- Use the `workflow` skill when asked to "continue". NOTE: when using this skill, the TODOs should be imported into your own todo system. However, you should also add to your todo system a note to mark each item in `design/todo.md` as done (e.g. by changing `- [ ]` to `- [x]`) when you complete it, so that the workflow skill can track progress and trigger the next item/phase correctly.
 - Use `typescript-guidelines` when writing TypeScript or .tsx files.
 - Use `typescript-test-guidelines` when writing tests or test.tsx files.
 
