@@ -6,6 +6,60 @@ Build a prototype of the `universe` CLI that preserves the 9-command ADR-007 sur
 
 `create` is the first command delivered through this cycle. Commands whose port contracts have not yet been defined emit a standardized `DeferredCommandError`; `register` is the next command to go through the full cycle, with contract definition as the implementation gate.
 
+## 1.1) CLI Layer Responsibility Architecture
+
+The CLI is structured across three layers with distinct concerns:
+
+### `bin.ts` — Argument Parsing, Routing, and Dependency Wiring
+
+Owns all logic before command dispatch:
+
+1. Parse `process.argv`
+2. If `--help` / `-h` / no command provided: print help text, set exit code, exit (never calls `runCli`)
+3. If unknown command: print error, set exit code, exit (never calls `runCli`)
+4. Validate argv shape for the matched command (arg counts, valid env values); on failure: print error, set exit code, exit
+5. Construct all concrete adapters and services
+6. Bind deps to the matched handler, producing a zero-argument thunk `() => Promise<HandlerResult>`
+7. Call `runCli(command, thunk, observability)`
+
+### `cli.ts` (`runCli`) — Dispatch and Observability
+
+Owns only command execution and observability:
+
+```ts
+const runCli = async (
+  command: string,
+  handler: () => Promise<HandlerResult>,
+  observability: ObservabilityClient,
+): Promise<CliResult>
+```
+
+- Calls `observability.safeTrack(`${command}.start`)`
+- Awaits `handler()`
+- On success: calls `observability.safeTrack(`${command}.success`, result.meta)`
+- On `CliError`: calls `observability.safeError` + `safeTrack(`${command}.failure`)`, returns error exit code
+- On unknown error: rethrows
+
+`cli.ts` has no knowledge of `argv`, `Services`, `Adapters`, or command names beyond the string passed in.
+
+### `commands.ts` — Command Implementation
+
+Each handler receives a flat deps object with exactly the members it needs. There is no shared `Deps` interface or `Services`/`Adapters` nesting. Each handler declares its own inline dep type:
+
+```ts
+// Example: handler receives only the dependencies it uses
+const handleDeploy = async (
+  { projectDirectory },
+  deps: {
+    platformManifestGenerator: PlatformManifestGenerator;
+    deployClient: DeployClient;
+    projectReader: ProjectReaderPort;
+  },
+)
+```
+
+The `HandlerResult` and `CliResult` types are exported and shared, but `Services` and `Adapters` interfaces are not used in handler contracts.
+
 ## 2) Users
 
 - **Primary:** Platform engineers designing and validating CLI architecture.
@@ -276,7 +330,7 @@ Port contracts are the implementation gate for each command. A command may not b
 - TypeScript interface with documented method signatures and error types.
 - Stub adapter that simulates realistic behaviour.
 - Unit tests for the stub adapter.
-- Wiring in `src/container.ts`; spike-guard test updated to include the new adapter.
+- Adapter instance creation in `bin.ts` when passed to `runCli`; spike-guard test updated to include the new adapter.
 
 **Ports defined for `create` (current)**
 
@@ -364,7 +418,32 @@ Maintain assumptions-first migration notes from the `create` spike to later comm
 - Interface designs can evolve but must preserve command-level contracts.
 - Interactive scaffolding is sufficient to validate the first vertical slice.
 
-## 8) Release / Milestones
+## 8) CLI Architecture Refactor Phases
+
+The CLI layer refactoring described in section 1.1 is implemented across three phases:
+
+### Phase 1 — Flatten `commands.ts` deps
+
+- Merge `Services` and `Adapters` into a single `Deps` interface
+- Update every handler signature to use `Pick<Deps, ...>` with flat, inline dep types instead of nested `services`/`adapters`
+- Update `bin.ts` and any tests that construct handler deps
+- `cli.ts` is unchanged in this phase
+
+### Phase 2 — Move validation and routing to `bin.ts`
+
+- Move the `COMMANDS` map and all `BadArgumentsError` throw logic out of `cli.ts` into `bin.ts`
+- Move `--help` handling into `bin.ts`
+- `bin.ts` binds deps to each handler producing a zero-arg thunk
+- `bin.ts` calls `runCli(command, thunk, observability)` only after successful validation
+
+### Phase 3 — Slim `runCli`
+
+- Remove `argv`, `cwd`, `Services`, `Adapters`, and `CommandHandler` from `cli.ts`
+- Update `runCli` to the three-argument signature described in section 1.1
+- Remove `CliDependencies` interface; it is no longer needed
+- Verify `cli.ts` imports only `ObservabilityClient` and types from `commands.ts`
+
+## 9) Release / Milestones
 
 - **M1:** Architecture skeleton + shared stub-command contract + assumptions register
 - **M2:** `create` prompt flow + validation + supported matrix
@@ -372,7 +451,7 @@ Maintain assumptions-first migration notes from the `create` spike to later comm
 - **M4:** Tests, docs, and migration notes for future command expansion
 - **M5:** `register` port contracts defined + stub adapters implemented + command handler delivered
 
-## 9) Risks and Mitigations
+## 10) Risks and Mitigations
 
 - **Risk:** Real APIs diverge from stub assumptions.
   - **Mitigation:** Contract-first ports + migration checklists + parity tests.
@@ -381,15 +460,15 @@ Maintain assumptions-first migration notes from the `create` spike to later comm
 - **Risk:** UX inconsistency across commands.
   - **Mitigation:** Shared command output guidelines + snapshot tests.
 
-## 10) Increment Addendum — Create Extensibility: Framework Layers + Package Manager Selection
+## 11) Increment Addendum — Create Extensibility: Framework Layers + Package Manager Selection
 
 This addendum incorporates the follow-on `create` PRD into the broader spike PRD above. It refines the `create` workflow to make framework scaffolding easier to extend and to support user-selectable package managers for Node.js projects without leaking package-manager concerns into runtime or framework layers.
 
-### 10.1 Product Summary
+### 11.1 Product Summary
 
 Extend `universe create` so framework scaffolding is easier to expand over time and users can choose a package manager for Node.js projects (initially `pnpm` and `bun`) without leaking package-manager specifics into framework/runtime responsibilities.
 
-### 10.2 Terminology
+### 11.2 Terminology
 
 **Runtime** in this codebase refers to the outermost execution boundary of a project. This covers:
 
@@ -400,7 +479,7 @@ TypeScript is explicitly **not** a runtime. It is a compile-time tool and devDep
 
 The runtime option `node_ts` is renamed to `node` to reflect that the runtime is Node.js alone. TypeScript support is selected independently via framework choice.
 
-### 10.3 Problem and Opportunity
+### 11.3 Problem and Opportunity
 
 Current scaffolding couples concerns in ways that slow extension:
 
@@ -410,7 +489,7 @@ Current scaffolding couples concerns in ways that slow extension:
 
 This increases change risk when adding new frameworks or package managers.
 
-### 10.4 Goals and Non-Goals
+### 11.4 Goals and Non-Goals
 
 #### Goals
 
@@ -426,7 +505,7 @@ This increases change risk when adding new frameworks or package managers.
 - Support package-manager selection for `static_web` runtime.
 - Change behavior of non-`create` commands.
 
-### 10.5 Users and Use Cases
+### 11.5 Users and Use Cases
 
 #### Target Users
 
@@ -442,7 +521,7 @@ This increases change risk when adding new frameworks or package managers.
 | internal developer | choose `pnpm` or `bun` during Node.js create                      | my scaffold matches team tooling                 |
 | platform engineer  | keep one package-manager dependency in command wiring             | dependency injection remains simple and testable |
 
-### 10.6 Scope
+### 11.6 Scope
 
 #### In Scope
 
@@ -462,9 +541,9 @@ This increases change risk when adding new frameworks or package managers.
 - Additional package managers beyond `pnpm` and `bun`.
 - End-user migration tooling for existing generated projects.
 
-### 10.7 Functional Requirements
+### 11.7 Functional Requirements
 
-- **FR-10.7.1:** Create input contract includes package manager for Node runtime only; runtime renamed to `node`.
+- **FR-11.7.1:** Create input contract includes package manager for Node runtime only; runtime renamed to `node`.
   - Rationale: package-manager choice is a first-class create decision; runtime naming must reflect what actually executes.
   - Acceptance Criteria:
     - `RUNTIME_OPTIONS` value changes from `node_ts` to `node`; label remains "Node.js (TypeScript)" until framework selection replaces the TypeScript assumption.
@@ -474,7 +553,7 @@ This increases change risk when adding new frameworks or package managers.
     - Confirmation output includes package manager for Node selections.
     - Input model supports values `pnpm` and `bun` for Node.
 
-- **FR-10.7.2:** Validation enforces runtime/framework/package-manager compatibility.
+- **FR-11.7.2:** Validation enforces runtime/framework/package-manager compatibility.
   - Rationale: invalid combinations must fail before writing files.
   - Acceptance Criteria:
     - `node` runtime selections require a supported package manager (`pnpm` or `bun`).
@@ -482,7 +561,7 @@ This increases change risk when adding new frameworks or package managers.
     - `static_web` selections reject framework choices that require Node (`typescript`, `express`).
     - Invalid combinations return typed create validation errors.
 
-- **FR-10.7.3:** Layer resolution supports package-manager stage and framework extensibility.
+- **FR-11.7.3:** Layer resolution supports package-manager stage and framework extensibility.
   - Rationale: layering must scale without hardcoded framework logic.
   - Acceptance Criteria:
     - Resolution order is deterministic: `always` -> `base/{runtime}` -> `package-managers/{manager}` (Node only) -> `frameworks/{framework}` -> `services/{service}`.
@@ -490,7 +569,7 @@ This increases change risk when adding new frameworks or package managers.
     - Framework resolution is data-driven/registry-oriented (no framework-specific branching required for future additions).
     - Missing/invalid layers fail with existing typed layer errors.
 
-- **FR-10.7.4:** Runtime layer owns only execution-environment primitives.
+- **FR-11.7.4:** Runtime layer owns only execution-environment primitives.
   - Rationale: the `node` runtime layer should contain only what is true of Node.js regardless of language, framework, or package manager. `docker-compose.dev.yml` starts here as a minimal ports-only skeleton; the package-manager layer extends it via config merge.
   - Acceptance Criteria:
     - Base layer is renamed from `base/node-js-typescript` to `base/node`.
@@ -498,7 +577,7 @@ This increases change risk when adding new frameworks or package managers.
     - `base/node` excludes TypeScript, `tsconfig.json`, `src/index.ts`, and all lifecycle scripts.
     - The package-manager layer extends `docker-compose.dev.yml` (via config merge) with `build:` context/target and `develop.watch` so the compose file has no hardcoded package-manager references at the base layer.
 
-- **FR-10.7.5:** TypeScript is modeled as a framework; framework layers own language tooling, entry points, and package-manager-agnostic scripts.
+- **FR-11.7.5:** TypeScript is modeled as a framework; framework layers own language tooling, entry points, and package-manager-agnostic scripts.
   - Rationale: TypeScript is a compile-time tool (devDependency), not a runtime. Treating it as a framework makes the selection explicit, keeps the runtime layer clean, and opens the door to non-TypeScript Node.js projects in future.
   - Acceptance Criteria:
     - `frameworks/typescript` is introduced and contributes: TypeScript devDependency, `tsconfig.json`, `src/index.ts` (minimal TS HTTP server), `build: "tsc -p tsconfig.json"` script, `start: "node dist/index.js"` script.
@@ -507,7 +586,7 @@ This increases change risk when adding new frameworks or package managers.
     - No framework layer includes `dev`, `preinstall`, or `start.sh` (those are package-manager-specific).
     - Scaffold outputs remain deterministic per selection tuple.
 
-- **FR-10.7.6:** Package-manager layers own manager-specific scaffold artifacts and Docker build configuration.
+- **FR-11.7.6:** Package-manager layers own manager-specific scaffold artifacts and Docker build configuration.
   - Rationale: The package-manager layer knows how to install dependencies and run the dev server, making it the right owner of `devInstall`/`devCmd` Dockerfile slots, the `.dockerignore`, and the Compose build/watch fragment.
   - Acceptance Criteria:
     - `package-managers/pnpm` layer contributes: `pnpm-workspace.yaml`, `start.sh` (`pnpm install && pnpm dev`), `dev: "pnpm run build && pnpm run start"` script, `preinstall: "npx only-allow pnpm"` script, `.dockerignore` (excludes `node_modules`, `dist`, `.git`), `docker-compose.dev.yml` fragment (adds `build: { context: ./, target: dev }` and `develop.watch` with sync/rebuild actions via config merge), and `dockerfileData` slots `devInstall` (copies lockfiles + runs corepack + pnpm install) and `devCmd` (`["pnpm", "run", "dev"]`).
@@ -515,7 +594,7 @@ This increases change risk when adding new frameworks or package managers.
     - Node+pnpm and Node+bun produce distinct package-manager artifacts from their respective layers.
     - Static scaffolds include no Node package-manager artifacts.
 
-- **FR-10.7.7:** Create orchestration uses a single package manager service.
+- **FR-11.7.7:** Create orchestration uses a single package manager service.
   - Rationale: preserve DI simplicity while supporting multiple managers.
   - Acceptance Criteria:
     - `handleCreate` depends on one service abstraction, not multiple manager adapters.
@@ -523,31 +602,31 @@ This increases change risk when adding new frameworks or package managers.
     - Service executes dependency specification and install steps for Node runtime.
     - Static runtime path skips package-manager execution.
 
-- **FR-10.7.8:** Test suite covers new behavior and preserves deterministic output.
+- **FR-11.7.8:** Test suite covers new behavior and preserves deterministic output.
   - Rationale: architecture changes require strong regression safety.
   - Acceptance Criteria:
     - Unit tests updated for prompt flow, validation rules, layer ordering, manager service dispatch, and adapters.
     - Integration create tests cover Node+pnpm, Node+bun, Static.
     - Snapshot and behavior tests remain deterministic across supported combinations.
 
-### 10.8 Non-Functional Requirements
+### 11.8 Non-Functional Requirements
 
-- **NFR-10.8.1:** Existing supported create combinations continue to work under renamed selections.
+- **NFR-11.8.1:** Existing supported create combinations continue to work under renamed selections.
   - Acceptance Criteria:
     - Node+Express scaffold succeeds as `node` + `express` + `pnpm` (was `node_ts` + `express`).
     - The former Node+None (TypeScript, no web framework) scaffold succeeds as `node` + `typescript` + `pnpm`.
     - Static scaffolds continue to succeed without manager selection.
     - Scaffold file output for equivalent selections is identical to the pre-refactor output.
 
-- **NFR-10.8.2:** Extensibility for future frameworks/package managers.
+- **NFR-11.8.2:** Extensibility for future frameworks/package managers.
   - Acceptance Criteria:
     - Adding one new framework or package manager requires adding new layer/adapter entries and tests, without modifying command handler control flow.
 
-- **NFR-10.8.3:** Deterministic scaffold output.
+- **NFR-11.8.3:** Deterministic scaffold output.
   - Acceptance Criteria:
     - Same selection tuple always produces identical file set/content ordering.
 
-### 10.9 Dependencies and Assumptions
+### 11.9 Dependencies and Assumptions
 
 #### Dependencies
 
@@ -563,7 +642,7 @@ This increases change risk when adding new frameworks or package managers.
 - `docker-compose.dev.yml` skeleton is owned by the runtime layer (ports only); the package-manager layer extends it via config merge to add `build:` context/target and `develop.watch` (Compose Watch). `start.sh` is still contributed by the package-manager layer but is not called by the compose file in the Docker-first workflow.
 - Framework layers own package-manager-agnostic scripts only (`build`, `start`); package-manager-specific scripts (`dev`, `preinstall`) and `start.sh` are always contributed by the package-manager layer.
 
-### 10.10 Risks and Mitigations
+### 11.10 Risks and Mitigations
 
 - **Risk:** Layer repartition causes broad snapshot churn.
   - **Mitigation:** phase changes and update tests in lock-step with deterministic ordering checks.
@@ -572,13 +651,13 @@ This increases change risk when adding new frameworks or package managers.
 - **Risk:** Adapter dispatch logic drifts from validation contract.
   - **Mitigation:** centralize manager mapping in service and cover with unit tests.
 
-### 10.11 Milestones
+### 11.11 Milestones
 
 - **Milestone 1:** Input/validation + service contract updates.
 - **Milestone 2:** Layer repartition + package-manager stage integration.
 - **Milestone 3:** Adapter/service wiring + full test stabilization.
 
-### 10.12 Resolved Design Decisions
+### 11.12 Resolved Design Decisions
 
 - **Runtime rename:** `node_ts` -> `node`. The runtime is Node.js. TypeScript is a framework, not a runtime.
 - **TypeScript as a framework:** `frameworks/typescript` is introduced as the framework choice for TypeScript projects without a web framework. `frameworks/express` includes its own TypeScript devDependency because all Express projects here are TypeScript-based. `frameworks/none` is bare Node.js with no TypeScript.
@@ -586,7 +665,7 @@ This increases change risk when adding new frameworks or package managers.
 - **Bun pinning semantics:** Bun matches pnpm exactly. Versions are defined by `package.json`; `bun install --frozen-lockfile` resolves the lockfile; `bun list --json` extracts installed versions for pinning.
 - **Package-manager-specific scripts:** `dev` and `preinstall` scripts are package-manager-specific and contributed by the package-manager layer. The `preinstall` hook enforces manager exclusivity where applicable (pnpm: `npx only-allow pnpm`; bun: no enforcement hook in v1). The `dev` script invokes the package manager's run command.
 
-### 10.13 Accepted Selection Tuples (Phase 1 Increment)
+### 11.13 Accepted Selection Tuples (Phase 1 Increment)
 
 All valid combinations enforced by `CreateInputValidationService`:
 
