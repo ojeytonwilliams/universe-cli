@@ -1,5 +1,14 @@
 # Changelog
 
+## [3.10.0] - 2026-04-20
+
+### feat: Add Dockerfile to static web scaffold
+
+- Static web apps now generate a `Dockerfile` using `node:22-alpine` and `npx serve public -l 3000`, giving them the same Docker-first DX as Node apps.
+- `docker-compose.dev.yml` updated to use `build: { context: ./, target: dev }` instead of `image: node:22-alpine` with a volume mount, so compose and the Dockerfile are consistent.
+- `.dockerignore` added to static scaffold (excludes `.git`).
+- Fixed a latent TypeScript error: `dockerfileData` in `FrameworkLayer` is now correctly typed as optional, since static framework entries rely on the base layer to supply all Dockerfile slots.
+
 ## [3.9.0] - 2026-04-20
 
 ### Docs: Update add-framework skill for config-driven workflow

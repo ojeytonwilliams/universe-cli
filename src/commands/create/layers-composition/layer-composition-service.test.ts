@@ -548,6 +548,21 @@ describe(LayerCompositionService, () => {
       ]);
     });
 
+    it("emits a Dockerfile for the Static combination", () => {
+      const result = service.resolveLayers({
+        confirmed: true,
+        databases: ["none"],
+        framework: "none",
+        name: "test",
+        platformServices: ["none"],
+        runtime: "static_web",
+      });
+
+      expect(result.files["Dockerfile"]).toBeDefined();
+      expect(result.files["Dockerfile"]).toContain("FROM node:22-alpine AS base");
+      expect(result.files["Dockerfile"]).toContain('CMD ["npx","serve","public","-l","3000"]');
+    });
+
     it.each(nodeCombinations)(
       "resolves Node.js + $framework + $packageManager + db:[$databaseLabel] + svc:[$serviceLabel]",
       ({ framework, packageManager, databases, platformServices }) => {

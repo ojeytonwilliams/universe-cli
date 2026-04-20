@@ -1,14 +1,19 @@
 const baseStaticLayer = {
+  dockerfileData: {
+    baseImage: "node:22-alpine",
+    devCmd: ["npx", "serve", "public", "-l", "3000"],
+    devCopySource: "COPY public public",
+    devInstall: "",
+  },
   files: {
+    ".dockerignore": [".git", ""].join("\n"),
     Procfile: "web: npx serve public -l 3000\n",
     "docker-compose.dev.yml": [
       "services:",
       "  web:",
-      "    image: node:22-alpine",
-      "    working_dir: /app",
-      "    volumes:",
-      "      - ./:/app",
-      '    command: sh -c "npx serve public -l 3000"',
+      "    build:",
+      "      context: ./",
+      "      target: dev",
       "    ports:",
       '      - "3000:3000"',
       "",
