@@ -79,8 +79,8 @@ Create `todo.md` from the requirements document using `assets/todo-template.md`.
 
 The TODO list must use explicit task types:
 
-- `CODE:` for implementation features
-- `TASK:` for non-coding work (validation, docs, review, configuration, release checks)
+- `CODE:` for coding work that adds or changes runtime behaviour (e.g. functions, classes, logic, UI interactions)
+- `TASK:` for non-coding work (validation, docs, review, configuration, release checks) and any code change that has no observable runtime behaviour to drive a failing test (e.g. adding a TypeScript interface file, a pure refactor with no logic changes, or adding a comment)
 
 Rules for TODO generation:
 
@@ -88,6 +88,7 @@ Rules for TODO generation:
 - every `CODE` item includes exactly one `Feature:` line
 - every `CODE` item includes at least one concrete `Acceptance` bullet
 - `CODE:` and `TASK:` items must be TODOs. e.g. `- [ ] CODE:`
+- if it's unclear whether a task is `CODE` or `TASK`, ask for clarification before proceeding
 - avoid vague verbs like "improve", "optimize", or "handle better" without measurable criteria
 - group TODOs into phases
 - the first phase includes all TODOs needed for a trivial working prototype
