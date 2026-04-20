@@ -426,8 +426,88 @@ body {
   ].join("\n"),
 };
 
+const htmlCssJsFrameworkLayer: FrameworkLayerData = {
+  devCopySource: "COPY public public",
+  files: {
+    "package.json": JSON.stringify({
+      devDependencies: {
+        serve: "^14",
+      },
+      name: "{{name}}",
+      private: true,
+      scripts: {
+        dev: "serve public -l {{port}}",
+      },
+    }),
+    "public/index.html": [
+      "<!doctype html>",
+      '<html lang="en">',
+      "  <head>",
+      '    <meta charset="utf-8" />',
+      '    <meta name="viewport" content="width=device-width, initial-scale=1" />',
+      "    <title>{{name}}</title>",
+      '    <link rel="stylesheet" href="./styles.css" />',
+      "  </head>",
+      "  <body>",
+      '    <main class="page">',
+      "      <h1>{{name}}</h1>",
+      "      <p>Your static Universe project is ready.</p>",
+      '      <button id="ping-button">Ping</button>',
+      '      <p id="output">Waiting...</p>',
+      "    </main>",
+      '    <script type="module" src="./main.js"></script>',
+      "  </body>",
+      "</html>",
+      "",
+    ].join("\n"),
+    "public/main.js": [
+      'const output = document.querySelector("#output");',
+      'const button = document.querySelector("#ping-button");',
+      "",
+      'button?.addEventListener("click", () => {',
+      "  if (output !== null) {",
+      '    output.textContent = "Universe static scaffold is alive.";',
+      "  }",
+      "});",
+      "",
+    ].join("\n"),
+    "public/styles.css": [
+      ":root {",
+      "  color-scheme: dark;",
+      "  font-family: Inter, system-ui, sans-serif;",
+      "}",
+      "",
+      "body {",
+      "  margin: 0;",
+      "  min-height: 100vh;",
+      "  background: linear-gradient(180deg, #0f172a, #020617);",
+      "  color: #e2e8f0;",
+      "}",
+      "",
+      ".page {",
+      "  margin: 0 auto;",
+      "  max-width: 48rem;",
+      "  padding: 6rem 1.5rem;",
+      "}",
+      "",
+      "button {",
+      "  border: 0;",
+      "  border-radius: 999px;",
+      "  background: #38bdf8;",
+      "  color: #020617;",
+      "  cursor: pointer;",
+      "  padding: 0.75rem 1.25rem;",
+      "}",
+      "",
+    ].join("\n"),
+  },
+  port: 3000,
+  watchSync: [{ path: "./public", target: "/app/public" }],
+};
+
 const frameworksLayer = {
   "frameworks/express": expressFrameworkLayer,
+  "frameworks/html-css-js": htmlCssJsFrameworkLayer,
   "frameworks/none": { files: {} as Record<string, string> },
   "frameworks/react-vite": { files: reactViteFiles },
   "frameworks/typescript": typescriptFrameworkLayer,
@@ -435,6 +515,7 @@ const frameworksLayer = {
 
 const typedFrameworkLayers: Record<string, FrameworkLayerData | undefined> = {
   "frameworks/express": expressFrameworkLayer,
+  "frameworks/html-css-js": htmlCssJsFrameworkLayer,
   "frameworks/typescript": typescriptFrameworkLayer,
 };
 

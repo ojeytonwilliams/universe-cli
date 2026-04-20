@@ -1,5 +1,14 @@
 # Changelog
 
+## [3.14.0] - 2026-04-20
+
+### feat: Add html-css-js framework and wire base-static-layer (Phase 4)
+
+- `frameworks/html-css-js` added as `FrameworkLayerData` with `port: 3000`, `devCopySource: "COPY public public"`, watchSync, and the public scaffold files (`index.html`, `main.js`, `styles.css`) migrated from `base-static-layer`.
+- `HTML_CSS_JS` registered in `FRAMEWORK_OPTIONS`, `FRAMEWORK_LABELS`, and `allowed-layer-combinations.json`.
+- `base-static-layer` typed as `RuntimeLayerData`; `dockerfileData`, `docker-compose.dev.yml`, and `public/` files removed.
+- `base/static` registered in `defaultRuntimeLayers` so the static runtime produces Dockerfile and docker-compose for typed framework combinations.
+
 ## [3.13.0] - 2026-04-20
 
 ### feat: Port template substitution in layer files (Phase 3)

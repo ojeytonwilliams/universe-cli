@@ -6,7 +6,7 @@
     "packageManagers": ["pnpm", "bun"]
   },
   "static_web": {
-    "frameworks": ["react-vite", "none"],
+    "frameworks": ["react-vite", "html-css-js", "none"],
     "databases": ["none"],
     "platformServices": ["none"],
     "packageManagers": []

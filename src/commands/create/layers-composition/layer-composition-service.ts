@@ -84,6 +84,7 @@ const defaultLayerRegistry: LayerRegistry = {
 
 const defaultRuntimeLayers: Record<string, RuntimeLayerData | undefined> = {
   "base/node": baseNodeLayer,
+  "base/static": baseStaticLayer,
 };
 
 const defaultFrameworkLayers: Record<string, FrameworkLayerData | undefined> = typedFrameworkLayers;

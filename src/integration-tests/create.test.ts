@@ -552,7 +552,7 @@ describe("create", () => {
       expect(app["develop"]).toBeDefined();
     });
 
-    it("static + none scaffold produces a .dockerignore and docker-compose.dev.yml", async () => {
+    it("static + none scaffold produces a .dockerignore", async () => {
       const selection = createStaticSelection("docker-static-test");
 
       const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection));
@@ -561,15 +561,7 @@ describe("create", () => {
       const files = collectGeneratedFiles(join(rootDirectory, selection.name));
 
       expect(files[".dockerignore"]).toBeDefined();
-
-      const compose = parseYaml(files["docker-compose.dev.yml"]!) as Record<string, unknown>;
-      const web = (compose["services"] as Record<string, unknown>)["web"] as Record<
-        string,
-        unknown
-      >;
-
-      expect(web["image"]).toBeUndefined();
-      expect(web["build"]).toBeDefined();
+      expect(files["docker-compose.dev.yml"]).toBeUndefined();
     });
   });
 });

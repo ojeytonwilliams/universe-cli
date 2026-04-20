@@ -101,7 +101,7 @@
 
 ## Phase 4: `html-css-js` framework and static runtime
 
-- [ ] CODE: Add `frameworks/html-css-js`
+- [x] CODE: Add `frameworks/html-css-js`
   - Feature: New `FrameworkLayerData` entry for plain HTML/CSS/JS projects per REQ-5
   - Files: `src/commands/create/layers-composition/layers/frameworks-layer.ts`
   - Acceptance:
@@ -112,13 +112,13 @@
     - `files` includes `public/index.html`, `public/main.js`, `public/styles.css` (content migrated from `base-static-layer`)
     - `pnpm test` passes
 
-- [ ] TASK: Register `html-css-js` in `prompt.port.ts` and `allowed-layer-combinations.json`
+- [x] TASK: Register `html-css-js` in `prompt.port.ts` and `allowed-layer-combinations.json`
   - Add `HTML_CSS_JS: "html-css-js"` to `FRAMEWORK_OPTIONS` in `src/commands/create/prompt/prompt.port.ts`
   - Add `[FRAMEWORK_OPTIONS.HTML_CSS_JS]: "HTML/CSS/JS"` to `FRAMEWORK_LABELS`
   - Add `"html-css-js"` to `static_web.frameworks` in `src/commands/create/allowed-layer-combinations.json`
   - `pnpm check` passes
 
-- [ ] CODE: Wire `base-static-layer` to `RuntimeLayerData`
+- [x] CODE: Wire `base-static-layer` to `RuntimeLayerData`
   - Feature: `base-static-layer` conforms to `RuntimeLayerData`; public scaffold files migrated to `frameworks/html-css-js` per REQ-10
   - Files: `src/commands/create/layers-composition/layers/base-static-layer.ts`
   - Acceptance:
