@@ -52,7 +52,7 @@ Always write tests first when working on CODE: features. Once the tests have bee
 
 Look at each of the phase's todo items. Mark them as checked if they have been completed. If any remain unchecked, implement those items before continuing.
 
-Once all the phase's todo items are checked, run `pnpm test`, `pnpm lint` and `pnpm check`. Fix any errors before proceeding.
+Once all the phase's todo items are checked, confirm the tests pass with `pnpm test`. If check and fix any code - only modify tests that are obviously broken. Once the tests pass, use `pnpm check` and fix any errors. Once they're passsing, run `pnpm lint:fix` and fix any remaining errors. Repeat in this order until test, check and lint all pass.
 
 Once the checks are passing, increment the package.json version respecting semver. Then create a CHANGELOG.md entry with the new version and current date e.g. ## [1.2.3] - 2026-03-19. Populate the CHANGELOG.md entry by summarizing the features implemented in the phase.
 
