@@ -67,7 +67,7 @@
 
 ## Phase 4: Update skill
 
-- [ ] TASK: Update `add-framework` skill to reflect the config-driven workflow
+- [x] TASK: Update `add-framework` skill to reflect the config-driven workflow
   - Edit `.claude/skills/add-framework/SKILL.md`
   - Replace the current Step 6 (edit `create-input-validation-service.ts` and add acceptance test) with: add the new framework key to the appropriate runtime's `"frameworks"` array in `src/commands/create/allowed-layer-combinations.json`
   - Renumber Step 7 (Verify) accordingly

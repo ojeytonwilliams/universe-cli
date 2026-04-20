@@ -1,6 +1,6 @@
 ---
 name: add-framework
-description: Interactively adds a new framework to the layers-composition system. Asks the user for the framework name, its runtime, display label, an optional boilerplate directory, and then makes all required code changes across frameworks-layer.ts, prompt.port.ts, clack-prompt.ts, and create-input-validation-service.ts.
+description: Interactively adds a new framework to the layers-composition system. Asks the user for the framework name, its runtime, display label, an optional boilerplate directory, and then makes all required code changes across allowed-layer-combinations.json, frameworks-layer.ts, and prompt.port.ts.
 allowed-tools: AskUserQuestion Read Edit Bash Glob
 ---
 
@@ -81,30 +81,21 @@ Open `src/commands/create/prompt/prompt.port.ts`.
    [FRAMEWORK_OPTIONS.MYFRAMEWORK]: "<Display Label>",
    ```
 
-## Step 5 — Wire the framework into the prompt
+## Step 5 — Register in allowed-layer-combinations config
 
-Open `src/commands/create/prompt/clack-prompt.ts`.
+Open `src/commands/create/allowed-layer-combinations.json`.
 
-- **node** runtime: add `FRAMEWORK_OPTIONS.<KEY>` to `NODE_FRAMEWORK_OPTIONS` (insert before `FRAMEWORK_OPTIONS.NONE`).
-- **static_web** runtime: add `FRAMEWORK_OPTIONS.<KEY>` to `STATIC_FRAMEWORK_OPTIONS` (insert before `FRAMEWORK_OPTIONS.NONE`).
+Add the new framework key to the appropriate runtime's `"frameworks"` array:
 
-## Step 6 — Register in input validation
+- **node** runtime: add `"<key>"` to `node.frameworks` (keep sorted alphabetically, before `"none"`).
+- **static_web** runtime: add `"<key>"` to `static_web.frameworks` (keep sorted alphabetically, before `"none"`).
 
-Open `src/commands/create/create-input-validation-service.ts`.
-
-Add the new framework key to the appropriate supported list:
-
-- **node** runtime: add `FRAMEWORK_OPTIONS.<KEY>` to `SUPPORTED_NODE_FRAMEWORKS` (keep sorted alphabetically).
-- **static_web** runtime: add `FRAMEWORK_OPTIONS.<KEY>` to `SUPPORTED_STATIC_FRAMEWORKS` (keep sorted alphabetically).
-
-Then open `src/commands/create/create-input-validation-service.test.ts` and add an acceptance test for the new combination, modelled on the existing `"accepts supported Static combination"` or `"accepts supported Node.js combinations"` test.
-
-## Step 7 — Verify
+## Step 6 — Verify
 
 Run `pnpm test` to confirm nothing is broken. If tests fail, diagnose and fix before finishing.
 
 ## Constraints
 
 - Follow all rules in the `typescript-guidelines` skill when editing `.ts` files.
-- Do not modify any files other than the four source files and their test files listed in steps 3–6.
-- Do not add new test files — modify existing ones only.
+- The only files that need changing when adding a framework are `allowed-layer-combinations.json`, `frameworks-layer.ts`, and `prompt.port.ts`.
+- Do not add new test files.

@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.9.0] - 2026-04-20
+
+### Docs: Update add-framework skill for config-driven workflow
+
+- Replaced Step 5 (edit `create-input-validation-service.ts` + add acceptance test) and Step 6 (edit `clack-prompt.ts`) with a single new Step 5: add the framework key to the appropriate runtime's `"frameworks"` array in `allowed-layer-combinations.json`.
+- Updated the frontmatter description and constraints to reflect that the only files requiring changes when adding a framework are `allowed-layer-combinations.json`, `frameworks-layer.ts`, and `prompt.port.ts`.
+
 ## [3.8.0] - 2026-04-20
 
 ### Refactor: Drive clack-prompt from allowed-layer-combinations config
