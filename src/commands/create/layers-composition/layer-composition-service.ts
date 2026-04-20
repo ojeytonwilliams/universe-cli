@@ -7,20 +7,29 @@ import {
   RUNTIME_OPTIONS,
 } from "../prompt/prompt.port.js";
 import type { CreateSelections } from "../prompt/prompt.port.js";
+import { buildComposeDevYaml } from "./build-compose-dev-yaml.js";
+import { buildDockerfileData } from "./build-dockerfile-data.js";
 import { alwaysLayer } from "./layers/always-layer.js";
 import { baseNodeLayer } from "./layers/base-node-layer.js";
 import { baseStaticLayer } from "./layers/base-static-layer.js";
 import { renderDockerfile } from "./layers/dockerfile-template.js";
 import type { DockerfileData } from "./layers/dockerfile-template.js";
-import { frameworksLayer } from "./layers/frameworks-layer.js";
-import { packageManagersLayer } from "./layers/package-managers-layer.js";
+import { frameworksLayer, typedFrameworkLayers } from "./layers/frameworks-layer.js";
+import type {
+  FrameworkLayerData,
+  PackageManagerLayerData,
+  RuntimeLayerData,
+} from "./layers/layer-types.js";
+import {
+  packageManagersLayer,
+  typedPackageManagerLayers,
+} from "./layers/package-managers-layer.js";
 import { servicesLayer } from "./layers/services-layer.js";
 
 type LayerStage = "always" | "base" | "frameworks" | "package-managers" | "services";
 type JsonValue = boolean | JsonObject | JsonValue[] | null | number | string;
 
 interface LayerData {
-  dockerfileData?: DockerfileData;
   files: Record<string, string>;
 }
 
@@ -72,6 +81,15 @@ const defaultLayerRegistry: LayerRegistry = {
   ...shimmedServicesLayer,
 };
 
+const defaultRuntimeLayers: Record<string, RuntimeLayerData | undefined> = {
+  "base/node": baseNodeLayer,
+};
+
+const defaultFrameworkLayers: Record<string, FrameworkLayerData | undefined> = typedFrameworkLayers;
+
+const defaultPackageManagerLayers: Record<string, PackageManagerLayerData | undefined> =
+  typedPackageManagerLayers;
+
 interface LayerComposer {
   resolveLayers(input: CreateSelections): ResolvedLayerSet;
 }
@@ -87,9 +105,23 @@ class LayerTemplateRenderer {
 
 class LayerCompositionService implements LayerComposer {
   private readonly layers: LayerRegistry;
+  private readonly runtimeLayers: Record<string, RuntimeLayerData | undefined>;
+  private readonly frameworkLayers: Record<string, FrameworkLayerData | undefined>;
+  private readonly packageManagerLayers: Record<string, PackageManagerLayerData | undefined>;
 
-  constructor(layers: LayerRegistry = defaultLayerRegistry) {
+  constructor(
+    layers: LayerRegistry = defaultLayerRegistry,
+    runtimeLayers: Record<string, RuntimeLayerData | undefined> = defaultRuntimeLayers,
+    frameworkLayers: Record<string, FrameworkLayerData | undefined> = defaultFrameworkLayers,
+    packageManagerLayers: Record<
+      string,
+      PackageManagerLayerData | undefined
+    > = defaultPackageManagerLayers,
+  ) {
     this.layers = layers;
+    this.runtimeLayers = runtimeLayers;
+    this.frameworkLayers = frameworkLayers;
+    this.packageManagerLayers = packageManagerLayers;
   }
 
   resolveLayers(input: CreateSelections): ResolvedLayerSet {
@@ -138,37 +170,29 @@ class LayerCompositionService implements LayerComposer {
       ]),
     );
 
-    const mergedDockerfileData = this.mergeDockerfileData(resolvedLayers);
-    if (this.isCompleteDockerfileData(mergedDockerfileData)) {
-      renderedFiles["Dockerfile"] = renderDockerfile(mergedDockerfileData);
+    const runtimeData = this.runtimeLayers[this.resolveRuntimeLayer(input.runtime)];
+    const frameworkData = this.frameworkLayers[this.resolveFrameworkLayer(input.framework)];
+
+    if (
+      runtimeData !== undefined &&
+      frameworkData !== undefined &&
+      input.packageManager !== undefined
+    ) {
+      const pmData =
+        this.packageManagerLayers[this.resolvePackageManagerLayer(input.packageManager)];
+
+      if (pmData !== undefined) {
+        renderedFiles["Dockerfile"] = renderDockerfile(
+          buildDockerfileData(runtimeData, frameworkData, pmData),
+        );
+        renderedFiles["docker-compose.dev.yml"] = buildComposeDevYaml(frameworkData, pmData);
+      }
     }
 
     return {
       files: renderedFiles,
       layers: resolvedLayers,
     };
-  }
-
-  private mergeDockerfileData(layers: ResolvedLayer[]): Partial<DockerfileData> {
-    const merged: Partial<DockerfileData> = {};
-    for (const layer of layers) {
-      const { dockerfileData } = this.layers[layer.name] ?? {};
-      if (dockerfileData !== undefined) {
-        Object.assign(merged, dockerfileData);
-      }
-    }
-    return merged;
-  }
-
-  private isCompleteDockerfileData(
-    data: Partial<DockerfileData>,
-  ): data is Required<DockerfileData> {
-    return (
-      data.baseImage !== undefined &&
-      data.devInstall !== undefined &&
-      data.devCopySource !== undefined &&
-      data.devCmd !== undefined
-    );
   }
 
   private resolveOrderedLayers(input: CreateSelections): ResolvedLayer[] {

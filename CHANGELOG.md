@@ -1,5 +1,15 @@
 # Changelog
 
+## [3.12.0] - 2026-04-20
+
+### feat: Wire node layers to typed interfaces and update composition service (Phase 2)
+
+- `baseNodeLayer` typed as `RuntimeLayerData`; `docker-compose.dev.yml` removed from its files.
+- `frameworks/express` and `frameworks/typescript` typed as `FrameworkLayerData`; `dockerfileData` removed; `port`, `devCopySource`, and `watchSync` added.
+- `package-managers/pnpm` typed as `PackageManagerLayerData`; `dockerfileData` and `docker-compose.dev.yml` removed; `devInstall`, `devCmd`, and `watchRebuild` added.
+- `LayerCompositionService` now calls `buildDockerfileData` and `buildComposeDevYaml` via typed layer registries instead of the `mergeDockerfileData` + `isCompleteDockerfileData` pattern.
+- Obsolete dockerfileData-merging unit tests removed; new Dockerfile and docker-compose.dev.yml emission tests added for express+pnpm and typescript+pnpm combinations.
+
 ## [3.11.0] - 2026-04-20
 
 ### feat: Add typed layer data interfaces and pure assembly functions

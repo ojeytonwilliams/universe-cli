@@ -35,7 +35,7 @@
 
 ## Phase 2: Wire node layers to new shapes and update composition service
 
-- [ ] CODE: Wire `base-node-layer` to `RuntimeLayerData`
+- [x] CODE: Wire `base-node-layer` to `RuntimeLayerData`
   - Feature: `base-node-layer` conforms to `RuntimeLayerData` per REQ-10
   - Files: `src/commands/create/layers-composition/layers/base-node-layer.ts`
   - Acceptance:
@@ -44,7 +44,7 @@
     - `docker-compose.dev.yml` absent from `files`
     - `pnpm test` passes
 
-- [ ] CODE: Wire `frameworks/express` and `frameworks/typescript` to `FrameworkLayerData`
+- [x] CODE: Wire `frameworks/express` and `frameworks/typescript` to `FrameworkLayerData`
   - Feature: Both node framework entries gain `port`, `devCopySource`, `watchSync` and lose `dockerfileData` per REQ-9
   - Files: `src/commands/create/layers-composition/layers/frameworks-layer.ts`
   - Acceptance:
@@ -53,7 +53,7 @@
     - `dockerfileData` absent from both entries
     - `pnpm test` passes
 
-- [ ] CODE: Wire `package-managers/pnpm` to `PackageManagerLayerData`
+- [x] CODE: Wire `package-managers/pnpm` to `PackageManagerLayerData`
   - Feature: `package-managers/pnpm` gains `devInstall`, `devCmd`, `watchRebuild` and loses `dockerfileData`; `docker-compose.dev.yml` removed from its `files` per REQ-8 (pnpm portion)
   - Files: `src/commands/create/layers-composition/layers/package-managers-layer.ts`
   - Acceptance:
@@ -63,7 +63,7 @@
     - `docker-compose.dev.yml` absent from `files`
     - `pnpm test` passes
 
-- [ ] CODE: Update composition service to use assembly functions
+- [x] CODE: Update composition service to use assembly functions
   - Feature: Replace `mergeDockerfileData` + `isCompleteDockerfileData` with `buildDockerfileData`; replace YAML deep-merge of compose layer files with `buildComposeDevYaml` per REQ-2, REQ-3
   - Files: `src/commands/create/layers-composition/layer-composition-service.ts`
   - Acceptance:
@@ -74,7 +74,7 @@
     - `frameworks/express + pnpm` and `frameworks/typescript + pnpm` combinations produce a valid `Dockerfile` and `docker-compose.dev.yml`
     - `pnpm test` passes
 
-- [ ] TASK: Remove obsolete dockerfileData-merging tests from `layer-composition-service.test.ts`
+- [x] TASK: Remove obsolete dockerfileData-merging tests from `layer-composition-service.test.ts`
   - Remove `"emits a Dockerfile when all four slots are populated across layers"`
   - Remove `"does not emit a Dockerfile when no layer contributes dockerfileData"`
   - Remove `"does not emit a Dockerfile when dockerfileData is only partially populated"`

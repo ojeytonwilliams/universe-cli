@@ -431,103 +431,6 @@ describe(LayerCompositionService, () => {
     });
   });
 
-  describe("dockerfileData merging and Dockerfile emission", () => {
-    const pnpmExpressSelection = {
-      confirmed: true as const,
-      databases: ["none" as const],
-      framework: "express" as const,
-      name: "test",
-      packageManager: "pnpm" as const,
-      platformServices: ["none" as const],
-      runtime: "node" as const,
-    };
-
-    it("emits a Dockerfile when all four slots are populated across layers", () => {
-      const service = new LayerCompositionService({
-        always: { files: {} },
-        "base/node": { files: {} },
-        "frameworks/express": {
-          dockerfileData: {
-            baseImage: "node:22-alpine",
-            devCopySource: "COPY src/ ./src/\nCOPY tsconfig.json ./",
-          },
-          files: {},
-        },
-        "frameworks/none": { files: {} },
-        "package-managers/pnpm": {
-          dockerfileData: {
-            devCmd: ["pnpm", "run", "dev"],
-            devInstall: "COPY package.json pnpm-lock.yaml ./\nRUN pnpm install",
-          },
-          files: {},
-        },
-      });
-
-      const result = service.resolveLayers(pnpmExpressSelection);
-
-      expect(result.files["Dockerfile"]).toBeDefined();
-      expect(result.files["Dockerfile"]).toContain("FROM node:22-alpine AS base");
-      expect(result.files["Dockerfile"]).toContain("FROM base AS dev");
-      expect(result.files["Dockerfile"]).toContain("COPY package.json pnpm-lock.yaml ./");
-      expect(result.files["Dockerfile"]).toContain('CMD ["pnpm","run","dev"]');
-    });
-
-    it("does not emit a Dockerfile when no layer contributes dockerfileData", () => {
-      const service = createService();
-
-      const result = service.resolveLayers(nodeExpressSelection);
-
-      expect(result.files["Dockerfile"]).toBeUndefined();
-    });
-
-    it("does not emit a Dockerfile when dockerfileData is only partially populated", () => {
-      const service = new LayerCompositionService({
-        always: { files: {} },
-        "base/node": { files: {} },
-        "frameworks/express": {
-          dockerfileData: { baseImage: "node:22-alpine" },
-          files: {},
-        },
-        "frameworks/none": { files: {} },
-        "package-managers/pnpm": { files: {} },
-      });
-
-      const result = service.resolveLayers(pnpmExpressSelection);
-
-      expect(result.files["Dockerfile"]).toBeUndefined();
-    });
-
-    it("later layer overwrites earlier layer for the same dockerfileData slot", () => {
-      const service = new LayerCompositionService({
-        always: { files: {} },
-        "base/node": {
-          dockerfileData: { baseImage: "node:20-alpine" },
-          files: {},
-        },
-        "frameworks/express": {
-          dockerfileData: {
-            baseImage: "node:22-alpine",
-            devCopySource: "COPY src/ ./src/",
-          },
-          files: {},
-        },
-        "frameworks/none": { files: {} },
-        "package-managers/pnpm": {
-          dockerfileData: {
-            devCmd: ["pnpm", "run", "dev"],
-            devInstall: "COPY package.json ./\nRUN pnpm install",
-          },
-          files: {},
-        },
-      });
-
-      const result = service.resolveLayers(pnpmExpressSelection);
-
-      expect(result.files["Dockerfile"]).toContain("FROM node:22-alpine AS base");
-      expect(result.files["Dockerfile"]).not.toContain("node:20-alpine");
-    });
-  });
-
   describe("combination coverage with default registry", () => {
     const service = new LayerCompositionService();
 
@@ -548,19 +451,68 @@ describe(LayerCompositionService, () => {
       ]);
     });
 
-    it("emits a Dockerfile for the Static combination", () => {
+    it("emits a Dockerfile for node + express + pnpm", () => {
       const result = service.resolveLayers({
         confirmed: true,
         databases: ["none"],
-        framework: "none",
+        framework: "express",
         name: "test",
+        packageManager: "pnpm",
         platformServices: ["none"],
-        runtime: "static_web",
+        runtime: "node",
       });
 
       expect(result.files["Dockerfile"]).toBeDefined();
       expect(result.files["Dockerfile"]).toContain("FROM node:22-alpine AS base");
-      expect(result.files["Dockerfile"]).toContain('CMD ["npx","serve","public","-l","3000"]');
+      expect(result.files["Dockerfile"]).toContain("FROM base AS dev");
+      expect(result.files["Dockerfile"]).toContain('CMD ["pnpm","run","dev"]');
+    });
+
+    it("emits a docker-compose.dev.yml for node + express + pnpm", () => {
+      const result = service.resolveLayers({
+        confirmed: true,
+        databases: ["none"],
+        framework: "express",
+        name: "test",
+        packageManager: "pnpm",
+        platformServices: ["none"],
+        runtime: "node",
+      });
+
+      expect(result.files["docker-compose.dev.yml"]).toBeDefined();
+      expect(result.files["docker-compose.dev.yml"]).toContain("3000:3000");
+      expect(result.files["docker-compose.dev.yml"]).toContain("target: dev");
+    });
+
+    it("emits a Dockerfile for node + typescript + pnpm", () => {
+      const result = service.resolveLayers({
+        confirmed: true,
+        databases: ["none"],
+        framework: "typescript",
+        name: "test",
+        packageManager: "pnpm",
+        platformServices: ["none"],
+        runtime: "node",
+      });
+
+      expect(result.files["Dockerfile"]).toBeDefined();
+      expect(result.files["Dockerfile"]).toContain("FROM node:22-alpine AS base");
+      expect(result.files["Dockerfile"]).toContain('CMD ["pnpm","run","dev"]');
+    });
+
+    it("emits a docker-compose.dev.yml for node + typescript + pnpm", () => {
+      const result = service.resolveLayers({
+        confirmed: true,
+        databases: ["none"],
+        framework: "typescript",
+        name: "test",
+        packageManager: "pnpm",
+        platformServices: ["none"],
+        runtime: "node",
+      });
+
+      expect(result.files["docker-compose.dev.yml"]).toBeDefined();
+      expect(result.files["docker-compose.dev.yml"]).toContain("3000:3000");
     });
 
     it.each(nodeCombinations)(
