@@ -12,7 +12,7 @@ import { PackageManagerService } from "../commands/create/package-manager/packag
 import { PnpmPackageManager } from "../commands/create/package-manager/pnpm-package-manager.js";
 import type { CreateSelections, Prompt } from "../commands/create/prompt/prompt.port.js";
 import { CreateInputValidationService } from "../services/create-input-validation-service.js";
-import { LayerCompositionService } from "../services/layer-composition-service.js";
+import { LayerCompositionService } from "../commands/create/layers-composition/layer-composition-service.js";
 import { PlatformManifestService } from "../services/platform-manifest-service.js";
 
 const assertDockerAvailable = (): void => {
