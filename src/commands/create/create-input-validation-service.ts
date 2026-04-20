@@ -5,7 +5,7 @@ import {
   InvalidMultiSelectError,
   InvalidNameError,
   TargetDirectoryExistsError,
-} from "../errors/cli-errors.js";
+} from "../../errors/cli-errors.js";
 import {
   DATABASE_OPTIONS,
   FRAMEWORK_LABELS,
@@ -14,7 +14,7 @@ import {
   PLATFORM_SERVICE_OPTIONS,
   RUNTIME_LABELS,
   RUNTIME_OPTIONS,
-} from "../commands/create/prompt/prompt.port.js";
+} from "./prompt/prompt.port.js";
 import type {
   CreateSelections,
   DatabaseOption,
@@ -22,7 +22,7 @@ import type {
   PackageManagerOption,
   PlatformServiceOption,
   RuntimeOption,
-} from "../commands/create/prompt/prompt.port.js";
+} from "./prompt/prompt.port.js";
 
 type PathExists = (path: string) => boolean;
 

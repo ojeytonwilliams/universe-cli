@@ -4,7 +4,7 @@ import type { PackageManagerRunner } from "./package-manager/package-manager.ser
 import type { PlatformManifestGenerator } from "../../services/platform-manifest-service.js";
 import type { Prompt } from "./prompt/prompt.port.js";
 import type { RepoInitialiser } from "../../io/repo-initialiser.port.js";
-import type { CreateInputValidator } from "../../services/create-input-validation-service.js";
+import type { CreateInputValidator } from "./create-input-validation-service.js";
 
 export interface HandlerResult {
   exitCode: number;

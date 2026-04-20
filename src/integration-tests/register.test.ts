@@ -5,7 +5,7 @@ import { createAdapterStubs } from "./adapter-stubs.js";
 import { StubPackageManager } from "../commands/create/package-manager/package-manager.stub.js";
 import { LocalFilesystemWriter } from "../io/local-filesystem-writer.js";
 import { LocalProjectReader } from "../io/local-project-reader.js";
-import { CreateInputValidationService } from "../services/create-input-validation-service.js";
+import { CreateInputValidationService } from "../commands/create/create-input-validation-service.js";
 import { LayerCompositionService } from "../commands/create/layers-composition/layer-composition-service.js";
 import { PackageManagerService } from "../commands/create/package-manager/package-manager.service.js";
 import { PlatformManifestService } from "../services/platform-manifest-service.js";

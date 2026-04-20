@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { createAdapterStubs } from "./adapter-stubs.js";
 import { LocalFilesystemWriter } from "../io/local-filesystem-writer.js";
 import { LocalProjectReader } from "../io/local-project-reader.js";
-import { CreateInputValidationService } from "../services/create-input-validation-service.js";
+import { CreateInputValidationService } from "../commands/create/create-input-validation-service.js";
 import { LayerCompositionService } from "../commands/create/layers-composition/layer-composition-service.js";
 import { PlatformManifestService } from "../services/platform-manifest-service.js";
 import { route } from "../bin.js";

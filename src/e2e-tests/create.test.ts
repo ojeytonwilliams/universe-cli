@@ -11,7 +11,7 @@ import { BunPackageManager } from "../commands/create/package-manager/bun-packag
 import { PackageManagerService } from "../commands/create/package-manager/package-manager.service.js";
 import { PnpmPackageManager } from "../commands/create/package-manager/pnpm-package-manager.js";
 import type { CreateSelections, Prompt } from "../commands/create/prompt/prompt.port.js";
-import { CreateInputValidationService } from "../services/create-input-validation-service.js";
+import { CreateInputValidationService } from "../commands/create/create-input-validation-service.js";
 import { LayerCompositionService } from "../commands/create/layers-composition/layer-composition-service.js";
 import { PlatformManifestService } from "../services/platform-manifest-service.js";
 
