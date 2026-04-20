@@ -6,6 +6,7 @@ const RUNTIME_OPTIONS = {
 const FRAMEWORK_OPTIONS = {
   EXPRESS: "express",
   NONE: "none",
+  REACT_VITE: "react-vite",
   TYPESCRIPT: "typescript",
 } as const;
 
@@ -46,6 +47,7 @@ const RUNTIME_LABELS = {
 const FRAMEWORK_LABELS = {
   [FRAMEWORK_OPTIONS.EXPRESS]: "Express",
   [FRAMEWORK_OPTIONS.NONE]: "None",
+  [FRAMEWORK_OPTIONS.REACT_VITE]: "React (Vite)",
   [FRAMEWORK_OPTIONS.TYPESCRIPT]: "TypeScript",
 } as const satisfies Record<FrameworkOption, string>;
 

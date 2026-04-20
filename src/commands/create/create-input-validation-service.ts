@@ -37,6 +37,10 @@ const SUPPORTED_NODE_FRAMEWORKS: FrameworkOption[] = [
   FRAMEWORK_OPTIONS.EXPRESS,
   FRAMEWORK_OPTIONS.NONE,
 ];
+const SUPPORTED_STATIC_FRAMEWORKS: FrameworkOption[] = [
+  FRAMEWORK_OPTIONS.REACT_VITE,
+  FRAMEWORK_OPTIONS.NONE,
+];
 const SUPPORTED_NODE_DATABASES: DatabaseOption[] = [
   DATABASE_OPTIONS.POSTGRESQL,
   DATABASE_OPTIONS.REDIS,
@@ -139,7 +143,7 @@ class CreateInputValidationService implements CreateInputValidator {
   }
 
   private validateStaticSelections(input: CreateSelections): void {
-    if (input.framework !== FRAMEWORK_OPTIONS.NONE) {
+    if (!SUPPORTED_STATIC_FRAMEWORKS.includes(input.framework)) {
       throw new CreateUnsupportedFrameworkError(
         getFrameworkLabel(input.framework),
         getRuntimeLabel(input.runtime),

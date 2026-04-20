@@ -65,6 +65,21 @@ describe(CreateInputValidationService, () => {
     expect(result.runtime).toBe("static_web");
   });
 
+  it("accepts react-vite framework for static_web runtime", () => {
+    const service = new CreateInputValidationService(() => false);
+
+    const result = service.validateCreateInput({
+      confirmed: true,
+      databases: ["none"],
+      framework: "react-vite",
+      name: "site-app",
+      platformServices: ["none"],
+      runtime: "static_web",
+    });
+
+    expect(result.framework).toBe("react-vite");
+  });
+
   it("rejects invalid project names with typed errors", () => {
     const service = new CreateInputValidationService(() => false);
 

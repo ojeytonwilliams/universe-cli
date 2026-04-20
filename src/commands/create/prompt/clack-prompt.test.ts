@@ -124,7 +124,10 @@ describe(ClackPrompt, () => {
 
     await adapter.promptForCreateInputs();
 
-    expect(frameworkOptions[1]).toStrictEqual([{ label: "None", value: "none" }]);
+    expect(frameworkOptions[1]).toStrictEqual([
+      { label: "React (Vite)", value: "react-vite" },
+      { label: "None", value: "none" },
+    ]);
   });
 
   it("includes TypeScript in framework options for Node runtime", async () => {
