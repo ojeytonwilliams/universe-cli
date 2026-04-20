@@ -18,7 +18,7 @@ import {
   TeardownError,
 } from "./errors/cli-errors.js";
 import type { ListResponse } from "./platform/list-client.port.js";
-import type { CreateSelections } from "./prompt/prompt.port.js";
+import type { CreateSelections } from "./commands/create/prompt/prompt.port.js";
 import type { StatusResponse } from "./platform/status-client.port.js";
 import type { TeardownReceipt } from "./platform/teardown-client.port.js";
 import type { ResolvedLayerSet } from "./services/layer-composition-service.js";

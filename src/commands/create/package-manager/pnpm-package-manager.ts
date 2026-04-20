@@ -2,7 +2,7 @@ import { execFile } from "node:child_process";
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { promisify } from "node:util";
-import { PackageInstallError } from "../errors/cli-errors.js";
+import { PackageInstallError } from "../../../errors/cli-errors.js";
 import type { PackageManager } from "./package-manager.port.js";
 
 const execFileAsync = promisify(execFile);

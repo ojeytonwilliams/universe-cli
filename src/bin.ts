@@ -8,7 +8,7 @@ import type { FilesystemWriter } from "./io/filesystem-writer.port.js";
 import type { ListClient } from "./platform/list-client.port.js";
 import type { RepoInitialiser } from "./io/repo-initialiser.port.js";
 import type { PromoteClient } from "./platform/promote-client.port.js";
-import type { Prompt } from "./prompt/prompt.port.js";
+import type { Prompt } from "./commands/create/prompt/prompt.port.js";
 import type { ProjectReaderPort } from "./io/project-reader.port.js";
 import type { RegistrationClient } from "./platform/registration-client.port.js";
 import type { RollbackClient } from "./platform/rollback-client.port.js";
@@ -18,13 +18,13 @@ import type { LogsClient } from "./platform/logs-client.port.js";
 import type { LayerComposer } from "./services/layer-composition-service.js";
 import type { PlatformManifestGenerator } from "./services/platform-manifest-service.js";
 import type { CreateInputValidator } from "./services/create-input-validation-service.js";
-import type { PackageManagerRunner } from "./package-manager/package-manager.service.js";
-import { ClackPrompt } from "./prompt/clack-prompt.js";
+import type { PackageManagerRunner } from "./commands/create/package-manager/package-manager.service.js";
+import { ClackPrompt } from "./commands/create/prompt/clack-prompt.js";
 import { LocalFilesystemWriter } from "./io/local-filesystem-writer.js";
 import { LocalProjectReader } from "./io/local-project-reader.js";
 import { GitRepoInitialiser } from "./io/git-repo-initialiser.js";
-import { PnpmPackageManager } from "./package-manager/pnpm-package-manager.js";
-import { BunPackageManager } from "./package-manager/bun-package-manager.js";
+import { PnpmPackageManager } from "./commands/create/package-manager/pnpm-package-manager.js";
+import { BunPackageManager } from "./commands/create/package-manager/bun-package-manager.js";
 import { CreateInputValidationService } from "./services/create-input-validation-service.js";
 import { LayerCompositionService } from "./services/layer-composition-service.js";
 import { PlatformManifestService } from "./services/platform-manifest-service.js";
@@ -37,7 +37,7 @@ import { StubRegistrationClient } from "./platform/registration-client.stub.js";
 import { StubRollbackClient } from "./platform/rollback-client.stub.js";
 import { StubStatusClient } from "./platform/status-client.stub.js";
 import { StubTeardownClient } from "./platform/teardown-client.stub.js";
-import { PackageManagerService } from "./package-manager/package-manager.service.js";
+import { PackageManagerService } from "./commands/create/package-manager/package-manager.service.js";
 import {
   handleCreate,
   handleDeploy,

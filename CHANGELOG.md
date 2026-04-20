@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.4.0] - 2026-04-20
+
+### Refactor: Move internal modules for maintainability
+
+- Moved `package-manager` and `prompt` modules into `src/commands/create/` to clarify ownership and reduce top-level clutter. This change makes the codebase easier to navigate and sets up for future refactors of the create command. All imports and tests were updated to reference the new locations. No user-facing behavior was changed.
+
 ## [3.3.6] - 2026-04-17
 
 ### Integration tests for Docker scaffold output

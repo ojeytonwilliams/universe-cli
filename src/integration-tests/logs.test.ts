@@ -8,9 +8,9 @@ import { CreateInputValidationService } from "../services/create-input-validatio
 import { LayerCompositionService } from "../services/layer-composition-service.js";
 import { PlatformManifestService } from "../services/platform-manifest-service.js";
 import { route } from "../bin.js";
-import type { CreateSelections, Prompt } from "../prompt/prompt.port.js";
-import { PackageManagerService } from "../package-manager/package-manager.service.js";
-import { StubPackageManager } from "../package-manager/package-manager.stub.js";
+import type { CreateSelections, Prompt } from "../commands/create/prompt/prompt.port.js";
+import { PackageManagerService } from "../commands/create/package-manager/package-manager.service.js";
+import { StubPackageManager } from "../commands/create/package-manager/package-manager.stub.js";
 
 const createNodeSelection = (name: string): CreateSelections => ({
   confirmed: true,

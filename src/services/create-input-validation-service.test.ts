@@ -6,7 +6,10 @@ import {
   InvalidNameError,
   TargetDirectoryExistsError,
 } from "../errors/cli-errors.js";
-import type { CreateSelections, PackageManagerOption } from "../prompt/prompt.port.js";
+import type {
+  CreateSelections,
+  PackageManagerOption,
+} from "../commands/create/prompt/prompt.port.js";
 import { CreateInputValidationService } from "./create-input-validation-service.js";
 
 const validNodeSelection: CreateSelections = {

@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { PackageInstallError } from "../errors/cli-errors.js";
+import { PackageInstallError } from "../../../errors/cli-errors.js";
 import { PnpmPackageManager } from "./pnpm-package-manager.js";
 
 const PNPM_LIST_OUTPUT = JSON.stringify([

@@ -4,7 +4,7 @@ import type { FilesystemWriter } from "./io/filesystem-writer.port.js";
 import type { ListClient } from "./platform/list-client.port.js";
 import type { RepoInitialiser } from "./io/repo-initialiser.port.js";
 import type { PromoteClient } from "./platform/promote-client.port.js";
-import type { Prompt } from "./prompt/prompt.port.js";
+import type { Prompt } from "./commands/create/prompt/prompt.port.js";
 import type { ProjectReaderPort } from "./io/project-reader.port.js";
 import type { RegistrationClient } from "./platform/registration-client.port.js";
 import type { RollbackClient } from "./platform/rollback-client.port.js";
@@ -17,7 +17,7 @@ import type {
   PlatformManifestGenerator,
 } from "./services/platform-manifest-service.js";
 import type { CreateInputValidator } from "./services/create-input-validation-service.js";
-import type { PackageManagerRunner } from "./package-manager/package-manager.service.js";
+import type { PackageManagerRunner } from "./commands/create/package-manager/package-manager.service.js";
 
 interface CliResult {
   exitCode: number;

@@ -14,7 +14,7 @@ import {
   PLATFORM_SERVICE_OPTIONS,
   RUNTIME_LABELS,
   RUNTIME_OPTIONS,
-} from "../prompt/prompt.port.js";
+} from "../commands/create/prompt/prompt.port.js";
 import type {
   CreateSelections,
   DatabaseOption,
@@ -22,7 +22,7 @@ import type {
   PackageManagerOption,
   PlatformServiceOption,
   RuntimeOption,
-} from "../prompt/prompt.port.js";
+} from "../commands/create/prompt/prompt.port.js";
 
 type PathExists = (path: string) => boolean;
 
