@@ -2,17 +2,13 @@
 
 ## Phase 1: Layer type interfaces and pure assembly functions
 
-- [ ] CODE: Define typed layer data interfaces
-  - Feature: New TypeScript interfaces `RuntimeLayerData`, `FrameworkLayerData`, `PackageManagerLayerData`, `WatchSyncEntry`, `WatchRebuildEntry` as specified in REQ-1
-  - Files: `src/commands/create/layers-composition/layers/layer-types.ts`
-  - Acceptance:
-    - `RuntimeLayerData` has `baseImage: string` and `files: Record<string, string>`
-    - `FrameworkLayerData` has `devCopySource: string`, `port: number`, `watchSync: WatchSyncEntry[]`, `files: Record<string, string>`
-    - `PackageManagerLayerData` has `devInstall: string`, `devCmd: string[]`, `watchRebuild: WatchRebuildEntry[]`, `files: Record<string, string>`
-    - `WatchSyncEntry` has `path: string` and `target: string`
-    - `WatchRebuildEntry` has `path: string`
-    - All types exported from `layer-types.ts`
-    - `pnpm check` passes
+- [ ] TASK: Define typed layer data interfaces
+  - Create `src/commands/create/layers-composition/layers/layer-types.ts` exporting `RuntimeLayerData`, `FrameworkLayerData`, `PackageManagerLayerData`, `WatchSyncEntry`, `WatchRebuildEntry` as specified in REQ-1
+  - `RuntimeLayerData` has `baseImage: string` and `files: Record<string, string>`
+  - `FrameworkLayerData` has `devCopySource: string`, `port: number`, `watchSync: WatchSyncEntry[]`, `files: Record<string, string>`
+  - `PackageManagerLayerData` has `devInstall: string`, `devCmd: string[]`, `watchRebuild: WatchRebuildEntry[]`, `files: Record<string, string>`
+  - `WatchSyncEntry` has `path: string` and `target: string`; `WatchRebuildEntry` has `path: string`
+  - `pnpm check` passes
 
 - [ ] CODE: `buildDockerfileData` assembly function
   - Feature: Pure function that assembles `Required<DockerfileData>` from typed layer inputs, replacing the `mergeDockerfileData` + `isCompleteDockerfileData` pattern per REQ-2
@@ -198,7 +194,7 @@
 
 | Requirement ID | TODO Item                                                                                        | Status |
 | -------------- | ------------------------------------------------------------------------------------------------ | ------ |
-| REQ-1          | Phase 1 / CODE: Define typed layer data interfaces                                               | mapped |
+| REQ-1          | Phase 1 / TASK: Define typed layer data interfaces                                               | mapped |
 | REQ-2          | Phase 1 / CODE: `buildDockerfileData` assembly function                                          | mapped |
 | REQ-2          | Phase 2 / CODE: Update composition service to use assembly functions                             | mapped |
 | REQ-3          | Phase 1 / CODE: `buildComposeDevYaml` assembly function                                          | mapped |
@@ -222,4 +218,4 @@
 | NFR-1          | Phase 1 / CODE: `buildComposeDevYaml` assembly function                                          | mapped |
 | NFR-2          | Phase 3 / CODE: Add `port` to `TemplateContext` and renderer                                     | mapped |
 | NFR-2          | Phase 3 / CODE: Replace hardcoded port with `{{port}}` in node framework files                   | mapped |
-| NFR-3          | Phase 1 / CODE: Define typed layer data interfaces                                               | mapped |
+| NFR-3          | Phase 1 / TASK: Define typed layer data interfaces                                               | mapped |
