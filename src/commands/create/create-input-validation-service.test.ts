@@ -28,17 +28,6 @@ describe(CreateInputValidationService, () => {
     expect(result).toStrictEqual(validNodeSelection);
   });
 
-  it("accepts typescript framework for Node runtime", () => {
-    const service = new CreateInputValidationService(() => false);
-
-    const result = service.validateCreateInput({
-      ...validNodeSelection,
-      framework: "typescript",
-    });
-
-    expect(result.framework).toBe("typescript");
-  });
-
   it("accepts bun as package manager for Node runtime", () => {
     const service = new CreateInputValidationService(() => false);
 
@@ -63,21 +52,6 @@ describe(CreateInputValidationService, () => {
     });
 
     expect(result.runtime).toBe("static_web");
-  });
-
-  it("accepts react-vite framework for static_web runtime", () => {
-    const service = new CreateInputValidationService(() => false);
-
-    const result = service.validateCreateInput({
-      confirmed: true,
-      databases: ["none"],
-      framework: "react-vite",
-      name: "site-app",
-      platformServices: ["none"],
-      runtime: "static_web",
-    });
-
-    expect(result.framework).toBe("react-vite");
   });
 
   it("rejects invalid project names with typed errors", () => {
@@ -172,38 +146,6 @@ describe(CreateInputValidationService, () => {
       });
 
     expect(act).toThrow(CreateUnsupportedCombinationError);
-  });
-
-  it("rejects typescript framework for static_web runtime", () => {
-    const service = new CreateInputValidationService(() => false);
-
-    const act = () =>
-      service.validateCreateInput({
-        confirmed: true,
-        databases: ["none"],
-        framework: "typescript",
-        name: "site-app",
-        platformServices: ["none"],
-        runtime: "static_web",
-      });
-
-    expect(act).toThrow(CreateUnsupportedFrameworkError);
-  });
-
-  it("rejects express framework for static_web runtime", () => {
-    const service = new CreateInputValidationService(() => false);
-
-    const act = () =>
-      service.validateCreateInput({
-        confirmed: true,
-        databases: ["none"],
-        framework: "express",
-        name: "site-app",
-        platformServices: ["none"],
-        runtime: "static_web",
-      });
-
-    expect(act).toThrow(CreateUnsupportedFrameworkError);
   });
 
   it("rejects unsupported Static database combinations", () => {

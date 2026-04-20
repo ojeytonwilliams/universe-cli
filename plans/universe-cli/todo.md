@@ -29,7 +29,7 @@
 
 ## Phase 2: Refactor validation service
 
-- [ ] CODE: Drive `create-input-validation-service.ts` from config
+- [x] CODE: Drive `create-input-validation-service.ts` from config
   - Feature: Validation service reads allowed combinations from `allowedCombinations` instead of hardcoded `SUPPORTED_*` arrays; the separate `validateNodeSelections` and `validateStaticSelections` methods are unified into a single `validateRuntimeSelections(input, config: RuntimeCombinations)` method
   - Files: `src/commands/create/create-input-validation-service.ts`
   - Acceptance:
@@ -41,7 +41,7 @@
     - Package manager rule: when `config.packageManagers.length > 0`, `input.packageManager` must be present and included in `config.packageManagers`; when `config.packageManagers.length === 0`, `input.packageManager` must be `undefined`
     - `pnpm test` passes
 
-- [ ] TASK: Remove config-data tests from `src/commands/create/create-input-validation-service.test.ts`
+- [x] TASK: Remove config-data tests from `src/commands/create/create-input-validation-service.test.ts`
   - Remove `"accepts typescript framework for Node runtime"`
   - Remove `"accepts react-vite framework for static_web runtime"`
   - Remove `"rejects typescript framework for static_web runtime"`

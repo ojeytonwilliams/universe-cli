@@ -6,56 +6,15 @@ import {
   InvalidNameError,
   TargetDirectoryExistsError,
 } from "../../errors/cli-errors.js";
-import {
-  DATABASE_OPTIONS,
-  FRAMEWORK_LABELS,
-  FRAMEWORK_OPTIONS,
-  PACKAGE_MANAGER_OPTIONS,
-  PLATFORM_SERVICE_OPTIONS,
-  RUNTIME_LABELS,
-  RUNTIME_OPTIONS,
-} from "./prompt/prompt.port.js";
-import type {
-  CreateSelections,
-  DatabaseOption,
-  FrameworkOption,
-  PackageManagerOption,
-  PlatformServiceOption,
-  RuntimeOption,
-} from "./prompt/prompt.port.js";
+import { allowedCombinations } from "./allowed-layer-combinations.js";
+import type { RuntimeCombinations } from "./allowed-layer-combinations.js";
+import { FRAMEWORK_LABELS, RUNTIME_LABELS } from "./prompt/prompt.port.js";
+import type { CreateSelections, FrameworkOption, RuntimeOption } from "./prompt/prompt.port.js";
 
 type PathExists = (path: string) => boolean;
 
 const PROJECT_NAME_PATTERN = /^[a-z][a-z0-9-]{2,49}$/;
-
-const NODE_RUNTIME = RUNTIME_OPTIONS.NODE;
-const STATIC_RUNTIME = RUNTIME_OPTIONS.STATIC_WEB;
-const NONE_VALUE = DATABASE_OPTIONS.NONE;
-
-const SUPPORTED_NODE_FRAMEWORKS: FrameworkOption[] = [
-  FRAMEWORK_OPTIONS.TYPESCRIPT,
-  FRAMEWORK_OPTIONS.EXPRESS,
-  FRAMEWORK_OPTIONS.NONE,
-];
-const SUPPORTED_STATIC_FRAMEWORKS: FrameworkOption[] = [
-  FRAMEWORK_OPTIONS.REACT_VITE,
-  FRAMEWORK_OPTIONS.NONE,
-];
-const SUPPORTED_NODE_DATABASES: DatabaseOption[] = [
-  DATABASE_OPTIONS.POSTGRESQL,
-  DATABASE_OPTIONS.REDIS,
-  DATABASE_OPTIONS.NONE,
-];
-const SUPPORTED_NODE_SERVICES: PlatformServiceOption[] = [
-  PLATFORM_SERVICE_OPTIONS.AUTH,
-  PLATFORM_SERVICE_OPTIONS.EMAIL,
-  PLATFORM_SERVICE_OPTIONS.ANALYTICS,
-  PLATFORM_SERVICE_OPTIONS.NONE,
-];
-const SUPPORTED_NODE_PACKAGE_MANAGERS: PackageManagerOption[] = [
-  PACKAGE_MANAGER_OPTIONS.PNPM,
-  PACKAGE_MANAGER_OPTIONS.BUN,
-];
+const NONE_VALUE = "none";
 
 const getRuntimeLabel = (runtime: string): string => {
   if (runtime in RUNTIME_LABELS) {
@@ -105,69 +64,43 @@ class CreateInputValidationService implements CreateInputValidator {
   }
 
   private validateRuntimeAndCombinations(input: CreateSelections): void {
-    if (input.runtime === NODE_RUNTIME) {
-      this.validateNodeSelections(input);
-      return;
+    const config = allowedCombinations[input.runtime];
+
+    if (config === undefined) {
+      throw new CreateUnsupportedRuntimeError(getRuntimeLabel(input.runtime));
     }
 
-    if (input.runtime === STATIC_RUNTIME) {
-      this.validateStaticSelections(input);
-      return;
-    }
-
-    throw new CreateUnsupportedRuntimeError(getRuntimeLabel(input.runtime));
+    this.validateRuntimeSelections(input, config);
   }
 
-  private validateNodeSelections(input: CreateSelections): void {
-    if (!SUPPORTED_NODE_FRAMEWORKS.includes(input.framework)) {
+  private validateRuntimeSelections(input: CreateSelections, config: RuntimeCombinations): void {
+    if (!config.frameworks.includes(input.framework)) {
       throw new CreateUnsupportedFrameworkError(
         getFrameworkLabel(input.framework),
         getRuntimeLabel(input.runtime),
       );
     }
 
-    if (
-      input.packageManager === undefined ||
-      !SUPPORTED_NODE_PACKAGE_MANAGERS.includes(input.packageManager)
-    ) {
+    if (config.packageManagers.length > 0) {
+      if (
+        input.packageManager === undefined ||
+        !config.packageManagers.includes(input.packageManager)
+      ) {
+        throw new CreateUnsupportedCombinationError(
+          `Runtime requires a supported package manager (${config.packageManagers.join(", ")})`,
+        );
+      }
+    } else if (input.packageManager !== undefined) {
       throw new CreateUnsupportedCombinationError(
-        `Node runtime requires a supported package manager (${SUPPORTED_NODE_PACKAGE_MANAGERS.join(", ")})`,
+        "This runtime does not support a package manager",
       );
     }
 
     this.ensureNoneExclusive("databases", input.databases);
     this.ensureNoneExclusive("platform services", input.platformServices);
 
-    this.ensureAllowedValues(input.databases, SUPPORTED_NODE_DATABASES, "databases");
-    this.ensureAllowedValues(input.platformServices, SUPPORTED_NODE_SERVICES, "platform services");
-  }
-
-  private validateStaticSelections(input: CreateSelections): void {
-    if (!SUPPORTED_STATIC_FRAMEWORKS.includes(input.framework)) {
-      throw new CreateUnsupportedFrameworkError(
-        getFrameworkLabel(input.framework),
-        getRuntimeLabel(input.runtime),
-      );
-    }
-
-    if (input.packageManager !== undefined) {
-      throw new CreateUnsupportedCombinationError(
-        "Static projects do not support a package manager",
-      );
-    }
-
-    if (input.databases.length !== 1 || input.databases[0] !== DATABASE_OPTIONS.NONE) {
-      throw new CreateUnsupportedCombinationError("Static projects only support databases: None");
-    }
-
-    if (
-      input.platformServices.length !== 1 ||
-      input.platformServices[0] !== PLATFORM_SERVICE_OPTIONS.NONE
-    ) {
-      throw new CreateUnsupportedCombinationError(
-        "Static projects only support platform services: None",
-      );
-    }
+    this.ensureAllowedValues(input.databases, config.databases, "databases");
+    this.ensureAllowedValues(input.platformServices, config.platformServices, "platform services");
   }
 
   private ensureNoneExclusive(field: string, values: string[]): void {

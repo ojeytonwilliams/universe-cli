@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.7.0] - 2026-04-20
+
+### Refactor: Drive validation service from allowed-layer-combinations config
+
+- Replaced five hardcoded `SUPPORTED_*` arrays in `create-input-validation-service.ts` with lookups against `allowedCombinations`. The separate `validateNodeSelections` and `validateStaticSelections` methods are unified into a single `validateRuntimeSelections(input, config)`, making it trivial to support new runtimes purely through config.
+- Removed four config-data tests from `create-input-validation-service.test.ts` (`accepts typescript framework for Node runtime`, `accepts react-vite framework for static_web runtime`, `rejects typescript framework for static_web runtime`, `rejects express framework for static_web runtime`) — these were asserting config contents, not validation logic.
+
 ## [3.6.0] - 2026-04-20
 
 ### Refactor: Introduce config-driven allowed layer combinations (foundation)
