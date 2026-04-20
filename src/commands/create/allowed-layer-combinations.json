@@ -1,0 +1,14 @@
+{
+  "node": {
+    "frameworks": ["typescript", "express", "none"],
+    "databases": ["postgresql", "redis", "none"],
+    "platformServices": ["auth", "email", "analytics", "none"],
+    "packageManagers": ["pnpm", "bun"]
+  },
+  "static_web": {
+    "frameworks": ["react-vite", "none"],
+    "databases": ["none"],
+    "platformServices": ["none"],
+    "packageManagers": []
+  }
+}

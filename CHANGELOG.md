@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.6.0] - 2026-04-20
+
+### Refactor: Introduce config-driven allowed layer combinations (foundation)
+
+- Added `src/commands/create/allowed-layer-combinations.json` encoding which frameworks, databases, platform services, and package managers are valid per runtime. This is the single source of truth that will replace duplicated hardcoded arrays across the prompt and validation service.
+- Added `src/commands/create/allowed-layer-combinations.ts` with a Zod schema that parses and validates the JSON at module-load time. A malformed config will throw at startup, surfaced by the e2e test — no dedicated unit tests required.
+- Added `resolveJsonModule: true` to `tsconfig.json` to enable typed JSON imports.
+
 ## [3.5.0] - 2026-04-20
 
 ### Refactor: Split command handlers and modularize CLI
