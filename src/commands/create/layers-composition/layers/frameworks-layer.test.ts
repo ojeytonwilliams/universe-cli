@@ -15,6 +15,13 @@ describe("frameworks/express layer", () => {
   it("has watchSync for ./src → /app/src", () => {
     expect(layer.watchSync).toStrictEqual([{ path: "./src", target: "/app/src" }]);
   });
+
+  it("uses {{port}} placeholder instead of hardcoded 3000 in src/index.ts", () => {
+    const content = layer.files["src/index.ts"];
+
+    expect(content).toContain("{{port}}");
+    expect(content).not.toContain("3000");
+  });
 });
 
 describe("frameworks/typescript layer", () => {
@@ -31,5 +38,12 @@ describe("frameworks/typescript layer", () => {
 
   it("has watchSync for ./src → /app/src", () => {
     expect(layer.watchSync).toStrictEqual([{ path: "./src", target: "/app/src" }]);
+  });
+
+  it("uses {{port}} placeholder instead of hardcoded 3000 in src/index.ts", () => {
+    const content = layer.files["src/index.ts"];
+
+    expect(content).toContain("{{port}}");
+    expect(content).not.toContain("3000");
   });
 });

@@ -58,6 +58,7 @@ interface FileOwner {
 interface TemplateContext {
   framework: string;
   name: string;
+  port: number;
   runtime: string;
 }
 
@@ -98,6 +99,7 @@ class LayerTemplateRenderer {
   render(template: string, context: TemplateContext): string {
     return template
       .replaceAll("{{name}}", context.name)
+      .replaceAll("{{port}}", String(context.port))
       .replaceAll("{{runtime}}", context.runtime)
       .replaceAll("{{framework}}", context.framework);
   }
@@ -158,9 +160,11 @@ class LayerCompositionService implements LayerComposer {
     }
 
     const renderer = new LayerTemplateRenderer();
+    const frameworkData = this.frameworkLayers[this.resolveFrameworkLayer(input.framework)];
     const context = {
       framework: FRAMEWORK_LABELS[input.framework],
       name: input.name,
+      port: frameworkData?.port ?? 0,
       runtime: RUNTIME_LABELS[input.runtime],
     };
     const renderedFiles: Record<string, string> = Object.fromEntries(
@@ -171,7 +175,6 @@ class LayerCompositionService implements LayerComposer {
     );
 
     const runtimeData = this.runtimeLayers[this.resolveRuntimeLayer(input.runtime)];
-    const frameworkData = this.frameworkLayers[this.resolveFrameworkLayer(input.framework)];
 
     if (
       runtimeData !== undefined &&

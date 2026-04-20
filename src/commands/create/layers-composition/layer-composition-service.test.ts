@@ -539,6 +539,7 @@ describe(LayerCompositionService, () => {
 const rendererContext = {
   framework: "Express",
   name: "my-app",
+  port: 3000,
   runtime: "Node.js (TypeScript)",
 };
 
@@ -570,10 +571,23 @@ describe(LayerTemplateRenderer, () => {
     expect(result).toBe("my-app/my-app.ts");
   });
 
+  it("substitutes {{port}} with the numeric port", () => {
+    const renderer = new LayerTemplateRenderer();
+
+    const result = renderer.render("port={{port}}", rendererContext);
+
+    expect(result).toBe("port=3000");
+  });
+
   it("returns the template unchanged when given an empty context", () => {
     const renderer = new LayerTemplateRenderer();
 
-    const result = renderer.render("hello={{name}}", { framework: "", name: "", runtime: "" });
+    const result = renderer.render("hello={{name}}", {
+      framework: "",
+      name: "",
+      port: 0,
+      runtime: "",
+    });
 
     expect(result).toBe("hello=");
   });

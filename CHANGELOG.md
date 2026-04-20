@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.13.0] - 2026-04-20
+
+### feat: Port template substitution in layer files (Phase 3)
+
+- `TemplateContext` gains `port: number`; `LayerTemplateRenderer` now substitutes `{{port}}` with the framework's port number.
+- `frameworks/express` and `frameworks/typescript` `src/index.ts` files replace hardcoded `3000` with `{{port}}` placeholder, resolved at composition time.
+
 ## [3.12.0] - 2026-04-20
 
 ### feat: Wire node layers to typed interfaces and update composition service (Phase 2)

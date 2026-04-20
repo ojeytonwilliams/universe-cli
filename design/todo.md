@@ -83,7 +83,7 @@
 
 ## Phase 3: Port template substitution
 
-- [ ] CODE: Add `port` to `TemplateContext` and renderer
+- [x] CODE: Add `port` to `TemplateContext` and renderer
   - Feature: `TemplateContext` gains `port: number`; `{{port}}` placeholders in layer files are substituted with the resolved framework's port at composition time per REQ-4
   - Files: `src/commands/create/layers-composition/layer-composition-service.ts`
   - Acceptance:
@@ -91,7 +91,7 @@
     - Template renderer replaces all `{{port}}` occurrences with `String(framework.port)`
     - `pnpm test` passes
 
-- [ ] CODE: Replace hardcoded port with `{{port}}` in node framework files
+- [x] CODE: Replace hardcoded port with `{{port}}` in node framework files
   - Feature: Hardcoded port `3000` in `frameworks/express` and `frameworks/typescript` file content replaced with `{{port}}` template placeholder per REQ-4, NFR-2
   - Files: `src/commands/create/layers-composition/layers/frameworks-layer.ts`
   - Acceptance:
