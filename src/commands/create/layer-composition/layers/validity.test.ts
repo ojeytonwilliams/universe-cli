@@ -35,6 +35,16 @@ describe("runtime layers", () => {
       expect(databaseNames).toContain(database);
     });
   });
+
+  it("should have a 'services' array referencing specific services", () => {
+    const runtimes = Object.values(runtimeJson);
+    const runtimeServices = runtimes.flatMap((runtime) => runtime.services);
+    const serviceNames = Object.keys(serviceJson);
+
+    runtimeServices.forEach((service: string) => {
+      expect(serviceNames).toContain(service);
+    });
+  });
 });
 
 describe("framework layers", () => {
@@ -69,6 +79,18 @@ describe("database layers", () => {
 
     databases.forEach((database) => {
       expect(runtimeDatabases).toContain(database);
+    });
+  });
+});
+
+describe("service layers", () => {
+  it("each service should have a corresponding runtime", () => {
+    const services = Object.keys(serviceJson);
+    const runtimes = Object.values(runtimeJson);
+    const runtimeServices = runtimes.flatMap((runtime) => runtime.services);
+
+    services.forEach((service) => {
+      expect(runtimeServices).toContain(service);
     });
   });
 });

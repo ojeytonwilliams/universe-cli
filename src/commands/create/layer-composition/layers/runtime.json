@@ -7,7 +7,8 @@
       "package.json": "{\"name\":\"{{name}}\",\"private\":true,\"type\":\"module\"}"
     },
     "frameworks": ["frameworks/express", "frameworks/typescript"],
-    "packageManagers": ["package-managers/pnpm", "package-managers/bun"]
+    "packageManagers": ["package-managers/pnpm", "package-managers/bun"],
+    "services": ["services/analytics", "services/auth", "services/email"]
   },
   "static_web": {
     "baseImage": "node:22-alpine",
@@ -18,6 +19,7 @@
       "pnpm-workspace.yaml": ""
     },
     "frameworks": ["frameworks/html-css-js", "frameworks/react-vite"],
-    "packageManagers": ["package-managers/pnpm", "package-managers/bun"]
+    "packageManagers": ["package-managers/pnpm", "package-managers/bun"],
+    "services": ["services/analytics", "services/auth", "services/email"]
   }
 }

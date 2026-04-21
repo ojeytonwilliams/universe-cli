@@ -16,6 +16,7 @@ const RuntimeSchema = z.record(
     files: z.record(z.string(), z.string()),
     frameworks: z.array(z.string()),
     packageManagers: z.array(z.string()),
+    services: z.array(z.string()),
   }),
 );
 type Runtime = z.infer<typeof RuntimeSchema>;
