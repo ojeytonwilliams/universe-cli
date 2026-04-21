@@ -1,6 +1,6 @@
 {
   "runtime": {
-    "node": "Node.js (TypeScript)",
+    "node": "Node.js",
     "static_web": "Static (HTML/CSS/JS)"
   },
   "framework": {
