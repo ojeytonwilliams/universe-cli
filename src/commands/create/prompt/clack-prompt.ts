@@ -18,6 +18,7 @@ import type {
   Prompt,
   RuntimeOption,
 } from "./prompt.port.js";
+import { databaseOptions, serviceOptions } from "../layer-composition/allowed-configuration.js";
 
 interface ClackPromptApi {
   confirm(options: { message: string }): Promise<boolean | symbol>;
@@ -70,15 +71,6 @@ const toPromptOptions = <T extends string>(
 const toLabelList = <T extends string>(values: T[], labels: Record<T, string>): string =>
   values.map((value) => labels[value]).join(", ");
 
-const getFrameworkOptions = (runtime: RuntimeOption): FrameworkOption[] =>
-  (allowedCombinations[runtime]?.frameworks ?? []) as FrameworkOption[];
-
-const getDatabaseOptions = (runtime: RuntimeOption): DatabaseOption[] =>
-  (allowedCombinations[runtime]?.databases ?? []) as DatabaseOption[];
-
-const getServiceOptions = (runtime: RuntimeOption): PlatformServiceOption[] =>
-  (allowedCombinations[runtime]?.platformServices ?? []) as PlatformServiceOption[];
-
 class ClackPrompt implements Prompt {
   private readonly api: ClackPromptApi;
   private readonly combinations: Record<string, RuntimeCombinations>;
@@ -119,7 +111,7 @@ class ClackPrompt implements Prompt {
 
     const framework = await this.api.select({
       message: "Select framework",
-      options: toPromptOptions(getFrameworkOptions(runtime as RuntimeOption), FRAMEWORK_LABELS),
+      options: toPromptOptions(databaseOptions(runtime as RuntimeOption), FRAMEWORK_LABELS),
     });
 
     if (this.api.isCancel(framework)) {
@@ -146,7 +138,7 @@ class ClackPrompt implements Prompt {
 
     const databases = await this.api.multiselect({
       message: "Select databases",
-      options: toPromptOptions(getDatabaseOptions(runtime as RuntimeOption), DATABASE_LABELS),
+      options: toPromptOptions(databaseOptions(runtime as RuntimeOption), DATABASE_LABELS),
     });
 
     if (this.api.isCancel(databases)) {
@@ -155,10 +147,7 @@ class ClackPrompt implements Prompt {
 
     const platformServices = await this.api.multiselect({
       message: "Select platform services",
-      options: toPromptOptions(
-        getServiceOptions(runtime as RuntimeOption),
-        PLATFORM_SERVICE_LABELS,
-      ),
+      options: toPromptOptions(serviceOptions(runtime as RuntimeOption), PLATFORM_SERVICE_LABELS),
     });
 
     if (this.api.isCancel(platformServices)) {
