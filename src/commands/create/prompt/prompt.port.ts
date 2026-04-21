@@ -39,36 +39,6 @@ type PlatformServiceOption =
 
 type PackageManagerOption = (typeof PACKAGE_MANAGER_OPTIONS)[keyof typeof PACKAGE_MANAGER_OPTIONS];
 
-const RUNTIME_LABELS = {
-  [RUNTIME_OPTIONS.NODE]: "Node.js (TypeScript)",
-  [RUNTIME_OPTIONS.STATIC_WEB]: "Static (HTML/CSS/JS)",
-} as const satisfies Record<RuntimeOption, string>;
-
-const FRAMEWORK_LABELS = {
-  [FRAMEWORK_OPTIONS.EXPRESS]: "Express",
-  [FRAMEWORK_OPTIONS.HTML_CSS_JS]: "HTML/CSS/JS",
-  [FRAMEWORK_OPTIONS.REACT_VITE]: "React (Vite)",
-  [FRAMEWORK_OPTIONS.TYPESCRIPT]: "TypeScript",
-} as const satisfies Record<FrameworkOption, string>;
-
-const DATABASE_LABELS = {
-  [DATABASE_OPTIONS.NONE]: "None",
-  [DATABASE_OPTIONS.POSTGRESQL]: "PostgreSQL",
-  [DATABASE_OPTIONS.REDIS]: "Redis",
-} as const satisfies Record<DatabaseOption, string>;
-
-const PLATFORM_SERVICE_LABELS = {
-  [PLATFORM_SERVICE_OPTIONS.ANALYTICS]: "Analytics",
-  [PLATFORM_SERVICE_OPTIONS.AUTH]: "Auth",
-  [PLATFORM_SERVICE_OPTIONS.EMAIL]: "Email",
-  [PLATFORM_SERVICE_OPTIONS.NONE]: "None",
-} as const satisfies Record<PlatformServiceOption, string>;
-
-const PACKAGE_MANAGER_LABELS = {
-  [PACKAGE_MANAGER_OPTIONS.BUN]: "bun",
-  [PACKAGE_MANAGER_OPTIONS.PNPM]: "pnpm",
-} as const satisfies Record<PackageManagerOption, string>;
-
 interface CreateSelections {
   name: string;
   runtime: RuntimeOption;
@@ -84,15 +54,10 @@ interface Prompt {
 }
 
 export {
-  DATABASE_LABELS,
   DATABASE_OPTIONS,
-  FRAMEWORK_LABELS,
   FRAMEWORK_OPTIONS,
-  PACKAGE_MANAGER_LABELS,
   PACKAGE_MANAGER_OPTIONS,
-  PLATFORM_SERVICE_LABELS,
   PLATFORM_SERVICE_OPTIONS,
-  RUNTIME_LABELS,
   RUNTIME_OPTIONS,
 };
 export type {

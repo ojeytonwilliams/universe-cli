@@ -1,11 +1,6 @@
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import { LayerConflictError, MissingLayerError } from "../../../errors/cli-errors.js";
-import {
-  DATABASE_OPTIONS,
-  FRAMEWORK_LABELS,
-  RUNTIME_LABELS,
-  RUNTIME_OPTIONS,
-} from "../prompt/prompt.port.js";
+import { DATABASE_OPTIONS, RUNTIME_OPTIONS } from "../prompt/prompt.port.js";
 import type { CreateSelections } from "../prompt/prompt.port.js";
 import { buildComposeDevYaml } from "./build-compose-dev-yaml.js";
 import { buildDockerfileData } from "./build-dockerfile-data.js";
@@ -25,6 +20,7 @@ import {
   typedPackageManagerLayers,
 } from "./layers/package-managers-layer.js";
 import { servicesLayer } from "./layers/services-layer.js";
+import { getLabel } from "./labels.js";
 
 type LayerStage = "always" | "base" | "frameworks" | "package-managers" | "services";
 type JsonValue = boolean | JsonObject | JsonValue[] | null | number | string;
@@ -162,11 +158,23 @@ class LayerCompositionService implements LayerComposer {
 
     const renderer = new LayerTemplateRenderer();
     const frameworkData = this.frameworkLayers[this.resolveFrameworkLayer(input.framework)];
+
+    let frameworkLabel: string = input.framework;
+    let runtimeLabel: string = input.runtime;
+
+    try {
+      frameworkLabel = getLabel("framework", input.framework);
+    } catch {}
+
+    try {
+      runtimeLabel = getLabel("runtime", input.runtime);
+    } catch {}
+
     const context = {
-      framework: FRAMEWORK_LABELS[input.framework],
+      framework: frameworkLabel,
       name: input.name,
       port: frameworkData?.port ?? 0,
-      runtime: RUNTIME_LABELS[input.runtime],
+      runtime: runtimeLabel,
     };
     const renderedFiles: Record<string, string> = Object.fromEntries(
       Object.entries(composedFiles).map(([filePath, content]) => [

@@ -8,29 +8,12 @@ import {
 } from "../../errors/cli-errors.js";
 import { allowedCombinations } from "./allowed-layer-combinations.js";
 import type { RuntimeCombinations } from "./allowed-layer-combinations.js";
-import { FRAMEWORK_LABELS, RUNTIME_LABELS } from "./prompt/prompt.port.js";
-import type { CreateSelections, FrameworkOption, RuntimeOption } from "./prompt/prompt.port.js";
+import type { CreateSelections } from "./prompt/prompt.port.js";
 
 type PathExists = (path: string) => boolean;
 
 const PROJECT_NAME_PATTERN = /^[a-z][a-z0-9-]{2,49}$/;
 const NONE_VALUE = "none";
-
-const getRuntimeLabel = (runtime: string): string => {
-  if (runtime in RUNTIME_LABELS) {
-    return RUNTIME_LABELS[runtime as RuntimeOption];
-  }
-
-  return runtime;
-};
-
-const getFrameworkLabel = (framework: string): string => {
-  if (framework in FRAMEWORK_LABELS) {
-    return FRAMEWORK_LABELS[framework as FrameworkOption];
-  }
-
-  return framework;
-};
 
 interface CreateInputValidator {
   validateCreateInput(input: CreateSelections): CreateSelections;
@@ -67,7 +50,7 @@ class CreateInputValidationService implements CreateInputValidator {
     const config = allowedCombinations[input.runtime];
 
     if (config === undefined) {
-      throw new CreateUnsupportedRuntimeError(getRuntimeLabel(input.runtime));
+      throw new CreateUnsupportedRuntimeError(input.runtime);
     }
 
     this.validateRuntimeSelections(input, config);
@@ -75,10 +58,7 @@ class CreateInputValidationService implements CreateInputValidator {
 
   private validateRuntimeSelections(input: CreateSelections, config: RuntimeCombinations): void {
     if (!config.frameworks.includes(input.framework)) {
-      throw new CreateUnsupportedFrameworkError(
-        getFrameworkLabel(input.framework),
-        getRuntimeLabel(input.runtime),
-      );
+      throw new CreateUnsupportedFrameworkError(input.framework, input.runtime);
     }
 
     if (config.packageManagers.length > 0) {
