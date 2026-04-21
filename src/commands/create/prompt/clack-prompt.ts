@@ -1,11 +1,4 @@
 import { confirm, isCancel, multiselect, select, text } from "@clack/prompts";
-import {
-  DATABASE_LABELS,
-  FRAMEWORK_LABELS,
-  PACKAGE_MANAGER_LABELS,
-  PLATFORM_SERVICE_LABELS,
-  RUNTIME_LABELS,
-} from "./prompt.port.js";
 import type {
   CreateSelections,
   DatabaseOption,
@@ -62,8 +55,8 @@ const toPromptOptions = <T extends string>(
     value,
   }));
 
-const toLabelList = <T extends string>(values: T[], labels: Record<T, string>): string =>
-  values.map((value) => labels[value]).join(", ");
+const toLabelList = <T extends string>(values: T[], category: LabelCategory): string =>
+  values.map((value) => getLabel(category, value)).join(", ");
 
 class ClackPrompt implements Prompt {
   private readonly api: ClackPromptApi;
@@ -146,19 +139,19 @@ class ClackPrompt implements Prompt {
     const confirmLines = [
       "Confirm create configuration:",
       `- Name: ${name}`,
-      `- Runtime: ${RUNTIME_LABELS[runtime as RuntimeOption]}`,
-      `- Framework: ${FRAMEWORK_LABELS[framework as FrameworkOption]}`,
+      `- Runtime: ${getLabel("runtime", runtime as RuntimeOption)}`,
+      `- Framework: ${getLabel("framework", framework as FrameworkOption)}`,
     ];
 
     if (packageManager !== undefined) {
       confirmLines.push(
-        `- Package manager: ${PACKAGE_MANAGER_LABELS[packageManager as PackageManagerOption]}`,
+        `- Package manager: ${getLabel("packageManager", packageManager as PackageManagerOption)}`,
       );
     }
 
     confirmLines.push(
-      `- Databases: ${toLabelList(databases as DatabaseOption[], DATABASE_LABELS)}`,
-      `- Platform services: ${toLabelList(platformServices as PlatformServiceOption[], PLATFORM_SERVICE_LABELS)}`,
+      `- Databases: ${toLabelList(databases as DatabaseOption[], "database")}`,
+      `- Platform services: ${toLabelList(platformServices as PlatformServiceOption[], "service")}`,
     );
 
     const isConfirmed = await this.api.confirm({
