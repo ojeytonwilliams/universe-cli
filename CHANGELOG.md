@@ -1,5 +1,16 @@
 # Changelog
 
+## [3.17.0] - 2026-04-21
+
+### feat: Cross-combination consistency invariant tests (Phase 7)
+
+- Added `scripts.dev: "PORT={{port}} node dist/index.js"` to `frameworks/express` and `frameworks/typescript` package.json so the rendered dev script always contains the framework port.
+- Updated `frameworks/react-vite` dev script from `"vite --host"` to `"vite --host --port {{port}}"` so the rendered script contains port 5173.
+- Added cross-combination invariant tests in `layer-composition-service.test.ts` that iterate every valid runtime/framework/package-manager combination from `allowed-layer-combinations.json` and assert:
+  - compose `ports:` is `"<port>:<port>"` matching the framework's declared port,
+  - compose `services.app.build.target` is `"dev"` and `Dockerfile` contains `FROM base AS dev`,
+  - `scripts.dev` in the generated `package.json` contains the framework port as a substring.
+
 ## [3.16.0] - 2026-04-21
 
 ### feat: Wire bun package manager and react-vite framework (Phase 6)

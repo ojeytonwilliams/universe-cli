@@ -21,6 +21,7 @@ const TYPESCRIPT_PACKAGE_JSON_FIELDS = JSON.stringify({
   },
   scripts: {
     build: "tsc -p tsconfig.json",
+    dev: "PORT={{port}} node dist/index.js",
     start: "node dist/index.js",
   },
 });
@@ -42,6 +43,7 @@ const expressFrameworkLayer: FrameworkLayerData = {
       },
       scripts: {
         build: "tsc -p tsconfig.json",
+        dev: "PORT={{port}} node dist/index.js",
         start: "node dist/index.js",
       },
     }),
@@ -517,7 +519,7 @@ const reactViteFrameworkLayer: FrameworkLayerData = {
             scripts: Record<string, string>;
           }
         ).scripts,
-        dev: "vite --host",
+        dev: "vite --host --port {{port}}",
       },
     }),
   },

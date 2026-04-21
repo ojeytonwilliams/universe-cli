@@ -178,7 +178,7 @@
 
 ## Phase 7: Invariant tests
 
-- [ ] CODE: Cross-combination consistency tests
+- [x] CODE: Cross-combination consistency tests
   - Feature: Tests that verify `Dockerfile`, `docker-compose.dev.yml`, and `package.json` are mutually consistent for every valid combination per REQ-11
   - Files: `src/commands/create/layers-composition/layer-composition-service.test.ts`
   - Acceptance:
