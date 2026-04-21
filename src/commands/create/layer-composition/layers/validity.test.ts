@@ -2,6 +2,8 @@ import databaseJson from "../layers/database.json" with { type: "json" };
 import frameworkJson from "../layers/framework.json" with { type: "json" };
 import packageManagersJson from "../layers/package-manager.json" with { type: "json" };
 import runtimeJson from "../layers/runtime.json" with { type: "json" };
+import labelsJson from "../labels.json" with { type: "json" };
+import serviceJson from "../layers/service.json" with { type: "json" };
 
 describe("runtime layers", () => {
   it("should have a 'framework' array referencing specific frameworks", () => {
@@ -67,6 +69,87 @@ describe("database layers", () => {
 
     databases.forEach((database) => {
       expect(runtimeDatabases).toContain(database);
+    });
+  });
+});
+
+describe("labels", () => {
+  it("should have a label for each runtime", () => {
+    const runtimes = Object.keys(runtimeJson);
+    const labels = Object.keys(labelsJson.runtime);
+
+    runtimes.forEach((runtime) => {
+      expect(labels).toContain(runtime);
+    });
+  });
+
+  it("should have a label for each framework", () => {
+    const frameworks = Object.keys(frameworkJson);
+    const labels = Object.keys(labelsJson.framework);
+
+    frameworks.forEach((framework) => {
+      expect(labels).toContain(framework);
+    });
+  });
+
+  it("should have a label for each package manager", () => {
+    const packageManagers = Object.keys(packageManagersJson);
+    const labels = Object.keys(labelsJson.packageManager);
+
+    packageManagers.forEach((packageManager) => {
+      expect(labels).toContain(packageManager);
+    });
+  });
+
+  it("should have a label for each database", () => {
+    const databases = databaseJson;
+    const labels = Object.keys(labelsJson.database);
+
+    databases.forEach((database) => {
+      expect(labels).toContain(database);
+    });
+  });
+
+  it("should have a label for each service", () => {
+    const services = Object.keys(labelsJson.service);
+    const labels = Object.keys(labelsJson.service);
+
+    services.forEach((service) => {
+      expect(labels).toContain(service);
+    });
+  });
+
+  it("should not have unused labels", () => {
+    const runtimes = Object.keys(runtimeJson);
+    const frameworks = Object.keys(frameworkJson);
+    const packageManagers = Object.keys(packageManagersJson);
+    const databases = databaseJson;
+    const services = Object.keys(serviceJson);
+
+    const runtimeLabels = Object.keys(labelsJson.runtime);
+    const frameworkLabels = Object.keys(labelsJson.framework);
+    const packageManagerLabels = Object.keys(labelsJson.packageManager);
+    const databaseLabels = Object.keys(labelsJson.database);
+    const serviceLabels = Object.keys(labelsJson.service);
+
+    runtimeLabels.forEach((label) => {
+      expect(runtimes).toContain(label);
+    });
+
+    frameworkLabels.forEach((label) => {
+      expect(frameworks).toContain(label);
+    });
+
+    packageManagerLabels.forEach((label) => {
+      expect(packageManagers).toContain(label);
+    });
+
+    databaseLabels.forEach((label) => {
+      expect(databases).toContain(label);
+    });
+
+    serviceLabels.forEach((label) => {
+      expect(services).toContain(label);
     });
   });
 });

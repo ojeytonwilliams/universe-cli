@@ -1,0 +1,26 @@
+{
+  "runtime": {
+    "node": "Node.js (TypeScript)",
+    "static_web": "Static (HTML/CSS/JS)"
+  },
+  "framework": {
+    "frameworks/express": "Express",
+    "frameworks/html-css-js": "HTML/CSS/JS",
+    "frameworks/react-vite": "React (Vite)",
+    "frameworks/typescript": "TypeScript"
+  },
+  "database": {
+    "none": "None",
+    "postgresql": "PostgreSQL",
+    "redis": "Redis"
+  },
+  "service": {
+    "services/analytics": "Analytics",
+    "services/auth": "Auth",
+    "services/email": "Email"
+  },
+  "packageManager": {
+    "package-managers/bun": "bun",
+    "package-managers/pnpm": "pnpm"
+  }
+}

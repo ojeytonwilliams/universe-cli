@@ -12,6 +12,8 @@ import frameworkJson from "../layers/framework.json" with { type: "json" };
 import packageManagersJson from "../layers/package-manager.json" with { type: "json" };
 import runtimeJson from "../layers/runtime.json" with { type: "json" };
 import serviceJson from "../layers/service.json" with { type: "json" };
+import labelsJson from "../labels.json" with { type: "json" };
+import { LabelsSchema } from "./labels.js";
 
 describe("always layer", () => {
   it("should match the schema", () => {
@@ -51,6 +53,13 @@ describe("runtime layer", () => {
 describe("service layer", () => {
   it("should match the schema", () => {
     const parsed = ServiceSchema.safeParse(serviceJson);
+    expect(parsed.error).toBeUndefined();
+  });
+});
+
+describe("labels", () => {
+  it("should match the schema", () => {
+    const parsed = LabelsSchema.safeParse(labelsJson);
     expect(parsed.error).toBeUndefined();
   });
 });
