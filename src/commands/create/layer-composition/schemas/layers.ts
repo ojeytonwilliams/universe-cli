@@ -12,7 +12,10 @@ const RuntimeSchema = z.record(
   z.string(),
   z.strictObject({
     baseImage: z.string(),
+    databases: z.array(z.string()),
     files: z.record(z.string(), z.string()),
+    frameworks: z.array(z.string()),
+    packageManagers: z.array(z.string()),
   }),
 );
 type Runtime = z.infer<typeof RuntimeSchema>;

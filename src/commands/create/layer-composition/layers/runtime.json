@@ -1,17 +1,23 @@
 {
   "node": {
     "baseImage": "node:22-alpine",
+    "databases": ["none", "postgresql", "redis"],
     "files": {
       "Procfile": "web: node dist/index.js\n",
       "package.json": "{\"name\":\"{{name}}\",\"private\":true,\"type\":\"module\"}"
-    }
+    },
+    "frameworks": ["frameworks/express", "frameworks/typescript"],
+    "packageManagers": ["package-managers/pnpm", "package-managers/bun"]
   },
   "static_web": {
     "baseImage": "node:22-alpine",
+    "databases": ["none"],
     "files": {
       ".dockerignore": ".git\n",
       "Procfile": "web: npx serve public -l {{port}}\n",
       "pnpm-workspace.yaml": ""
-    }
+    },
+    "frameworks": ["frameworks/html-css-js", "frameworks/react-vite"],
+    "packageManagers": ["package-managers/pnpm", "package-managers/bun"]
   }
 }
