@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.16.0] - 2026-04-21
+
+### feat: Wire bun package manager and react-vite framework (Phase 6)
+
+- `package-managers/bun` typed as `PackageManagerLayerData` with `devInstall` (global bun install via npm), `devCmd: ["bun", "run", "dev"]`, and `watchRebuild` for `package.json` and `bun.lock`.
+- `frameworks/react-vite` typed as `FrameworkLayerData` with `port: 5173`, `devCopySource` copying `src`, `index.html`, `vite.config.ts`, and `tsconfig*.json`, `watchSync` for `./src`, and `dev` script updated to `vite --host` so the dev server is reachable from outside the Docker container.
+
 ## [3.15.0] - 2026-04-21
 
 ### feat: Remove frameworks/none and enable static_web package manager selection (Phase 5)

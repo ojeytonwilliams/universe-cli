@@ -156,7 +156,7 @@
 
 ## Phase 6: Wire bun and `react-vite`
 
-- [ ] CODE: Wire `package-managers/bun` to `PackageManagerLayerData`
+- [x] CODE: Wire `package-managers/bun` to `PackageManagerLayerData`
   - Feature: `package-managers/bun` gains `devInstall`, `devCmd`, `watchRebuild` per REQ-8
   - Files: `src/commands/create/layers-composition/layers/package-managers-layer.ts`
   - Acceptance:
@@ -165,7 +165,7 @@
     - `watchRebuild` is `[{ path: "./package.json" }, { path: "./bun.lock" }]`
     - `pnpm test` passes
 
-- [ ] CODE: Wire `frameworks/react-vite` to `FrameworkLayerData`
+- [x] CODE: Wire `frameworks/react-vite` to `FrameworkLayerData`
   - Feature: `frameworks/react-vite` gains `port`, `devCopySource`, `watchSync` per REQ-9; dev server is made reachable from outside the Docker container
   - Files: `src/commands/create/layers-composition/layers/frameworks-layer.ts`
   - Acceptance:

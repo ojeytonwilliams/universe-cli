@@ -54,6 +54,32 @@ describe("frameworksLayer registry", () => {
   });
 });
 
+describe("frameworks/react-vite layer", () => {
+  const layer = typedFrameworkLayers["frameworks/react-vite"]!;
+
+  it("has port 5173", () => {
+    expect(layer.port).toBe(5173);
+  });
+
+  it("has devCopySource that copies src, index.html, vite.config.ts and tsconfig files", () => {
+    expect(layer.devCopySource).toBe(
+      "COPY src src\nCOPY index.html .\nCOPY vite.config.ts .\nCOPY tsconfig*.json .",
+    );
+  });
+
+  it("has watchSync for ./src → /app/src", () => {
+    expect(layer.watchSync).toStrictEqual([{ path: "./src", target: "/app/src" }]);
+  });
+
+  it("has package.json with dev script that includes --host", () => {
+    const pkg = JSON.parse(layer.files["package.json"]!) as {
+      scripts: Record<string, string>;
+    };
+
+    expect(pkg.scripts["dev"]).toContain("--host");
+  });
+});
+
 describe("frameworks/html-css-js layer", () => {
   const layer = typedFrameworkLayers["frameworks/html-css-js"]!;
 

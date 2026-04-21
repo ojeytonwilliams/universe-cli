@@ -505,16 +505,37 @@ const htmlCssJsFrameworkLayer: FrameworkLayerData = {
   watchSync: [{ path: "./public", target: "/app/public" }],
 };
 
+const reactViteFrameworkLayer: FrameworkLayerData = {
+  devCopySource: "COPY src src\nCOPY index.html .\nCOPY vite.config.ts .\nCOPY tsconfig*.json .",
+  files: {
+    ...reactViteFiles,
+    "package.json": JSON.stringify({
+      ...(JSON.parse(reactViteFiles["package.json"]!) as object),
+      scripts: {
+        ...(
+          JSON.parse(reactViteFiles["package.json"]!) as {
+            scripts: Record<string, string>;
+          }
+        ).scripts,
+        dev: "vite --host",
+      },
+    }),
+  },
+  port: 5173,
+  watchSync: [{ path: "./src", target: "/app/src" }],
+};
+
 const frameworksLayer = {
   "frameworks/express": expressFrameworkLayer,
   "frameworks/html-css-js": htmlCssJsFrameworkLayer,
-  "frameworks/react-vite": { files: reactViteFiles },
+  "frameworks/react-vite": reactViteFrameworkLayer,
   "frameworks/typescript": typescriptFrameworkLayer,
 };
 
 const typedFrameworkLayers: Record<string, FrameworkLayerData | undefined> = {
   "frameworks/express": expressFrameworkLayer,
   "frameworks/html-css-js": htmlCssJsFrameworkLayer,
+  "frameworks/react-vite": reactViteFrameworkLayer,
   "frameworks/typescript": typescriptFrameworkLayer,
 };
 

@@ -1,6 +1,26 @@
 import { packageManagersLayer } from "./package-managers-layer.js";
 
+const bunLayer = packageManagersLayer["package-managers/bun"];
 const pnpmLayer = packageManagersLayer["package-managers/pnpm"];
+
+describe("package-managers/bun layer", () => {
+  it("provides devInstall that installs bun globally and copies lockfiles", () => {
+    expect(bunLayer.devInstall).toBe(
+      "RUN npm install -g bun\nCOPY package.json bun.lock ./\nRUN bun install",
+    );
+  });
+
+  it("provides devCmd as the bun run dev array", () => {
+    expect(bunLayer.devCmd).toStrictEqual(["bun", "run", "dev"]);
+  });
+
+  it("provides watchRebuild entries for package.json and bun.lock", () => {
+    expect(bunLayer.watchRebuild).toStrictEqual([
+      { path: "./package.json" },
+      { path: "./bun.lock" },
+    ]);
+  });
+});
 
 describe("package-managers/pnpm layer", () => {
   it("provides devInstall that copies lockfiles and runs pnpm install via corepack", () => {
