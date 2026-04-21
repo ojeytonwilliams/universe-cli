@@ -1,9 +1,12 @@
 import labelData from "./labels.json" with { type: "json" };
 
 type LabelsData = typeof labelData;
-type LabelCategory = keyof LabelsData;
+export type LabelCategory = keyof LabelsData;
 
-export const getLabel = <C extends LabelCategory>(
-  category: C,
-  key: C extends LabelCategory ? keyof LabelsData[C] : never,
-): string => labelData[category][key] as string;
+export const getLabel = <C extends LabelCategory>(category: C, key: string): string => {
+  const categoryData = labelData[category];
+  if (key in categoryData) {
+    return categoryData[key as keyof typeof categoryData] as string;
+  }
+  throw new Error(`Label not found for category "${category}" and key "${key}"`);
+};

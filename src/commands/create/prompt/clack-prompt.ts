@@ -1,13 +1,10 @@
 import { confirm, isCancel, multiselect, select, text } from "@clack/prompts";
-import { allowedCombinations } from "../allowed-layer-combinations.js";
-import type { RuntimeCombinations } from "../allowed-layer-combinations.js";
 import {
   DATABASE_LABELS,
   FRAMEWORK_LABELS,
   PACKAGE_MANAGER_LABELS,
   PLATFORM_SERVICE_LABELS,
   RUNTIME_LABELS,
-  RUNTIME_OPTIONS,
 } from "./prompt.port.js";
 import type {
   CreateSelections,
@@ -18,7 +15,15 @@ import type {
   Prompt,
   RuntimeOption,
 } from "./prompt.port.js";
-import { databaseOptions, serviceOptions } from "../layer-composition/allowed-configuration.js";
+import {
+  databaseOptions,
+  frameworkOptions,
+  packageManagerOptions,
+  runtimeOptions,
+  serviceOptions,
+} from "../layer-composition/allowed-configuration.js";
+import { getLabel } from "../layer-composition/labels.js";
+import type { LabelCategory } from "../layer-composition/labels.js";
 
 interface ClackPromptApi {
   confirm(options: { message: string }): Promise<boolean | symbol>;
@@ -48,23 +53,12 @@ const defaultClackApi: ClackPromptApi = {
   text,
 };
 
-const RUNTIME_PROMPT_OPTIONS: { label: string; value: RuntimeOption }[] = [
-  {
-    label: RUNTIME_LABELS[RUNTIME_OPTIONS.NODE],
-    value: RUNTIME_OPTIONS.NODE,
-  },
-  {
-    label: RUNTIME_LABELS[RUNTIME_OPTIONS.STATIC_WEB],
-    value: RUNTIME_OPTIONS.STATIC_WEB,
-  },
-];
-
 const toPromptOptions = <T extends string>(
   values: T[],
-  labels: Record<T, string>,
+  category: LabelCategory,
 ): { label: string; value: T }[] =>
   values.map((value) => ({
-    label: labels[value],
+    label: getLabel(category, value),
     value,
   }));
 
@@ -73,14 +67,9 @@ const toLabelList = <T extends string>(values: T[], labels: Record<T, string>): 
 
 class ClackPrompt implements Prompt {
   private readonly api: ClackPromptApi;
-  private readonly combinations: Record<string, RuntimeCombinations>;
 
-  constructor(
-    api: ClackPromptApi = defaultClackApi,
-    combinations: Record<string, RuntimeCombinations> = allowedCombinations,
-  ) {
+  constructor(api: ClackPromptApi = defaultClackApi) {
     this.api = api;
-    this.combinations = combinations;
   }
 
   async promptForCreateInputs(): Promise<CreateSelections | null> {
@@ -102,7 +91,7 @@ class ClackPrompt implements Prompt {
 
     const runtime = await this.api.select({
       message: "Select runtime",
-      options: RUNTIME_PROMPT_OPTIONS,
+      options: toPromptOptions(runtimeOptions(), "runtime"),
     });
 
     if (this.api.isCancel(runtime)) {
@@ -111,7 +100,7 @@ class ClackPrompt implements Prompt {
 
     const framework = await this.api.select({
       message: "Select framework",
-      options: toPromptOptions(databaseOptions(runtime as RuntimeOption), FRAMEWORK_LABELS),
+      options: toPromptOptions(frameworkOptions(runtime as RuntimeOption), "framework"),
     });
 
     if (this.api.isCancel(framework)) {
@@ -119,7 +108,7 @@ class ClackPrompt implements Prompt {
     }
 
     let packageManager: string | symbol | undefined;
-    const packageManagers = this.combinations[runtime as RuntimeOption]?.packageManagers ?? [];
+    const packageManagers = packageManagerOptions(runtime as RuntimeOption);
     if (packageManagers.length === 1) {
       const [autoSelected] = packageManagers;
       if (autoSelected !== undefined) {
@@ -128,7 +117,7 @@ class ClackPrompt implements Prompt {
     } else if (packageManagers.length > 1) {
       packageManager = await this.api.select({
         message: "Select package manager",
-        options: toPromptOptions(packageManagers as PackageManagerOption[], PACKAGE_MANAGER_LABELS),
+        options: toPromptOptions(packageManagers as PackageManagerOption[], "packageManager"),
       });
 
       if (this.api.isCancel(packageManager)) {
@@ -138,7 +127,7 @@ class ClackPrompt implements Prompt {
 
     const databases = await this.api.multiselect({
       message: "Select databases",
-      options: toPromptOptions(databaseOptions(runtime as RuntimeOption), DATABASE_LABELS),
+      options: toPromptOptions(databaseOptions(runtime as RuntimeOption), "database"),
     });
 
     if (this.api.isCancel(databases)) {
@@ -147,7 +136,7 @@ class ClackPrompt implements Prompt {
 
     const platformServices = await this.api.multiselect({
       message: "Select platform services",
-      options: toPromptOptions(serviceOptions(runtime as RuntimeOption), PLATFORM_SERVICE_LABELS),
+      options: toPromptOptions(serviceOptions(runtime as RuntimeOption), "service"),
     });
 
     if (this.api.isCancel(platformServices)) {
