@@ -67,3 +67,4 @@ Avoid describing how the code was written
 - If the repository contains mixed, ambiguous, or unexpected edits, inspect them before committing.
 - If there is not enough context to understand the reason for the changes, gather more context before committing.
 - Respect repository-specific commit conventions when they are documented.
+- Do not add co-authors or other metadata to the commit message unless explicitly instructed by the user.
