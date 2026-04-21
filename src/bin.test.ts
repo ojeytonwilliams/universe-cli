@@ -4,7 +4,7 @@ import type { FilesystemWriter } from "./io/filesystem-writer.port.js";
 import type { ObservabilityClient } from "./observability/observability-client.port.js";
 import type { CreateSelections, Prompt } from "./commands/create/prompt/prompt.port.js";
 import type { StatusResponse } from "./platform/status-client.port.js";
-import type { ResolvedLayerSet } from "./commands/create/layers-composition/layer-composition-service.js";
+import type { ResolvedLayerSet } from "./commands/create/layer-composition/layer-composition-service.js";
 import type { PlatformManifest } from "./services/platform-manifest-service.js";
 
 // --- Test stubs and helpers (copied from cli.test.ts) ---

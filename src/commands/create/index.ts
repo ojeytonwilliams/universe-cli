@@ -1,5 +1,5 @@
 import type { FilesystemWriter } from "../../io/filesystem-writer.port.js";
-import type { LayerComposer } from "./layers-composition/layer-composition-service.js";
+import type { LayerComposer } from "./layer-composition/layer-composition-service.js";
 import type { PackageManagerRunner } from "./package-manager/package-manager.service.js";
 import type { PlatformManifestGenerator } from "../../services/platform-manifest-service.js";
 import type { Prompt } from "./prompt/prompt.port.js";

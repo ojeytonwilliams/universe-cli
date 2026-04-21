@@ -21,7 +21,7 @@ import type { ListResponse } from "./platform/list-client.port.js";
 import type { CreateSelections } from "./commands/create/prompt/prompt.port.js";
 import type { StatusResponse } from "./platform/status-client.port.js";
 import type { TeardownReceipt } from "./platform/teardown-client.port.js";
-import type { ResolvedLayerSet } from "./commands/create/layers-composition/layer-composition-service.js";
+import type { ResolvedLayerSet } from "./commands/create/layer-composition/layer-composition-service.js";
 import { handleCreate } from "./commands/create/index.js";
 import { handleRegister } from "./commands/register/index.js";
 import { handleDeploy } from "./commands/deploy/index.js";

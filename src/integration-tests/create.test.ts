@@ -4,8 +4,8 @@ import { join, relative } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { createAdapterStubs } from "./adapter-stubs.js";
 import { StubPackageManager } from "../commands/create/package-manager/package-manager.stub.js";
-import { LayerCompositionService } from "../commands/create/layers-composition/layer-composition-service.js";
-import type { LayerRegistry } from "../commands/create/layers-composition/layer-composition-service.js";
+import { LayerCompositionService } from "../commands/create/layer-composition/layer-composition-service.js";
+import type { LayerRegistry } from "../commands/create/layer-composition/layer-composition-service.js";
 import { PackageManagerService } from "../commands/create/package-manager/package-manager.service.js";
 import type {
   PackageManagerRunner,
