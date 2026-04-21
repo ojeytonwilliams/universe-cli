@@ -1,0 +1,17 @@
+{
+  "node": {
+    "baseImage": "node:22-alpine",
+    "files": {
+      "Procfile": "web: node dist/index.js\n",
+      "package.json": "{\"name\":\"{{name}}\",\"private\":true,\"type\":\"module\"}"
+    }
+  },
+  "static_web": {
+    "baseImage": "node:22-alpine",
+    "files": {
+      ".dockerignore": ".git\n",
+      "Procfile": "web: npx serve public -l {{port}}\n",
+      "pnpm-workspace.yaml": ""
+    }
+  }
+}
