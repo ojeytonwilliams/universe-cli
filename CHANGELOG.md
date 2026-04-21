@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.15.0] - 2026-04-21
+
+### feat: Remove frameworks/none and enable static_web package manager selection (Phase 5)
+
+- `allowed-layer-combinations.json` updated: `node.frameworks` is now `["typescript", "express"]`, `static_web.frameworks` is `["react-vite", "html-css-js"]`, and `static_web.packageManagers` is `["pnpm", "bun"]` — the `none` framework option is removed from all runtimes.
+- `frameworks/none` entry removed from `frameworksLayer`; `NONE` key removed from `FRAMEWORK_OPTIONS` and `FRAMEWORK_LABELS`.
+- `ClackPrompt` now auto-selects the sole package manager silently when `packageManagers.length === 1`, preserving the interactive select for runtimes with multiple options.
+
 ## [3.14.0] - 2026-04-20
 
 ### feat: Add html-css-js framework and wire base-static-layer (Phase 4)

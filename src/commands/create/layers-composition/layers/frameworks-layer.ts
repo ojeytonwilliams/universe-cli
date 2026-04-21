@@ -508,7 +508,6 @@ const htmlCssJsFrameworkLayer: FrameworkLayerData = {
 const frameworksLayer = {
   "frameworks/express": expressFrameworkLayer,
   "frameworks/html-css-js": htmlCssJsFrameworkLayer,
-  "frameworks/none": { files: {} as Record<string, string> },
   "frameworks/react-vite": { files: reactViteFiles },
   "frameworks/typescript": typescriptFrameworkLayer,
 };

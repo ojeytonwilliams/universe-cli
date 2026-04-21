@@ -37,7 +37,7 @@ const createPromptPort = (selection: CreateSelections | null): Prompt => ({
 
 const createNodeSelection = (selection: {
   databases: CreateSelections["databases"];
-  framework: "express" | "none" | "typescript";
+  framework: "express" | "typescript";
   name: string;
   platformServices: CreateSelections["platformServices"];
 }): CreateSelections => ({
@@ -53,8 +53,9 @@ const createNodeSelection = (selection: {
 const createStaticSelection = (name: string): CreateSelections => ({
   confirmed: true,
   databases: ["none"],
-  framework: "none",
+  framework: "html-css-js",
   name,
+  packageManager: "pnpm",
   platformServices: ["none"],
   runtime: "static_web",
 });
@@ -140,10 +141,10 @@ describe("create", () => {
     expect(existsSync(join(rootDirectory, selection.name))).toBe(true);
   });
 
-  it("scaffolds Node.js + no framework + no services", async () => {
+  it("scaffolds Node.js + typescript + no services", async () => {
     const selection = createNodeSelection({
       databases: ["none"],
-      framework: "none",
+      framework: "typescript",
       name: "node-bare",
       platformServices: ["none"],
     });
@@ -260,7 +261,6 @@ describe("create", () => {
           }),
         },
       },
-      "frameworks/none": { files: {} },
       "package-managers/pnpm": { files: {} },
     };
 
@@ -299,7 +299,6 @@ describe("create", () => {
         files: { "public/index.html": "<h1>Static</h1>\n" },
       },
       "frameworks/express": { files: {} },
-      "frameworks/none": { files: {} },
       "package-managers/pnpm": { files: {} },
     };
 
@@ -334,7 +333,7 @@ describe("create", () => {
   it("includes pnpm security artefacts in Node.js scaffold", async () => {
     const selection = createNodeSelection({
       databases: ["none"],
-      framework: "none",
+      framework: "typescript",
       name: "pnpm-security-app",
       platformServices: ["none"],
     });
@@ -379,7 +378,7 @@ describe("create", () => {
     const name = "node-install-spy";
     const selection = createNodeSelection({
       databases: ["none"],
-      framework: "none",
+      framework: "typescript",
       name,
       platformServices: ["none"],
     });
@@ -417,7 +416,7 @@ describe("create", () => {
     const name = "node-repo-init-spy";
     const selection = createNodeSelection({
       databases: ["none"],
-      framework: "none",
+      framework: "typescript",
       name,
       platformServices: ["none"],
     });
@@ -552,7 +551,7 @@ describe("create", () => {
       expect(app["develop"]).toBeDefined();
     });
 
-    it("static + none scaffold produces a .dockerignore", async () => {
+    it("static + html-css-js + pnpm scaffold produces a .dockerignore, Dockerfile, and docker-compose.dev.yml", async () => {
       const selection = createStaticSelection("docker-static-test");
 
       const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection));
@@ -561,7 +560,8 @@ describe("create", () => {
       const files = collectGeneratedFiles(join(rootDirectory, selection.name));
 
       expect(files[".dockerignore"]).toBeDefined();
-      expect(files["docker-compose.dev.yml"]).toBeUndefined();
+      expect(files["Dockerfile"]).toBeDefined();
+      expect(files["docker-compose.dev.yml"]).toBeDefined();
     });
   });
 });

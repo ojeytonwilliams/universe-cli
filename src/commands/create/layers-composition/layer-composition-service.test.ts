@@ -9,7 +9,7 @@ import type { LayerData } from "./layer-composition-service.js";
 
 const NODE_DATABASES = ["postgresql", "redis"] as const;
 const NODE_SERVICES = ["auth", "email", "analytics"] as const;
-const NODE_FRAMEWORKS = ["express", "none", "typescript"] as const;
+const NODE_FRAMEWORKS = ["express", "typescript"] as const;
 const NODE_PACKAGE_MANAGERS = ["pnpm", "bun"] as const;
 
 const buildPowerSet = <T>(items: readonly T[]): T[][] => {
@@ -114,7 +114,6 @@ const createService = (overrides?: Record<string, LayerData | undefined>) =>
         "src/server.ts": "const start = (): void => {};\nexport { start };\n",
       },
     },
-    "frameworks/none": { files: {} },
     "frameworks/typescript": { files: {} },
     "package-managers/bun": {
       files: {
@@ -252,14 +251,14 @@ describe(LayerCompositionService, () => {
       const service = new LayerCompositionService({
         always: { files: { "README.md": "# {{name}}\n" } },
         "base/node": { files: {} },
-        "frameworks/none": { files: {} },
+        "frameworks/typescript": { files: {} },
         "package-managers/pnpm": { files: {} },
       });
 
       const result = service.resolveLayers({
         confirmed: true,
         databases: ["none"],
-        framework: "none",
+        framework: "typescript",
         name: "my-app",
         packageManager: "pnpm",
         platformServices: ["none"],
@@ -294,14 +293,14 @@ describe(LayerCompositionService, () => {
       const service = new LayerCompositionService({
         always: { files: { "note.txt": "{{name}} {{unknown}}\n" } },
         "base/node": { files: {} },
-        "frameworks/none": { files: {} },
+        "frameworks/typescript": { files: {} },
         "package-managers/pnpm": { files: {} },
       });
 
       const result = service.resolveLayers({
         confirmed: true,
         databases: ["none"],
-        framework: "none",
+        framework: "typescript",
         name: "my-app",
         packageManager: "pnpm",
         platformServices: ["none"],
@@ -319,7 +318,6 @@ describe(LayerCompositionService, () => {
         "base/node": { files: { "package.json": '{"name":"test"}' } },
         "base/static": { files: { "public/index.html": "<h1>test</h1>\n" } },
         "frameworks/express": { files: {} },
-        "frameworks/none": { files: {} },
         "package-managers/pnpm": { files: {} },
         ...overrides,
       });
@@ -434,12 +432,13 @@ describe(LayerCompositionService, () => {
   describe("combination coverage with default registry", () => {
     const service = new LayerCompositionService();
 
-    it("resolves Static to always, base/static, and frameworks/none", () => {
+    it("resolves Static to always, base/static, and frameworks/html-css-js", () => {
       const result = service.resolveLayers({
         confirmed: true,
         databases: ["none"],
-        framework: "none",
+        framework: "html-css-js",
         name: "test",
+        packageManager: "pnpm",
         platformServices: ["none"],
         runtime: "static_web",
       });
@@ -447,7 +446,7 @@ describe(LayerCompositionService, () => {
       expect(result.layers.map((layer) => layer.name)).toStrictEqual([
         "always",
         "base/static",
-        "frameworks/none",
+        "frameworks/html-css-js",
       ]);
     });
 

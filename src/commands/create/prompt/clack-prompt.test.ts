@@ -1,3 +1,4 @@
+import type { RuntimeCombinations } from "../allowed-layer-combinations.js";
 import type { CreateSelections, Prompt } from "./prompt.port.js";
 import { ClackPrompt } from "./clack-prompt.js";
 import type { ClackPromptApi } from "./clack-prompt.js";
@@ -33,9 +34,9 @@ const createMockApi = (
 describe(ClackPrompt, () => {
   it("prompts in the required order for Node runtime", async () => {
     const events: string[] = [];
-    const selectQueue = ["node", "none", "pnpm"];
+    const selectQueue = ["node", "typescript", "pnpm"];
     const mockApi: ClackPromptApi = {
-      ...createMockApi(["node", "none", "pnpm"], [["none"], ["none"]]),
+      ...createMockApi(["node", "typescript", "pnpm"], [["none"], ["none"]]),
       confirm() {
         events.push("confirmation");
         return Promise.resolve(true);
@@ -70,11 +71,11 @@ describe(ClackPrompt, () => {
     ]);
   });
 
-  it("does not prompt for package manager when runtime is static_web", async () => {
+  it("prompts for package manager when runtime is static_web (2 package managers)", async () => {
     const events: string[] = [];
-    const selectQueue = ["static_web", "none"];
+    const selectQueue = ["static_web", "html-css-js", "pnpm"];
     const mockApi: ClackPromptApi = {
-      ...createMockApi(["static_web", "none"], [["none"], ["none"]]),
+      ...createMockApi(["static_web", "html-css-js", "pnpm"], [["none"], ["none"]]),
       confirm() {
         events.push("confirmation");
         return Promise.resolve(true);
@@ -102,6 +103,7 @@ describe(ClackPrompt, () => {
       "Enter project name",
       "Select runtime",
       "Select framework",
+      "Select package manager",
       "Select databases",
       "Select platform services",
       "confirmation",
@@ -171,23 +173,70 @@ describe(ClackPrompt, () => {
     expect(result).toStrictEqual(expected);
   });
 
-  it("returns selected values without package manager for Static runtime", async () => {
+  it("returns selected values with package manager for Static runtime", async () => {
     const expected: CreateSelections = {
       confirmed: true,
       databases: ["none"],
-      framework: "none",
+      framework: "html-css-js",
       name: "hello-universe",
+      packageManager: "pnpm",
       platformServices: ["none"],
       runtime: "static_web",
     };
 
-    const mockApi = createMockApi(["static_web", "none"], [["none"], ["none"]]);
+    const mockApi = createMockApi(["static_web", "html-css-js", "pnpm"], [["none"], ["none"]]);
 
     const adapter: Prompt = new ClackPrompt(mockApi);
 
     const result = await adapter.promptForCreateInputs();
 
     expect(result).toStrictEqual(expected);
+  });
+
+  it("auto-selects the sole package manager without showing the prompt", async () => {
+    const singlePmCombinations: Record<string, RuntimeCombinations> = {
+      node: {
+        databases: ["none"],
+        frameworks: ["express"],
+        packageManagers: ["pnpm"],
+        platformServices: ["none"],
+      },
+      static_web: {
+        databases: ["none"],
+        frameworks: ["html-css-js"],
+        packageManagers: ["pnpm", "bun"],
+        platformServices: ["none"],
+      },
+    };
+
+    const events: string[] = [];
+    const selectQueue = ["node", "express"];
+    const mockApi: ClackPromptApi = {
+      ...createMockApi(["node", "express"], [["none"], ["none"]]),
+      confirm() {
+        events.push("confirmation");
+        return Promise.resolve(true);
+      },
+      multiselect(options) {
+        events.push(options.message);
+        return Promise.resolve(["none"]);
+      },
+      select(options) {
+        events.push(options.message);
+        const nextSelection = selectQueue.shift() as string;
+        return Promise.resolve(nextSelection);
+      },
+      text(options) {
+        events.push(options.message);
+        return Promise.resolve("hello-universe");
+      },
+    };
+
+    const adapter = new ClackPrompt(mockApi, singlePmCombinations);
+    const result = await adapter.promptForCreateInputs();
+
+    expect(events).not.toContain("Select package manager");
+    expect(result?.packageManager).toBe("pnpm");
   });
 
   it("includes package manager in confirmation message for Node runtime", async () => {

@@ -1,5 +1,6 @@
 import { confirm, isCancel, multiselect, select, text } from "@clack/prompts";
 import { allowedCombinations } from "../allowed-layer-combinations.js";
+import type { RuntimeCombinations } from "../allowed-layer-combinations.js";
 import {
   DATABASE_LABELS,
   FRAMEWORK_LABELS,
@@ -80,9 +81,14 @@ const getServiceOptions = (runtime: RuntimeOption): PlatformServiceOption[] =>
 
 class ClackPrompt implements Prompt {
   private readonly api: ClackPromptApi;
+  private readonly combinations: Record<string, RuntimeCombinations>;
 
-  constructor(api: ClackPromptApi = defaultClackApi) {
+  constructor(
+    api: ClackPromptApi = defaultClackApi,
+    combinations: Record<string, RuntimeCombinations> = allowedCombinations,
+  ) {
     this.api = api;
+    this.combinations = combinations;
   }
 
   async promptForCreateInputs(): Promise<CreateSelections | null> {
@@ -121,8 +127,13 @@ class ClackPrompt implements Prompt {
     }
 
     let packageManager: string | symbol | undefined;
-    const packageManagers = allowedCombinations[runtime as RuntimeOption]?.packageManagers ?? [];
-    if (packageManagers.length > 0) {
+    const packageManagers = this.combinations[runtime as RuntimeOption]?.packageManagers ?? [];
+    if (packageManagers.length === 1) {
+      const [autoSelected] = packageManagers;
+      if (autoSelected !== undefined) {
+        packageManager = autoSelected;
+      }
+    } else if (packageManagers.length > 1) {
       packageManager = await this.api.select({
         message: "Select package manager",
         options: toPromptOptions(packageManagers as PackageManagerOption[], PACKAGE_MANAGER_LABELS),

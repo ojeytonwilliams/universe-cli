@@ -1,14 +1,14 @@
 {
   "node": {
-    "frameworks": ["typescript", "express", "none"],
+    "frameworks": ["typescript", "express"],
     "databases": ["postgresql", "redis", "none"],
     "platformServices": ["auth", "email", "analytics", "none"],
     "packageManagers": ["pnpm", "bun"]
   },
   "static_web": {
-    "frameworks": ["react-vite", "html-css-js", "none"],
+    "frameworks": ["react-vite", "html-css-js"],
     "databases": ["none"],
     "platformServices": ["none"],
-    "packageManagers": []
+    "packageManagers": ["pnpm", "bun"]
   }
 }

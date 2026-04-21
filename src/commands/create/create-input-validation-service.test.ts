@@ -45,8 +45,9 @@ describe(CreateInputValidationService, () => {
     const result = service.validateCreateInput({
       confirmed: true,
       databases: ["none"],
-      framework: "none",
+      framework: "html-css-js",
       name: "site-app",
+      packageManager: "pnpm",
       platformServices: ["none"],
       runtime: "static_web",
     });
@@ -131,16 +132,15 @@ describe(CreateInputValidationService, () => {
     expect(act).toThrow(CreateUnsupportedCombinationError);
   });
 
-  it("rejects non-empty package manager for static_web runtime", () => {
+  it("rejects missing package manager for static_web runtime", () => {
     const service = new CreateInputValidationService(() => false);
 
     const act = () =>
       service.validateCreateInput({
         confirmed: true,
         databases: ["none"],
-        framework: "none",
+        framework: "html-css-js",
         name: "site-app",
-        packageManager: "pnpm",
         platformServices: ["none"],
         runtime: "static_web",
       });
@@ -155,8 +155,9 @@ describe(CreateInputValidationService, () => {
       service.validateCreateInput({
         confirmed: true,
         databases: ["postgresql"],
-        framework: "none",
+        framework: "html-css-js",
         name: "site-app",
+        packageManager: "pnpm",
         platformServices: ["none"],
         runtime: "static_web",
       });
@@ -171,8 +172,9 @@ describe(CreateInputValidationService, () => {
       service.validateCreateInput({
         confirmed: true,
         databases: ["none"],
-        framework: "none",
+        framework: "html-css-js",
         name: "site-app",
+        packageManager: "pnpm",
         platformServices: ["auth"],
         runtime: "static_web",
       });

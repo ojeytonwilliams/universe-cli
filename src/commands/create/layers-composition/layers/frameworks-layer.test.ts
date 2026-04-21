@@ -48,6 +48,12 @@ describe("frameworks/typescript layer", () => {
   });
 });
 
+describe("frameworksLayer registry", () => {
+  it("does not expose a frameworks/none entry", () => {
+    expect((frameworksLayer as Record<string, unknown>)["frameworks/none"]).toBeUndefined();
+  });
+});
+
 describe("frameworks/html-css-js layer", () => {
   const layer = typedFrameworkLayers["frameworks/html-css-js"]!;
 

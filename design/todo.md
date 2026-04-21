@@ -131,13 +131,13 @@
 
 ## Phase 5: Remove `frameworks/none` and update `static_web` config
 
-- [ ] TASK: Update `allowed-layer-combinations.json` for the new framework and package manager lists
+- [x] TASK: Update `allowed-layer-combinations.json` for the new framework and package manager lists
   - Set `node.frameworks` to `["typescript", "express"]`
   - Set `static_web.frameworks` to `["react-vite", "html-css-js"]`
   - Set `static_web.packageManagers` to `["pnpm", "bun"]`
   - `pnpm test` passes
 
-- [ ] CODE: Remove `frameworks/none` from codebase
+- [x] CODE: Remove `frameworks/none` from codebase
   - Feature: The `none` framework option is removed from the layer registry and from `FRAMEWORK_OPTIONS` per REQ-6
   - Files: `src/commands/create/layers-composition/layers/frameworks-layer.ts`, `src/commands/create/prompt/prompt.port.ts`
   - Acceptance:
@@ -145,7 +145,7 @@
     - `NONE` key absent from `FRAMEWORK_OPTIONS` and `FRAMEWORK_LABELS`
     - `pnpm test` passes
 
-- [ ] CODE: Auto-select single-option package manager in prompt
+- [x] CODE: Auto-select single-option package manager in prompt
   - Feature: When a runtime has exactly one valid package manager, the prompt selects it silently without presenting a selection UI per REQ-7
   - Files: `src/commands/create/prompt/clack-prompt.ts`
   - Acceptance:
