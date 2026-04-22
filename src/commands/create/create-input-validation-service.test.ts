@@ -2,7 +2,6 @@ import {
   CreateUnsupportedCombinationError,
   CreateUnsupportedFrameworkError,
   CreateUnsupportedRuntimeError,
-  InvalidMultiSelectError,
   InvalidNameError,
   TargetDirectoryExistsError,
 } from "../../errors/cli-errors.js";
@@ -44,11 +43,11 @@ describe(CreateInputValidationService, () => {
 
     const result = service.validateCreateInput({
       confirmed: true,
-      databases: ["none"],
+      databases: [],
       framework: "html-css-js",
       name: "site-app",
       packageManager: "pnpm",
-      platformServices: ["none"],
+      platformServices: [],
       runtime: "static_web",
     });
 
@@ -73,18 +72,6 @@ describe(CreateInputValidationService, () => {
     const act = () => service.validateCreateInput(validNodeSelection);
 
     expect(act).toThrow(TargetDirectoryExistsError);
-  });
-
-  it('rejects multi-select values when "None" is combined with others', () => {
-    const service = new CreateInputValidationService(() => false);
-
-    const act = () =>
-      service.validateCreateInput({
-        ...validNodeSelection,
-        databases: ["none", "redis"],
-      });
-
-    expect(act).toThrow(InvalidMultiSelectError);
   });
 
   it("rejects unsupported runtimes", () => {
@@ -138,10 +125,10 @@ describe(CreateInputValidationService, () => {
     const act = () =>
       service.validateCreateInput({
         confirmed: true,
-        databases: ["none"],
+        databases: [],
         framework: "html-css-js",
         name: "site-app",
-        platformServices: ["none"],
+        platformServices: [],
         runtime: "static_web",
       });
 
@@ -158,7 +145,7 @@ describe(CreateInputValidationService, () => {
         framework: "html-css-js",
         name: "site-app",
         packageManager: "pnpm",
-        platformServices: ["none"],
+        platformServices: [],
         runtime: "static_web",
       });
 
@@ -171,7 +158,7 @@ describe(CreateInputValidationService, () => {
     const act = () =>
       service.validateCreateInput({
         confirmed: true,
-        databases: ["none"],
+        databases: [],
         framework: "html-css-js",
         name: "site-app",
         packageManager: "pnpm",

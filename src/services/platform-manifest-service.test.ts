@@ -15,11 +15,11 @@ const nodeSelection: CreateSelections = {
 
 const staticSelection: CreateSelections = {
   confirmed: true,
-  databases: ["none"],
+  databases: [],
   framework: "html-css-js",
   name: "marketing-site",
   packageManager: "pnpm",
-  platformServices: ["none"],
+  platformServices: [],
   runtime: "static_web",
 };
 
@@ -37,9 +37,9 @@ describe(PlatformManifestService, () => {
 
     const result = service.generatePlatformManifest({
       ...nodeSelection,
-      databases: ["none"],
+      databases: [],
       framework: "typescript",
-      platformServices: ["none"],
+      platformServices: [],
     });
 
     expect(result).toContain("services: []");

@@ -195,11 +195,11 @@ describe(ClackPrompt, () => {
   it.skip("returns selected values with package manager for Static runtime", async () => {
     const expected: CreateSelections = {
       confirmed: true,
-      databases: ["none"],
+      databases: [],
       framework: "html-css-js",
       name: "hello-universe",
       packageManager: "pnpm",
-      platformServices: ["none"],
+      platformServices: [],
       runtime: "static_web",
     };
 

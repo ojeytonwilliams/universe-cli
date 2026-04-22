@@ -14,11 +14,11 @@ import type { CreateSelections, Prompt } from "../commands/create/prompt/prompt.
 
 const createNodeSelection = (name: string): CreateSelections => ({
   confirmed: true,
-  databases: ["none"],
+  databases: [],
   framework: "express",
   name,
   packageManager: "pnpm",
-  platformServices: ["none"],
+  platformServices: [],
   runtime: "node",
 });
 

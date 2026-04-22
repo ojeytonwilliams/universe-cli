@@ -1,3 +1,5 @@
+import type { DatabaseOption, ServiceOption } from "../layer-composition/schemas/layers.js";
+
 const RUNTIME_OPTIONS = {
   NODE: "node",
   STATIC_WEB: "static_web",
@@ -32,11 +34,6 @@ type RuntimeOption = (typeof RUNTIME_OPTIONS)[keyof typeof RUNTIME_OPTIONS];
 
 type FrameworkOption = (typeof FRAMEWORK_OPTIONS)[keyof typeof FRAMEWORK_OPTIONS];
 
-type DatabaseOption = (typeof DATABASE_OPTIONS)[keyof typeof DATABASE_OPTIONS];
-
-type PlatformServiceOption =
-  (typeof PLATFORM_SERVICE_OPTIONS)[keyof typeof PLATFORM_SERVICE_OPTIONS];
-
 type PackageManagerOption = (typeof PACKAGE_MANAGER_OPTIONS)[keyof typeof PACKAGE_MANAGER_OPTIONS];
 
 interface CreateSelections {
@@ -44,7 +41,7 @@ interface CreateSelections {
   runtime: RuntimeOption;
   framework: FrameworkOption;
   databases: DatabaseOption[];
-  platformServices: PlatformServiceOption[];
+  platformServices: ServiceOption[];
   confirmed: boolean;
   packageManager?: PackageManagerOption;
 }
@@ -65,7 +62,7 @@ export type {
   DatabaseOption,
   FrameworkOption,
   PackageManagerOption,
-  PlatformServiceOption,
+  ServiceOption,
   Prompt,
   RuntimeOption,
 };

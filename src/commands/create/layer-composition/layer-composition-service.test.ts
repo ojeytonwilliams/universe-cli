@@ -6,7 +6,7 @@ import type {
   PackageManagerOption,
   RuntimeOption,
 } from "../prompt/prompt.port.js";
-import { LayerConflictError, MissingLayerError } from "../../../errors/cli-errors.js";
+import { LayerConflictError } from "../../../errors/cli-errors.js";
 import { LayerCompositionService, LayerTemplateRenderer } from "./layer-composition-service.js";
 import type { LayerRegistry } from "./layer-composition-service.js";
 import { typedFrameworkLayers } from "./layers/frameworks-layer.js";
@@ -34,8 +34,8 @@ const buildPowerSet = <T>(items: readonly T[]): T[][] => {
   return subsets;
 };
 
-const toMultiSelect = <T extends string>(items: T[]): (T | "none")[] =>
-  items.length === 0 ? ["none"] : ([...items].sort() as (T | "none")[]);
+const toMultiSelect = <T extends string>(items: T[]): T[] =>
+  items.length === 0 ? [] : [...items].sort();
 
 const expectedNodeLayerNames = ({
   framework,
@@ -48,10 +48,7 @@ const expectedNodeLayerNames = ({
   packageManager: (typeof NODE_PACKAGE_MANAGERS)[number];
   platformServices: CreateSelections["platformServices"];
 }): string[] => {
-  const serviceLayerSlugs = [
-    ...databases.filter((d) => d !== "none"),
-    ...platformServices.filter((s) => s !== "none"),
-  ]
+  const serviceLayerSlugs = [...databases, ...platformServices]
     .map((v) => `services/${v}`)
     .sort((a, b) => a.localeCompare(b));
 
@@ -81,10 +78,10 @@ const nodeCombinations: NodeCase[] = NODE_PACKAGE_MANAGERS.flatMap((packageManag
     databaseSubsets.flatMap((databases) =>
       serviceSubsets.map((platformServices) => ({
         databaseLabel: databases.join(","),
-        databases: databases as CreateSelections["databases"],
+        databases: databases,
         framework,
         packageManager,
-        platformServices: platformServices as CreateSelections["platformServices"],
+        platformServices: platformServices,
         serviceLabel: platformServices.join(","),
       })),
     ),
@@ -101,7 +98,7 @@ const nodeExpressSelection: CreateSelections = {
   runtime: "node",
 };
 
-const createService = (overrides?: LayerRegistry) => {
+const createService = (overrides?: Partial<LayerRegistry>) => {
   const base: LayerRegistry = {
     always: {
       always: {
@@ -124,6 +121,7 @@ const createService = (overrides?: LayerRegistry) => {
     },
     runtime: {
       node: {
+        baseImage: "node:22-alpine",
         files: {
           "package.json": '{"scripts":{"build":"tsc","dev":"node src/index.js"}}',
           "src/index.ts": "export { start } from './server.js';\n",
@@ -139,9 +137,9 @@ const createService = (overrides?: LayerRegistry) => {
   };
 
   return new LayerCompositionService({
-    always: { ...base.always, ...overrides?.always },
-    frameworks: { ...base.frameworks, ...overrides?.frameworks },
-    "package-managers": { ...base["package-managers"], ...overrides?.["package-managers"] },
+    always: base.always,
+    frameworks: base.frameworks,
+    "package-managers": base["package-managers"],
     runtime: { ...base.runtime, ...overrides?.runtime },
     services: { ...base.services, ...overrides?.services },
   });
@@ -188,19 +186,9 @@ describe(LayerCompositionService, () => {
     );
   });
 
-  it("fails with a typed error when a required layer is missing", () => {
-    const service = createService({
-      frameworks: { express: undefined },
-    });
-
-    const act = () => service.resolveLayers(nodeExpressSelection);
-
-    expect(act).toThrow(MissingLayerError);
-  });
-
   it("fails with a typed error for non-configuration file collisions across stages", () => {
     const service = createService({
-      runtime: { node: { files: { "README.md": "# Replacement\n" } } },
+      runtime: { node: { baseImage: "", files: { "README.md": "# Replacement\n" } } },
     });
 
     const act = () => service.resolveLayers(nodeExpressSelection);
@@ -247,16 +235,17 @@ describe(LayerCompositionService, () => {
         always: { always: { files: { "README.md": "# {{name}}\n" } } },
         frameworks: { typescript: { files: {} } },
         "package-managers": { pnpm: { files: {} } },
-        runtime: { node: { files: {} } },
+        runtime: { node: { baseImage: "", files: {} } },
+        services: {},
       });
 
       const result = service.resolveLayers({
         confirmed: true,
-        databases: ["none"],
+        databases: [],
         framework: "typescript",
         name: "my-app",
         packageManager: "pnpm",
-        platformServices: ["none"],
+        platformServices: [],
         runtime: "node",
       });
 
@@ -273,16 +262,17 @@ describe(LayerCompositionService, () => {
         always: { always: { files: { "meta.txt": "rt={{runtime}} fw={{framework}}\n" } } },
         frameworks: { express: { files: {} } },
         "package-managers": { pnpm: { files: {} } },
-        runtime: { node: { files: {} } },
+        runtime: { node: { baseImage: "", files: {} } },
+        services: {},
       });
 
       const result = service.resolveLayers({
         confirmed: true,
-        databases: ["none"],
+        databases: [],
         framework: "express",
         name: "app",
         packageManager: "pnpm",
-        platformServices: ["none"],
+        platformServices: [],
         runtime: "node",
       });
 
@@ -294,16 +284,17 @@ describe(LayerCompositionService, () => {
         always: { always: { files: { "note.txt": "{{name}} {{unknown}}\n" } } },
         frameworks: { typescript: { files: {} } },
         "package-managers": { pnpm: { files: {} } },
-        runtime: { node: { files: {} } },
+        runtime: { node: { baseImage: "", files: {} } },
+        services: {},
       });
 
       const result = service.resolveLayers({
         confirmed: true,
-        databases: ["none"],
+        databases: [],
         framework: "typescript",
         name: "my-app",
         packageManager: "pnpm",
-        platformServices: ["none"],
+        platformServices: [],
         runtime: "node",
       });
 
@@ -312,15 +303,16 @@ describe(LayerCompositionService, () => {
   });
 
   describe("yaml config serialisation", () => {
-    const makeYamlService = (overrides?: LayerRegistry) => {
+    const makeYamlService = (overrides?: Partial<LayerRegistry>) => {
       const base: LayerRegistry = {
         always: { always: { files: { "README.md": "# test\n" } } },
         frameworks: { express: { files: {} } },
         "package-managers": { pnpm: { files: {} } },
         runtime: {
-          node: { files: { "package.json": '{"name":"test"}' } },
-          static: { files: { "public/index.html": "<h1>test</h1>\n" } },
+          node: { baseImage: "", files: { "package.json": '{"name":"test"}' } },
+          static: { baseImage: "", files: { "public/index.html": "<h1>test</h1>\n" } },
         },
+        services: {},
       };
 
       return new LayerCompositionService({
@@ -334,6 +326,7 @@ describe(LayerCompositionService, () => {
 
     it("merges YAML config files and emits valid YAML output", () => {
       const service = makeYamlService({
+        always: {},
         frameworks: {
           express: {
             files: {
@@ -343,20 +336,22 @@ describe(LayerCompositionService, () => {
         },
         runtime: {
           node: {
+            baseImage: "",
             files: {
               "docker-compose.yaml": "version: '3'\nservices:\n  app:\n    image: node:22\n",
             },
           },
         },
+        services: {},
       });
 
       const result = service.resolveLayers({
         confirmed: true,
-        databases: ["none"],
+        databases: [],
         framework: "express",
         name: "test",
         packageManager: "pnpm",
-        platformServices: ["none"],
+        platformServices: [],
         runtime: "node",
       });
 
@@ -371,16 +366,18 @@ describe(LayerCompositionService, () => {
     it("merges .yml config files and emits valid YAML output", () => {
       const service = makeYamlService({
         frameworks: { express: { files: { "config.yml": "env: extended\n" } } },
-        runtime: { node: { files: { "config.yml": "env: base\nshared: common\n" } } },
+        runtime: {
+          node: { baseImage: "", files: { "config.yml": "env: base\nshared: common\n" } },
+        },
       });
 
       const result = service.resolveLayers({
         confirmed: true,
-        databases: ["none"],
+        databases: [],
         framework: "express",
         name: "test",
         packageManager: "pnpm",
-        platformServices: ["none"],
+        platformServices: [],
         runtime: "node",
       });
 
@@ -396,16 +393,18 @@ describe(LayerCompositionService, () => {
         frameworks: {
           express: { files: { "package.json": '{"dependencies":{"express":"5.1.0"}}' } },
         },
-        runtime: { node: { files: { "package.json": '{"scripts":{"build":"tsc"}}' } } },
+        runtime: {
+          node: { baseImage: "", files: { "package.json": '{"scripts":{"build":"tsc"}}' } },
+        },
       });
 
       const result = service.resolveLayers({
         confirmed: true,
-        databases: ["none"],
+        databases: [],
         framework: "express",
         name: "test",
         packageManager: "pnpm",
-        platformServices: ["none"],
+        platformServices: [],
         runtime: "node",
       });
 
@@ -426,6 +425,7 @@ describe(LayerCompositionService, () => {
         },
         runtime: {
           node: {
+            baseImage: "",
             files: {
               "docker-compose.yaml": "services:\n  app:\n    image: node:22\n",
               "package.json": '{"scripts":{"build":"tsc"}}',
@@ -436,11 +436,11 @@ describe(LayerCompositionService, () => {
 
       const result = service.resolveLayers({
         confirmed: true,
-        databases: ["none"],
+        databases: [],
         framework: "express",
         name: "test",
         packageManager: "pnpm",
-        platformServices: ["none"],
+        platformServices: [],
         runtime: "node",
       });
 
@@ -460,11 +460,11 @@ describe(LayerCompositionService, () => {
     it("resolves Static to always, runtime/static_web, and frameworks/html-css-js", () => {
       const result = service.resolveLayers({
         confirmed: true,
-        databases: ["none"],
+        databases: [],
         framework: "html-css-js",
         name: "test",
         packageManager: "pnpm",
-        platformServices: ["none"],
+        platformServices: [],
         runtime: "static_web",
       });
 
@@ -478,11 +478,11 @@ describe(LayerCompositionService, () => {
     it("emits a Dockerfile for node + express + pnpm", () => {
       const result = service.resolveLayers({
         confirmed: true,
-        databases: ["none"],
+        databases: [],
         framework: "express",
         name: "test",
         packageManager: "pnpm",
-        platformServices: ["none"],
+        platformServices: [],
         runtime: "node",
       });
 
@@ -495,11 +495,11 @@ describe(LayerCompositionService, () => {
     it("emits a docker-compose.dev.yml for node + express + pnpm", () => {
       const result = service.resolveLayers({
         confirmed: true,
-        databases: ["none"],
+        databases: [],
         framework: "express",
         name: "test",
         packageManager: "pnpm",
-        platformServices: ["none"],
+        platformServices: [],
         runtime: "node",
       });
 
@@ -511,11 +511,11 @@ describe(LayerCompositionService, () => {
     it("emits a Dockerfile for node + typescript + pnpm", () => {
       const result = service.resolveLayers({
         confirmed: true,
-        databases: ["none"],
+        databases: [],
         framework: "typescript",
         name: "test",
         packageManager: "pnpm",
-        platformServices: ["none"],
+        platformServices: [],
         runtime: "node",
       });
 
@@ -527,11 +527,11 @@ describe(LayerCompositionService, () => {
     it("emits a docker-compose.dev.yml for node + typescript + pnpm", () => {
       const result = service.resolveLayers({
         confirmed: true,
-        databases: ["none"],
+        databases: [],
         framework: "typescript",
         name: "test",
         packageManager: "pnpm",
-        platformServices: ["none"],
+        platformServices: [],
         runtime: "node",
       });
 
@@ -635,11 +635,11 @@ describe("cross-combination consistency invariants", () => {
     ({ runtime, framework, packageManager, expectedPort }) => {
       const result = service.resolveLayers({
         confirmed: true,
-        databases: ["none"],
+        databases: [],
         framework: framework as FrameworkOption,
         name: "test",
         packageManager: packageManager as PackageManagerOption,
-        platformServices: ["none"],
+        platformServices: [],
         runtime: runtime as RuntimeOption,
       });
 

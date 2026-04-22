@@ -14,11 +14,11 @@ import { StubPackageManager } from "../commands/create/package-manager/package-m
 
 const createNodeSelection = (name: string): CreateSelections => ({
   confirmed: true,
-  databases: ["none"],
+  databases: [],
   framework: "express",
   name,
   packageManager: "pnpm",
-  platformServices: ["none"],
+  platformServices: [],
   runtime: "node",
 });
 

@@ -73,11 +73,11 @@ describe("create e2e — docker", () => {
   it("node + express + pnpm scaffold produces a reachable container on port 3000", async () => {
     const selection: CreateSelections = {
       confirmed: true,
-      databases: ["none"],
+      databases: [],
       framework: "express",
       name: "e2e-express-app",
       packageManager: "pnpm",
-      platformServices: ["none"],
+      platformServices: [],
       runtime: "node",
     };
 

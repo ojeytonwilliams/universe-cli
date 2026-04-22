@@ -52,11 +52,11 @@ const createNodeSelection = (selection: {
 
 const createStaticSelection = (name: string): CreateSelections => ({
   confirmed: true,
-  databases: ["none"],
+  databases: [],
   framework: "html-css-js",
   name,
   packageManager: "pnpm",
-  platformServices: ["none"],
+  platformServices: [],
   runtime: "static_web",
 });
 
@@ -143,10 +143,10 @@ describe("create", () => {
 
   it("scaffolds Node.js + typescript + no services", async () => {
     const selection = createNodeSelection({
-      databases: ["none"],
+      databases: [],
       framework: "typescript",
       name: "node-bare",
-      platformServices: ["none"],
+      platformServices: [],
     });
 
     const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection));
@@ -187,10 +187,10 @@ describe("create", () => {
       rootDirectory,
       createPromptPort(
         createNodeSelection({
-          databases: ["none"],
+          databases: [],
           framework: "express",
           name: conflictProjectName,
-          platformServices: ["none"],
+          platformServices: [],
         }),
       ),
     );
@@ -207,10 +207,10 @@ describe("create", () => {
       rootDirectory,
       createPromptPort(
         createNodeSelection({
-          databases: ["none"],
+          databases: [],
           framework: "express",
           name: conflictProjectName,
-          platformServices: ["none"],
+          platformServices: [],
         }),
       ),
     );
@@ -227,10 +227,10 @@ describe("create", () => {
 
   it("covers config merge overwrite behavior in a create flow", async () => {
     const selection = createNodeSelection({
-      databases: ["none"],
+      databases: [],
       framework: "express",
       name: "config-merge-app",
-      platformServices: ["none"],
+      platformServices: [],
     });
     const customLayers: LayerRegistry = {
       always: { always: { files: { "README.md": "# __PROJECT_NAME__\n" } } },
@@ -247,14 +247,16 @@ describe("create", () => {
       "package-managers": { pnpm: { files: {} } },
       runtime: {
         node: {
+          baseImage: "node:22-alpine",
           files: {
             "package.json": JSON.stringify({
               scripts: { build: "tsc -p tsconfig.json", dev: "node base-dev.js" },
             }),
           },
         },
-        static: { files: { "public/index.html": "<h1>Static</h1>\n" } },
+        static: { baseImage: "nginx:alpine", files: { "public/index.html": "<h1>Static</h1>\n" } },
       },
+      services: {},
     };
 
     const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection), {
@@ -276,19 +278,20 @@ describe("create", () => {
 
   it("covers non-config collision failure behavior in a create flow", async () => {
     const selection = createNodeSelection({
-      databases: ["none"],
+      databases: [],
       framework: "express",
       name: "collision-app",
-      platformServices: ["none"],
+      platformServices: [],
     });
     const customLayers: LayerRegistry = {
       always: { always: { files: { "README.md": "# from always\n" } } },
       frameworks: { express: { files: {} } },
       "package-managers": { pnpm: { files: {} } },
       runtime: {
-        node: { files: { "README.md": "# from base\n" } },
-        static: { files: { "public/index.html": "<h1>Static</h1>\n" } },
+        node: { baseImage: "", files: { "README.md": "# from base\n" } },
+        static: { baseImage: "", files: { "public/index.html": "<h1>Static</h1>\n" } },
       },
+      services: {},
     };
 
     const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection), {
@@ -321,10 +324,10 @@ describe("create", () => {
 
   it("includes pnpm security artefacts in Node.js scaffold", async () => {
     const selection = createNodeSelection({
-      databases: ["none"],
+      databases: [],
       framework: "typescript",
       name: "pnpm-security-app",
-      platformServices: ["none"],
+      platformServices: [],
     });
 
     const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection));
@@ -366,10 +369,10 @@ describe("create", () => {
   it("calls packageManager.run with the target directory for Node.js scaffold", async () => {
     const name = "node-install-spy";
     const selection = createNodeSelection({
-      databases: ["none"],
+      databases: [],
       framework: "typescript",
       name,
-      platformServices: ["none"],
+      platformServices: [],
     });
 
     const run = vi.fn((_opts: RunOptions) => Promise.resolve());
@@ -404,10 +407,10 @@ describe("create", () => {
   it("calls repoInitialiser.initialise with the target directory for Node.js scaffold", async () => {
     const name = "node-repo-init-spy";
     const selection = createNodeSelection({
-      databases: ["none"],
+      databases: [],
       framework: "typescript",
       name,
-      platformServices: ["none"],
+      platformServices: [],
     });
 
     const repoInitialiser = { initialise: vi.fn((_dir: string) => Promise.resolve()) };
@@ -452,10 +455,10 @@ describe("create", () => {
   describe("docker scaffold output", () => {
     it("node + express + pnpm Dockerfile contains base image and build steps", async () => {
       const selection = createNodeSelection({
-        databases: ["none"],
+        databases: [],
         framework: "express",
         name: "docker-express-dockerfile",
-        platformServices: ["none"],
+        platformServices: [],
       });
 
       const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection));
@@ -471,10 +474,10 @@ describe("create", () => {
 
     it("node + express + pnpm .dockerignore and compose have correct docker config", async () => {
       const selection = createNodeSelection({
-        databases: ["none"],
+        databases: [],
         framework: "express",
         name: "docker-express-compose",
-        platformServices: ["none"],
+        platformServices: [],
       });
 
       const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection));
@@ -497,10 +500,10 @@ describe("create", () => {
 
     it("node + typescript + pnpm Dockerfile contains base image and build steps", async () => {
       const selection = createNodeSelection({
-        databases: ["none"],
+        databases: [],
         framework: "typescript",
         name: "docker-typescript-dockerfile",
-        platformServices: ["none"],
+        platformServices: [],
       });
 
       const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection));
@@ -516,10 +519,10 @@ describe("create", () => {
 
     it("node + typescript + pnpm .dockerignore and compose have correct docker config", async () => {
       const selection = createNodeSelection({
-        databases: ["none"],
+        databases: [],
         framework: "typescript",
         name: "docker-typescript-compose",
-        platformServices: ["none"],
+        platformServices: [],
       });
 
       const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection));

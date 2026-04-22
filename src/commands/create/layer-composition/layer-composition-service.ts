@@ -1,10 +1,8 @@
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import { LayerConflictError, MissingLayerError } from "../../../errors/cli-errors.js";
-import { DATABASE_OPTIONS, RUNTIME_OPTIONS } from "../prompt/prompt.port.js";
 import type { CreateSelections } from "../prompt/prompt.port.js";
 import { buildComposeDevYaml } from "./build-compose-dev-yaml.js";
 import { buildDockerfileData } from "./build-dockerfile-data.js";
-import { baseStaticLayer } from "./layers/base-static-layer.js";
 import { renderDockerfile } from "./layers/dockerfile-template.js";
 import type { DockerfileData } from "./layers/dockerfile-template.js";
 import { typedFrameworkLayers } from "./layers/frameworks-layer.js";
@@ -21,7 +19,6 @@ import alwaysLayer from "./layers/always.json" with { type: "json" };
 import frameworksLayer from "./layers/framework.json" with { type: "json" };
 import packageManagersLayer from "./layers/package-manager.json" with { type: "json" };
 import runtimeLayer from "./layers/runtime.json" with { type: "json" };
-import { baseNodeLayer } from "./layers/base-node-layer.js";
 
 type LayerType = "always" | "runtime" | "frameworks" | "package-managers" | "services";
 type JsonValue = boolean | JsonObject | JsonValue[] | null | number | string;
@@ -30,7 +27,13 @@ interface LayerData {
   files: Record<string, string>;
 }
 
-type LayerRegistry = Partial<Record<LayerType, Record<string, LayerData | undefined>>>;
+interface LayerRegistry {
+  always: Record<string, LayerData>;
+  runtime: Record<string, RuntimeLayerData>;
+  frameworks: Record<string, LayerData | undefined>;
+  "package-managers": Record<string, LayerData | undefined>;
+  services: Record<string, LayerData | undefined>;
+}
 
 interface JsonObject {
   [key: string]: JsonValue;
@@ -60,7 +63,6 @@ interface TemplateContext {
 }
 
 const CONFIG_EXTENSIONS = new Set([".json", ".yaml", ".yml"]);
-const NONE_VALUE = DATABASE_OPTIONS.NONE;
 
 const defaultLayerRegistry: LayerRegistry = {
   always: { always: alwaysLayer },
@@ -70,11 +72,6 @@ const defaultLayerRegistry: LayerRegistry = {
   services: Object.fromEntries(
     Object.entries(servicesLayer).map(([key, files]) => [key.slice("services/".length), { files }]),
   ),
-};
-
-const defaultRuntimeLayers: Record<string, RuntimeLayerData | undefined> = {
-  node: baseNodeLayer,
-  static: baseStaticLayer,
 };
 
 const defaultFrameworkLayers: Record<string, FrameworkLayerData | undefined> = typedFrameworkLayers;
@@ -98,13 +95,11 @@ class LayerTemplateRenderer {
 
 class LayerCompositionService implements LayerComposer {
   private readonly layers: LayerRegistry;
-  private readonly runtimeLayers: Record<string, RuntimeLayerData | undefined>;
   private readonly frameworkLayers: Record<string, FrameworkLayerData | undefined>;
   private readonly packageManagerLayers: Record<string, PackageManagerLayerData | undefined>;
 
   constructor(
     layers: LayerRegistry = defaultLayerRegistry,
-    runtimeLayers: Record<string, RuntimeLayerData | undefined> = defaultRuntimeLayers,
     frameworkLayers: Record<string, FrameworkLayerData | undefined> = defaultFrameworkLayers,
     packageManagerLayers: Record<
       string,
@@ -112,7 +107,6 @@ class LayerCompositionService implements LayerComposer {
     > = defaultPackageManagerLayers,
   ) {
     this.layers = layers;
-    this.runtimeLayers = runtimeLayers;
     this.frameworkLayers = frameworkLayers;
     this.packageManagerLayers = packageManagerLayers;
   }
@@ -177,8 +171,7 @@ class LayerCompositionService implements LayerComposer {
       ]),
     );
 
-    const runtimeData =
-      this.runtimeLayers[input.runtime === RUNTIME_OPTIONS.NODE ? "node" : "static"];
+    const runtimeData = this.layers.runtime?.[input.runtime];
 
     if (
       runtimeData !== undefined &&
@@ -202,7 +195,7 @@ class LayerCompositionService implements LayerComposer {
   }
 
   private resolveOrderedLayers(input: CreateSelections): ResolvedLayer[] {
-    const isNode = input.runtime === RUNTIME_OPTIONS.NODE;
+    const isNode = input.runtime === "node";
     const runtimeId = isNode ? "node" : "static_web";
 
     const refs: { id: string; layerType: LayerType }[] = [
@@ -213,7 +206,6 @@ class LayerCompositionService implements LayerComposer {
         : []),
       { id: input.framework, layerType: "frameworks" },
       ...[...input.databases, ...input.platformServices]
-        .filter((v) => v !== NONE_VALUE)
         .sort((a, b) => a.localeCompare(b))
         .map((id) => ({ id, layerType: "services" as const })),
     ];

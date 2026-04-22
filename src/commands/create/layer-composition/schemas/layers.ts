@@ -5,7 +5,10 @@ const AlwaysSchema = z.strictObject({
 });
 type Always = z.infer<typeof AlwaysSchema>;
 
-const DatabaseSchema = z.record(z.string(), z.record(z.string(), z.string()));
+const DatabaseOptionSchema = z.literal(["postgresql", "redis"]);
+type DatabaseOption = z.infer<typeof DatabaseOptionSchema>;
+
+const DatabaseSchema = z.record(DatabaseOptionSchema, z.record(z.string(), z.string()));
 type Database = z.infer<typeof DatabaseSchema>;
 
 const RuntimeSchema = z.record(
@@ -32,6 +35,8 @@ const PackageManagerSchema = z.record(
 );
 type PackageManager = z.infer<typeof PackageManagerSchema>;
 
+const ServiceOptionSchema = z.literal(["analytics", "auth", "email"]);
+type ServiceOption = z.infer<typeof ServiceOptionSchema>;
 const ServiceSchema = z.record(z.string(), z.record(z.string(), z.string()));
 type Service = z.infer<typeof ServiceSchema>;
 
@@ -54,4 +59,13 @@ export {
   PackageManagerSchema,
   ServiceSchema,
 };
-export type { Always, Database, Runtime, Framework, PackageManager, Service };
+export type {
+  Always,
+  Database,
+  DatabaseOption,
+  Runtime,
+  Framework,
+  PackageManager,
+  Service,
+  ServiceOption,
+};

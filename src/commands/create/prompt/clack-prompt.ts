@@ -4,7 +4,7 @@ import type {
   DatabaseOption,
   FrameworkOption,
   PackageManagerOption,
-  PlatformServiceOption,
+  ServiceOption,
   Prompt,
   RuntimeOption,
 } from "./prompt.port.js";
@@ -154,7 +154,7 @@ class ClackPrompt implements Prompt {
 
     confirmLines.push(
       `- Databases: ${toLabelList(databases as DatabaseOption[], "database")}`,
-      `- Platform services: ${toLabelList(platformServices as PlatformServiceOption[], "service")}`,
+      `- Platform services: ${toLabelList(platformServices as ServiceOption[], "service")}`,
     );
 
     const isConfirmed = await this.api.confirm({
@@ -170,7 +170,7 @@ class ClackPrompt implements Prompt {
       databases: databases as DatabaseOption[],
       framework: framework as FrameworkOption,
       name,
-      platformServices: platformServices as PlatformServiceOption[],
+      platformServices: platformServices as ServiceOption[],
       runtime: runtime as RuntimeOption,
       ...(packageManager !== undefined && {
         packageManager: packageManager as PackageManagerOption,

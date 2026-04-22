@@ -1,10 +1,6 @@
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import {
-  DATABASE_OPTIONS,
-  PLATFORM_SERVICE_OPTIONS,
-  RUNTIME_OPTIONS,
-} from "../commands/create/prompt/prompt.port.js";
+import { RUNTIME_OPTIONS } from "../commands/create/prompt/prompt.port.js";
 import type { CreateSelections } from "../commands/create/prompt/prompt.port.js";
 import type { ProjectReaderPort } from "../io/project-reader.port.js";
 import { ManifestInvalidError } from "../errors/cli-errors.js";
@@ -120,11 +116,9 @@ class PlatformManifestService implements PlatformManifestGenerator {
       return manifest;
     }
 
-    const services = input.platformServices
-      .filter((value) => value !== PLATFORM_SERVICE_OPTIONS.NONE)
-      .sort();
+    const services = input.platformServices.sort();
 
-    const resources = input.databases.filter((value) => value !== DATABASE_OPTIONS.NONE).sort();
+    const resources = input.databases.sort();
 
     const manifest: AppPlatformManifest = {
       domain,
