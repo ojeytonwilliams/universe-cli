@@ -1,5 +1,5 @@
 {
-  "frameworks/express": {
+  "express": {
     "devCopySource": "COPY src/ ./src/\nCOPY tsconfig.json ./",
     "files": {
       "package.json": "{\"dependencies\":{\"express\":\"^5\"},\"devDependencies\":{\"@types/express\":\"^5\",\"@types/node\":\"^24\",\"typescript\":\"^5\"},\"scripts\":{\"build\":\"tsc -p tsconfig.json\",\"dev\":\"PORT={{port}} node dist/index.js\",\"start\":\"node dist/index.js\"}}",
@@ -9,7 +9,7 @@
     "port": 3000,
     "watchSync": [{ "path": "./src", "target": "/app/src" }]
   },
-  "frameworks/html-css-js": {
+  "html-css-js": {
     "devCopySource": "COPY public public",
     "files": {
       "package.json": "{\"devDependencies\":{\"serve\":\"^14\"},\"name\":\"{{name}}\",\"private\":true,\"scripts\":{\"dev\":\"serve public -l {{port}}\"}}",
@@ -20,7 +20,7 @@
     "port": 3000,
     "watchSync": [{ "path": "./public", "target": "/app/public" }]
   },
-  "frameworks/react-vite": {
+  "react-vite": {
     "devCopySource": "COPY src src\nCOPY index.html .\nCOPY vite.config.ts .\nCOPY tsconfig*.json .",
     "files": {
       "eslint.config.js": "import js from '@eslint/js'\nimport globals from 'globals'\nimport reactHooks from 'eslint-plugin-react-hooks'\nimport reactRefresh from 'eslint-plugin-react-refresh'\nimport tseslint from 'typescript-eslint'\nimport { defineConfig, globalIgnores } from 'eslint/config'\n\nexport default defineConfig([\n  globalIgnores(['dist']),\n  {\n    files: ['**/*.{ts,tsx}'],\n    extends: [\n      js.configs.recommended,\n      tseslint.configs.recommended,\n      reactHooks.configs.flat.recommended,\n      reactRefresh.configs.vite,\n    ],\n    languageOptions: {\n      ecmaVersion: 2020,\n      globals: globals.browser,\n    },\n  },\n])\n",
@@ -38,7 +38,7 @@
     "port": 5173,
     "watchSync": [{ "path": "./src", "target": "/app/src" }]
   },
-  "frameworks/typescript": {
+  "typescript": {
     "devCopySource": "COPY src/ ./src/\nCOPY tsconfig.json ./",
     "files": {
       "package.json": "{\"devDependencies\":{\"@types/node\":\"^24\",\"typescript\":\"^5\"},\"scripts\":{\"build\":\"tsc -p tsconfig.json\",\"dev\":\"PORT={{port}} node dist/index.js\",\"start\":\"node dist/index.js\"}}",

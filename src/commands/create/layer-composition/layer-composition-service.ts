@@ -7,7 +7,7 @@ import { buildDockerfileData } from "./build-dockerfile-data.js";
 import { baseStaticLayer } from "./layers/base-static-layer.js";
 import { renderDockerfile } from "./layers/dockerfile-template.js";
 import type { DockerfileData } from "./layers/dockerfile-template.js";
-import { frameworksLayer, typedFrameworkLayers } from "./layers/frameworks-layer.js";
+import { typedFrameworkLayers } from "./layers/frameworks-layer.js";
 import type {
   FrameworkLayerData,
   PackageManagerLayerData,
@@ -18,6 +18,7 @@ import { servicesLayer } from "./layers/services-layer.js";
 import { getLabel } from "./labels.js";
 
 import alwaysLayer from "./layers/always.json" with { type: "json" };
+import frameworksLayer from "./layers/framework.json" with { type: "json" };
 import packageManagersLayer from "./layers/package-manager.json" with { type: "json" };
 import runtimeLayer from "./layers/runtime.json" with { type: "json" };
 import { baseNodeLayer } from "./layers/base-node-layer.js";
@@ -63,9 +64,7 @@ const NONE_VALUE = DATABASE_OPTIONS.NONE;
 
 const defaultLayerRegistry: LayerRegistry = {
   always: { always: alwaysLayer },
-  frameworks: Object.fromEntries(
-    Object.entries(frameworksLayer).map(([key, value]) => [key.slice("frameworks/".length), value]),
-  ),
+  frameworks: frameworksLayer,
   "package-managers": packageManagersLayer,
   runtime: runtimeLayer,
   services: Object.fromEntries(

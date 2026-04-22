@@ -4,10 +4,10 @@
     "static_web": "Static (HTML/CSS/JS)"
   },
   "framework": {
-    "frameworks/express": "Express",
-    "frameworks/html-css-js": "HTML/CSS/JS",
-    "frameworks/react-vite": "React (Vite)",
-    "frameworks/typescript": "TypeScript"
+    "express": "Express",
+    "html-css-js": "HTML/CSS/JS",
+    "react-vite": "React (Vite)",
+    "typescript": "TypeScript"
   },
   "database": {
     "none": "None",
