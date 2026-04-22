@@ -8,5 +8,6 @@ export const getLabel = <C extends LabelCategory>(category: C, key: string): str
   if (key in categoryData) {
     return categoryData[key as keyof typeof categoryData] as string;
   }
-  throw new Error(`Label not found for category "${category}" and key "${key}"`);
+
+  return key;
 };

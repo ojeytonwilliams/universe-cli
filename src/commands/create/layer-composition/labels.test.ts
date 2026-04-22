@@ -5,4 +5,8 @@ describe(getLabel, () => {
     expect(getLabel("runtime", "node")).toBe("Node.js");
     expect(getLabel("framework", "express")).toBe("Express");
   });
+
+  it("should default to the key if no label is found", () => {
+    expect(getLabel("runtime", "unknown-runtime")).toBe("unknown-runtime");
+  });
 });
