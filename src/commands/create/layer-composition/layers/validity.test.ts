@@ -29,7 +29,7 @@ describe("runtime layers", () => {
   it("should have a 'databases' array referencing specific databases", () => {
     const runtimes = Object.values(runtimeJson);
     const runtimeDatabases = runtimes.flatMap((runtime) => runtime.databases);
-    const databaseNames = databaseJson;
+    const databaseNames = Object.keys(databaseJson);
 
     runtimeDatabases.forEach((database: string) => {
       expect(databaseNames).toContain(database);
@@ -73,7 +73,7 @@ describe("package manager layers", () => {
 
 describe("database layers", () => {
   it("each database should have a corresponding runtime", () => {
-    const databases = databaseJson;
+    const databases = Object.keys(databaseJson);
     const runtimes = Object.values(runtimeJson);
     const runtimeDatabases = runtimes.flatMap((runtime) => runtime.databases);
 
@@ -124,7 +124,7 @@ describe("labels", () => {
   });
 
   it("should have a label for each database", () => {
-    const databases = databaseJson;
+    const databases = Object.keys(databaseJson);
     const labels = Object.keys(labelsJson.database);
 
     databases.forEach((database) => {
@@ -145,7 +145,7 @@ describe("labels", () => {
     const runtimes = Object.keys(runtimeJson);
     const frameworks = Object.keys(frameworkJson);
     const packageManagers = Object.keys(packageManagersJson);
-    const databases = databaseJson;
+    const databases = Object.keys(databaseJson);
     const services = Object.keys(serviceJson);
 
     const runtimeLabels = Object.keys(labelsJson.runtime);

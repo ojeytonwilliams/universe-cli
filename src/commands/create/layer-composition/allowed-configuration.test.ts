@@ -16,25 +16,29 @@ describe("allowed-configuration", () => {
   });
 
   describe(frameworkOptions, () => {
-    it.each(RUNTIMES)("should return non-empty arrays with for runtime '%s'", (runtime) => {
+    it.each(RUNTIMES)("should return non-empty arrays for runtime '%s'", (runtime) => {
       expect(frameworkOptions(runtime).length).toBeGreaterThan(0);
     });
   });
 
   describe(packageManagerOptions, () => {
-    it.each(RUNTIMES)("should return non-empty arrays with for runtime '%s'", (runtime) => {
+    it.each(RUNTIMES)("should return non-empty arrays for runtime '%s'", (runtime) => {
       expect(packageManagerOptions(runtime).length).toBeGreaterThan(0);
     });
   });
 
   describe(databaseOptions, () => {
-    it.each(RUNTIMES)("should return non-empty arrays with for runtime '%s'", (runtime) => {
-      expect(databaseOptions(runtime).length).toBeGreaterThan(0);
+    it("should return a non-empty array for runtime 'node'", () => {
+      expect(databaseOptions("node").length).toBeGreaterThan(0);
+    });
+
+    it("should return an empty array with for runtime 'static_web'", () => {
+      expect(databaseOptions("static_web")).toHaveLength(0);
     });
   });
 
   describe(serviceOptions, () => {
-    it.each(RUNTIMES)("should return non-empty arrays with for runtime '%s'", (runtime) => {
+    it.each(RUNTIMES)("should return non-empty arrays for runtime '%s'", (runtime) => {
       expect(serviceOptions(runtime).length).toBeGreaterThan(0);
     });
   });

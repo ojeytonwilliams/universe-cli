@@ -1,1 +1,8 @@
-["none", "postgresql", "redis"]
+{
+  "postgresql": {
+    "universe/services/postgresql.md": "PostgreSQL resource selected for {{name}}.\n"
+  },
+  "redis": {
+    "universe/services/redis.md": "Redis resource selected for {{name}}.\n"
+  }
+}

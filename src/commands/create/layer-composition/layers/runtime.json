@@ -1,18 +1,18 @@
 {
   "node": {
     "baseImage": "node:22-alpine",
-    "databases": ["none", "postgresql", "redis"],
+    "databases": ["postgresql", "redis"],
     "files": {
       "Procfile": "web: node dist/index.js\n",
       "package.json": "{\"name\":\"{{name}}\",\"private\":true,\"type\":\"module\"}"
     },
     "frameworks": ["express", "typescript"],
     "packageManagers": ["pnpm", "bun"],
-    "services": ["services/analytics", "services/auth", "services/email"]
+    "services": ["analytics", "auth", "email"]
   },
   "static_web": {
     "baseImage": "node:22-alpine",
-    "databases": ["none"],
+    "databases": [],
     "files": {
       ".dockerignore": ".git\n",
       "Procfile": "web: npx serve public -l {{port}}\n",
@@ -20,6 +20,6 @@
     },
     "frameworks": ["html-css-js", "react-vite"],
     "packageManagers": ["pnpm", "bun"],
-    "services": ["services/analytics", "services/auth", "services/email"]
+    "services": ["analytics", "auth", "email"]
   }
 }

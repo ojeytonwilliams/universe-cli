@@ -18,7 +18,7 @@ const runCli = async (
     if (error instanceof CliError) {
       observability.safeError(error);
       observability.safeTrack(`${command}.failure`);
-      return { exitCode: error.exitCode, output: error.message };
+      return { exitCode: error.exitCode, output: error.stack ?? error.message };
     }
     throw error;
   }

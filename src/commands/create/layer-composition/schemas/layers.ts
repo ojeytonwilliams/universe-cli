@@ -5,7 +5,7 @@ const AlwaysSchema = z.strictObject({
 });
 type Always = z.infer<typeof AlwaysSchema>;
 
-const DatabaseSchema = z.array(z.string());
+const DatabaseSchema = z.record(z.string(), z.record(z.string(), z.string()));
 type Database = z.infer<typeof DatabaseSchema>;
 
 const RuntimeSchema = z.record(

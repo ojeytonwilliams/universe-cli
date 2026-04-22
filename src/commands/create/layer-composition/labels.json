@@ -10,14 +10,13 @@
     "typescript": "TypeScript"
   },
   "database": {
-    "none": "None",
     "postgresql": "PostgreSQL",
     "redis": "Redis"
   },
   "service": {
-    "services/analytics": "Analytics",
-    "services/auth": "Auth",
-    "services/email": "Email"
+    "analytics": "Analytics",
+    "auth": "Auth",
+    "email": "Email"
   },
   "packageManager": {
     "bun": "bun",
