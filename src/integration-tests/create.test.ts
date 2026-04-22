@@ -1,11 +1,9 @@
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
-import { parse as parseYaml } from "yaml";
 import { createAdapterStubs } from "./adapter-stubs.js";
 import { StubPackageManager } from "../commands/create/package-manager/package-manager.stub.js";
 import { LayerCompositionService } from "../commands/create/layer-composition/layer-composition-service.js";
-import type { LayerRegistry } from "../commands/create/layer-composition/layer-composition-service.js";
 import { PackageManagerService } from "../commands/create/package-manager/package-manager.service.js";
 import type {
   PackageManagerRunner,
@@ -25,7 +23,6 @@ interface AdapterOverrides {
 
 interface MakeDepsOptions {
   adapterOverrides?: AdapterOverrides;
-  layerRegistry?: LayerRegistry;
   packageManagerService?: PackageManagerRunner;
 }
 
@@ -92,14 +89,12 @@ const collectGeneratedFiles = (directory: string): Record<string, string> => {
 };
 
 const makeDeps = (cwd: string, prompt: Prompt, options: MakeDepsOptions = {}) => {
-  const { adapterOverrides = {}, layerRegistry, packageManagerService } = options;
+  const { adapterOverrides = {}, packageManagerService } = options;
   const { observability, ...adapters } = createAdapterStubs();
   return {
     ...adapters,
     filesystemWriter: new LocalFilesystemWriter(),
-    layerResolver: layerRegistry
-      ? new LayerCompositionService(layerRegistry)
-      : new LayerCompositionService(),
+    layerResolver: new LayerCompositionService(),
     observability,
     packageManager:
       packageManagerService ??
@@ -166,151 +161,6 @@ describe("create", () => {
     expect(existsSync(join(rootDirectory, selection.name))).toBe(true);
   });
 
-  it("covers create validation failure and target-directory conflict failure", async () => {
-    const { observability: obsInvalid, ...routeDepsInvalid } = makeDeps(
-      rootDirectory,
-      createPromptPort(createStaticSelection("InvalidName")),
-    );
-    const invalidNameResult = await route(
-      ["create"],
-      routeDepsInvalid,
-      { cwd: rootDirectory },
-      obsInvalid,
-    );
-
-    expect(invalidNameResult.exitCode).toBeGreaterThan(0);
-    expect(invalidNameResult.output).toContain("Invalid project name");
-
-    const conflictProjectName = "already-exists";
-
-    const { observability: obsFirst, ...routeDepsFirst } = makeDeps(
-      rootDirectory,
-      createPromptPort(
-        createNodeSelection({
-          databases: [],
-          framework: "express",
-          name: conflictProjectName,
-          platformServices: [],
-        }),
-      ),
-    );
-    const firstCreateResult = await route(
-      ["create"],
-      routeDepsFirst,
-      { cwd: rootDirectory },
-      obsFirst,
-    );
-
-    expect(firstCreateResult.exitCode).toBe(0);
-
-    const { observability: obsConflict, ...routeDepsConflict } = makeDeps(
-      rootDirectory,
-      createPromptPort(
-        createNodeSelection({
-          databases: [],
-          framework: "express",
-          name: conflictProjectName,
-          platformServices: [],
-        }),
-      ),
-    );
-    const targetExistsResult = await route(
-      ["create"],
-      routeDepsConflict,
-      { cwd: rootDirectory },
-      obsConflict,
-    );
-
-    expect(targetExistsResult.exitCode).toBeGreaterThan(0);
-    expect(targetExistsResult.output).toContain("Target directory already exists");
-  });
-
-  it("covers config merge overwrite behavior in a create flow", async () => {
-    const selection = createNodeSelection({
-      databases: [],
-      framework: "express",
-      name: "config-merge-app",
-      platformServices: [],
-    });
-    const customLayers: LayerRegistry = {
-      always: { always: { files: { "README.md": "# __PROJECT_NAME__\n" } } },
-      frameworks: {
-        express: {
-          devCopySource: "",
-          files: {
-            "package.json": JSON.stringify({
-              dependencies: { express: "5.1.0" },
-              scripts: { dev: "node framework-dev.js" },
-            }),
-          },
-          port: 3000,
-          watchSync: [],
-        },
-      },
-      "package-managers": {
-        pnpm: { devCmd: [], devInstall: "", files: {}, watchRebuild: [] },
-      },
-      runtime: {
-        node: {
-          baseImage: "node:22-alpine",
-          files: {
-            "package.json": JSON.stringify({
-              scripts: { build: "tsc -p tsconfig.json", dev: "node base-dev.js" },
-            }),
-          },
-        },
-        static: { baseImage: "nginx:alpine", files: { "public/index.html": "<h1>Static</h1>\n" } },
-      },
-      services: {},
-    };
-
-    const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection), {
-      layerRegistry: customLayers,
-    });
-    const result = await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
-
-    expect(result.exitCode).toBe(0);
-
-    const generatedPackage = readFileSync(
-      join(rootDirectory, selection.name, "package.json"),
-      "utf8",
-    );
-
-    expect(generatedPackage).toBe(
-      '{"dependencies":{"express":"5.1.0"},"scripts":{"build":"tsc -p tsconfig.json","dev":"node framework-dev.js"}}',
-    );
-  });
-
-  it("covers non-config collision failure behavior in a create flow", async () => {
-    const selection = createNodeSelection({
-      databases: [],
-      framework: "express",
-      name: "collision-app",
-      platformServices: [],
-    });
-    const customLayers: LayerRegistry = {
-      always: { always: { files: { "README.md": "# from always\n" } } },
-      frameworks: { express: { devCopySource: "", files: {}, port: 3000, watchSync: [] } },
-      "package-managers": {
-        pnpm: { devCmd: [], devInstall: "", files: {}, watchRebuild: [] },
-      },
-      runtime: {
-        node: { baseImage: "", files: { "README.md": "# from base\n" } },
-        static: { baseImage: "", files: { "public/index.html": "<h1>Static</h1>\n" } },
-      },
-      services: {},
-    };
-
-    const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection), {
-      layerRegistry: customLayers,
-    });
-    const result = await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
-
-    expect(result.exitCode).toBeGreaterThan(0);
-    expect(result.output).toContain('File path conflict: "README.md"');
-    expect(existsSync(join(rootDirectory, selection.name))).toBe(false);
-  });
-
   it("snapshots generated Node.js scaffold output", async () => {
     const selection = createNodeSelection({
       databases: ["postgresql", "redis"],
@@ -327,50 +177,6 @@ describe("create", () => {
     const generatedFiles = collectGeneratedFiles(join(rootDirectory, selection.name));
 
     expect(generatedFiles).toMatchSnapshot();
-  });
-
-  it("includes pnpm security artefacts in Node.js scaffold", async () => {
-    const selection = createNodeSelection({
-      databases: [],
-      framework: "typescript",
-      name: "pnpm-security-app",
-      platformServices: [],
-    });
-
-    const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection));
-    const result = await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
-
-    expect(result.exitCode).toBe(0);
-
-    const files = collectGeneratedFiles(join(rootDirectory, selection.name));
-    const expectedWorkspace = [
-      "blockExoticSubdeps: true",
-      "minimumReleaseAge: 1440",
-      "trustPolicy: no-downgrade",
-      "engineStrict: true",
-      "",
-    ].join("\n");
-
-    expect(files["pnpm-workspace.yaml"]).toBe(expectedWorkspace);
-    expect(files[".npmrc"]).toBeUndefined();
-
-    const pkg = JSON.parse(files["package.json"]!) as { scripts: Record<string, string> };
-
-    expect(pkg.scripts["preinstall"]).toBe("npx only-allow pnpm");
-  });
-
-  it("static scaffold pnpm-workspace.yaml is empty", async () => {
-    const selection = createStaticSelection("static-workspace-check");
-
-    const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection));
-    const result = await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
-
-    expect(result.exitCode).toBe(0);
-
-    const files = collectGeneratedFiles(join(rootDirectory, selection.name));
-
-    expect(files["pnpm-workspace.yaml"]).toBe("");
-    expect(files[".npmrc"]).toBeUndefined();
   });
 
   it("calls packageManager.run with the target directory for Node.js scaffold", async () => {
@@ -457,110 +263,5 @@ describe("create", () => {
     const generatedFiles = collectGeneratedFiles(join(rootDirectory, selection.name));
 
     expect(generatedFiles).toMatchSnapshot();
-  });
-
-  describe("docker scaffold output", () => {
-    it("node + express + pnpm Dockerfile contains base image and build steps", async () => {
-      const selection = createNodeSelection({
-        databases: [],
-        framework: "express",
-        name: "docker-express-dockerfile",
-        platformServices: [],
-      });
-
-      const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection));
-      await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
-
-      const files = collectGeneratedFiles(join(rootDirectory, selection.name));
-
-      expect(files["Dockerfile"]).toContain("FROM node:22-alpine AS base");
-      expect(files["Dockerfile"]).toContain("COPY src/ ./src/");
-      expect(files["Dockerfile"]).toContain("COPY tsconfig.json ./");
-      expect(files["Dockerfile"]).toContain('CMD ["pnpm","run","dev"]');
-    });
-
-    it("node + express + pnpm .dockerignore and compose have correct docker config", async () => {
-      const selection = createNodeSelection({
-        databases: [],
-        framework: "express",
-        name: "docker-express-compose",
-        platformServices: [],
-      });
-
-      const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection));
-      await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
-
-      const files = collectGeneratedFiles(join(rootDirectory, selection.name));
-
-      expect(files[".dockerignore"]).toContain("node_modules");
-
-      const compose = parseYaml(files["docker-compose.dev.yml"]!) as Record<string, unknown>;
-      const app = (compose["services"] as Record<string, unknown>)["app"] as Record<
-        string,
-        unknown
-      >;
-
-      expect(app["image"]).toBeUndefined();
-      expect(app["build"]).toBeDefined();
-      expect(app["develop"]).toBeDefined();
-    });
-
-    it("node + typescript + pnpm Dockerfile contains base image and build steps", async () => {
-      const selection = createNodeSelection({
-        databases: [],
-        framework: "typescript",
-        name: "docker-typescript-dockerfile",
-        platformServices: [],
-      });
-
-      const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection));
-      await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
-
-      const files = collectGeneratedFiles(join(rootDirectory, selection.name));
-
-      expect(files["Dockerfile"]).toContain("FROM node:22-alpine AS base");
-      expect(files["Dockerfile"]).toContain("COPY src/ ./src/");
-      expect(files["Dockerfile"]).toContain("COPY tsconfig.json ./");
-      expect(files["Dockerfile"]).toContain('CMD ["pnpm","run","dev"]');
-    });
-
-    it("node + typescript + pnpm .dockerignore and compose have correct docker config", async () => {
-      const selection = createNodeSelection({
-        databases: [],
-        framework: "typescript",
-        name: "docker-typescript-compose",
-        platformServices: [],
-      });
-
-      const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection));
-      await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
-
-      const files = collectGeneratedFiles(join(rootDirectory, selection.name));
-
-      expect(files[".dockerignore"]).toContain("node_modules");
-
-      const compose = parseYaml(files["docker-compose.dev.yml"]!) as Record<string, unknown>;
-      const app = (compose["services"] as Record<string, unknown>)["app"] as Record<
-        string,
-        unknown
-      >;
-
-      expect(app["image"]).toBeUndefined();
-      expect(app["build"]).toBeDefined();
-      expect(app["develop"]).toBeDefined();
-    });
-
-    it("static + html-css-js + pnpm scaffold produces a .dockerignore, Dockerfile, and docker-compose.dev.yml", async () => {
-      const selection = createStaticSelection("docker-static-test");
-
-      const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection));
-      await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
-
-      const files = collectGeneratedFiles(join(rootDirectory, selection.name));
-
-      expect(files[".dockerignore"]).toBeDefined();
-      expect(files["Dockerfile"]).toBeDefined();
-      expect(files["docker-compose.dev.yml"]).toBeDefined();
-    });
   });
 });

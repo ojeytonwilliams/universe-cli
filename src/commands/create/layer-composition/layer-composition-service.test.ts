@@ -14,6 +14,16 @@ describe(LayerCompositionService, () => {
     runtime: "node",
   };
 
+  const staticSelection: CreateSelections = {
+    confirmed: true,
+    databases: [],
+    framework: "html-css-js",
+    name: "test",
+    packageManager: "pnpm",
+    platformServices: [],
+    runtime: "static_web",
+  };
+
   it("emits a Dockerfile for node + express + pnpm", () => {
     const result = service.resolveLayers(nodeExpressSelection);
 
@@ -50,5 +60,39 @@ describe(LayerCompositionService, () => {
 
     expect(result.files["docker-compose.dev.yml"]).toBeDefined();
     expect(result.files["docker-compose.dev.yml"]).toContain("3000:3000");
+  });
+
+  it("emits a .dockerignore containing node_modules for node scaffold", () => {
+    const result = service.resolveLayers(nodeExpressSelection);
+
+    expect(result.files[".dockerignore"]).toContain("node_modules");
+  });
+
+  it("emits pnpm-workspace.yaml with security settings for node + pnpm", () => {
+    const result = service.resolveLayers(nodeExpressSelection);
+
+    expect(result.files["pnpm-workspace.yaml"]).toBe(
+      [
+        "blockExoticSubdeps: true",
+        "minimumReleaseAge: 1440",
+        "trustPolicy: no-downgrade",
+        "engineStrict: true",
+        "",
+      ].join("\n"),
+    );
+  });
+
+  it("emits empty pnpm-workspace.yaml for static scaffold", () => {
+    const result = service.resolveLayers(staticSelection);
+
+    expect(result.files["pnpm-workspace.yaml"]).toBe("");
+  });
+
+  it("emits Dockerfile, .dockerignore, and docker-compose.dev.yml for static scaffold", () => {
+    const result = service.resolveLayers(staticSelection);
+
+    expect(result.files["Dockerfile"]).toBeDefined();
+    expect(result.files[".dockerignore"]).toBeDefined();
+    expect(result.files["docker-compose.dev.yml"]).toBeDefined();
   });
 });
