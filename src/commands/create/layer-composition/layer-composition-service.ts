@@ -88,22 +88,11 @@ class LayerCompositionService implements LayerComposer {
     const renderer = new LayerTemplateRenderer();
     const frameworkData = this.layers.frameworks?.[input.framework];
 
-    let frameworkLabel: string = input.framework;
-    let runtimeLabel: string = input.runtime;
-
-    try {
-      frameworkLabel = getLabel("framework", input.framework);
-    } catch {}
-
-    try {
-      runtimeLabel = getLabel("runtime", input.runtime);
-    } catch {}
-
     const context: TemplateContext = {
-      framework: frameworkLabel,
+      framework: getLabel("framework", input.framework),
       name: input.name,
       port: frameworkData?.port ?? 0,
-      runtime: runtimeLabel,
+      runtime: getLabel("runtime", input.runtime),
     };
 
     const renderedFiles: Record<string, string> = Object.fromEntries(
