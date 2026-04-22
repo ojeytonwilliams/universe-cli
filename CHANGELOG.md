@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.19.3] - 2026-04-22
+
+### refactor: Simplify service layer composition
+
+- Merged `services-layer.ts` into JSON files and updated the composition logic to use a unified structure for services and databases.
+- Motivation: Reduces code duplication and makes it easier to add or modify service/database layers in the future.
+
 ## [3.19.2]
 
 ### refactor: Move layer types to schemas/layers

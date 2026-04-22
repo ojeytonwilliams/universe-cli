@@ -8,7 +8,10 @@ type Always = z.infer<typeof AlwaysSchema>;
 const DatabaseOptionSchema = z.literal(["postgresql", "redis"]);
 type DatabaseOption = z.infer<typeof DatabaseOptionSchema>;
 
-const DatabaseSchema = z.record(DatabaseOptionSchema, z.record(z.string(), z.string()));
+const DatabaseSchema = z.record(
+  DatabaseOptionSchema,
+  z.strictObject({ files: z.record(z.string(), z.string()) }),
+);
 type Database = z.infer<typeof DatabaseSchema>;
 
 const RUNTIME_OPTIONS = { NODE: "node", STATIC_WEB: "static_web" } as const;
@@ -43,7 +46,10 @@ type PackageManager = z.infer<typeof PackageManagerSchema>;
 
 const ServiceOptionSchema = z.literal(["analytics", "auth", "email"]);
 type ServiceOption = z.infer<typeof ServiceOptionSchema>;
-const ServiceSchema = z.record(ServiceOptionSchema, z.record(z.string(), z.string()));
+const ServiceSchema = z.record(
+  ServiceOptionSchema,
+  z.strictObject({ files: z.record(z.string(), z.string()) }),
+);
 type Service = z.infer<typeof ServiceSchema>;
 
 const FrameworkOptionSchema = z.literal(["express", "html-css-js", "react-vite", "typescript"]);

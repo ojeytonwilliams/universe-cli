@@ -1,7 +1,8 @@
 import type { CreateSelections } from "../prompt/prompt.port.js";
 import { buildComposeDevYaml } from "./build-compose-dev-yaml.js";
 import { composeLayerFiles } from "./compose-layer-files.js";
-import { servicesLayer } from "./layers/services-layer.js";
+import databaseLayer from "./layers/database.json" with { type: "json" };
+import serviceLayer from "./layers/service.json" with { type: "json" };
 import { LayerTemplateRenderer } from "./layer-template-renderer.js";
 import type { TemplateContext } from "./layer-template-renderer.js";
 import { getLabel } from "./labels.js";
@@ -64,9 +65,7 @@ const defaultLayerRegistry: LayerRegistry = {
   frameworks: frameworksLayer,
   "package-managers": packageManagersLayer,
   runtime: runtimeLayer,
-  services: Object.fromEntries(
-    Object.entries(servicesLayer).map(([key, files]) => [key.slice("services/".length), { files }]),
-  ),
+  services: { ...serviceLayer, ...databaseLayer },
 };
 
 class LayerCompositionService implements LayerComposer {

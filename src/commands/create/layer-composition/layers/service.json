@@ -1,11 +1,17 @@
 {
   "analytics": {
-    "universe/services/analytics.md": "Analytics service selected for {{name}}.\n"
+    "files": {
+      "universe/services/analytics.md": "Analytics service selected for {{name}}.\n"
+    }
   },
   "auth": {
-    "universe/services/auth.md": "Auth service selected for {{name}}.\n"
+    "files": {
+      "universe/services/auth.md": "Auth service selected for {{name}}.\n"
+    }
   },
   "email": {
-    "universe/services/email.md": "Email service selected for {{name}}.\n"
+    "files": {
+      "universe/services/email.md": "Email service selected for {{name}}.\n"
+    }
   }
 }
