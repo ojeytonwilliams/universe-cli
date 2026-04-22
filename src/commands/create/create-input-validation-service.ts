@@ -6,8 +6,14 @@ import {
   InvalidNameError,
   TargetDirectoryExistsError,
 } from "../../errors/cli-errors.js";
-import { allowedCombinations } from "./allowed-layer-combinations.js";
-import type { RuntimeCombinations } from "./allowed-layer-combinations.js";
+import {
+  databaseOptions,
+  frameworkOptions,
+  packageManagerOptions,
+  serviceOptions,
+} from "./layer-composition/allowed-configuration.js";
+import type { RuntimeCombinations } from "./layer-composition/allowed-configuration.js";
+import { RUNTIME_OPTIONS } from "./layer-composition/schemas/layers.js";
 import type { CreateSelections } from "./prompt/prompt.port.js";
 
 type PathExists = (path: string) => boolean;
@@ -47,11 +53,18 @@ class CreateInputValidationService implements CreateInputValidator {
   }
 
   private validateRuntimeAndCombinations(input: CreateSelections): void {
-    const config = allowedCombinations[input.runtime];
+    const isValidRuntime = Object.values(RUNTIME_OPTIONS).includes(input.runtime);
 
-    if (config === undefined) {
+    if (!isValidRuntime) {
       throw new CreateUnsupportedRuntimeError(input.runtime);
     }
+
+    const config: RuntimeCombinations = {
+      databases: databaseOptions(input.runtime),
+      frameworks: frameworkOptions(input.runtime),
+      packageManagers: packageManagerOptions(input.runtime),
+      platformServices: serviceOptions(input.runtime),
+    };
 
     this.validateRuntimeSelections(input, config);
   }

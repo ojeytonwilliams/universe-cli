@@ -9,4 +9,12 @@ const packageManagerOptions = (runtime: Runtime) => runtimeData[runtime].package
 const databaseOptions = (runtime: Runtime) => runtimeData[runtime].databases;
 const serviceOptions = (runtime: Runtime) => runtimeData[runtime].services;
 
+interface RuntimeCombinations {
+  databases: string[];
+  frameworks: string[];
+  packageManagers: string[];
+  platformServices: string[];
+}
+
 export { databaseOptions, frameworkOptions, runtimeOptions, packageManagerOptions, serviceOptions };
+export type { RuntimeCombinations };

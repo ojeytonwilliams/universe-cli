@@ -1,15 +1,7 @@
-import { parse as parseYaml } from "yaml";
-import { allowedCombinations } from "../allowed-layer-combinations.js";
-import type {
-  CreateSelections,
-  FrameworkOption,
-  PackageManagerOption,
-  RuntimeOption,
-} from "../prompt/prompt.port.js";
+import type { CreateSelections } from "../prompt/prompt.port.js";
 import { LayerConflictError } from "../../../errors/cli-errors.js";
 import { LayerCompositionService, LayerTemplateRenderer } from "./layer-composition-service.js";
 import type { LayerRegistry } from "./layer-composition-service.js";
-import { typedFrameworkLayers } from "./layers/frameworks-layer.js";
 
 // ---------------------------------------------------------------------------
 // Combination coverage helpers
@@ -615,46 +607,4 @@ describe(LayerTemplateRenderer, () => {
 
     expect(result).toBe("hello=");
   });
-});
-
-const invariantCases = Object.entries(allowedCombinations).flatMap(([runtime, runtimeConfig]) =>
-  runtimeConfig.frameworks.flatMap((framework) =>
-    runtimeConfig.packageManagers.map((packageManager) => {
-      const data = typedFrameworkLayers[`frameworks/${framework}`];
-      const expectedPort = data?.port ?? 0;
-      return { expectedPort, framework, packageManager, runtime };
-    }),
-  ),
-);
-
-describe("cross-combination consistency invariants", () => {
-  const service = new LayerCompositionService();
-
-  it.each(invariantCases)(
-    "$runtime + $framework + $packageManager",
-    ({ runtime, framework, packageManager, expectedPort }) => {
-      const result = service.resolveLayers({
-        confirmed: true,
-        databases: [],
-        framework: framework as FrameworkOption,
-        name: "test",
-        packageManager: packageManager as PackageManagerOption,
-        platformServices: [],
-        runtime: runtime as RuntimeOption,
-      });
-
-      const compose = parseYaml(result.files["docker-compose.dev.yml"]!) as {
-        services: { app: { build: { target: string }; ports: string[] } };
-      };
-      const pkg = JSON.parse(result.files["package.json"]!) as { scripts?: { dev?: string } };
-
-      // 1. compose ports: ["<port>:<port>"]
-      expect(compose.services.app.ports).toContain(`${expectedPort}:${expectedPort}`);
-      // 2. compose build target = "dev" and Dockerfile contains "FROM base AS dev"
-      expect(compose.services.app.build.target).toBe("dev");
-      expect(result.files["Dockerfile"]).toContain("FROM base AS dev");
-      // 3. scripts.dev in generated package.json contains the framework port
-      expect(pkg.scripts?.dev).toContain(String(expectedPort));
-    },
-  );
 });

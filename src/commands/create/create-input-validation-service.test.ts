@@ -162,7 +162,8 @@ describe(CreateInputValidationService, () => {
         framework: "html-css-js",
         name: "site-app",
         packageManager: "pnpm",
-        platformServices: ["auth"],
+        // @ts-expect-error forcing invalid platform service
+        platformServices: ["fake"],
         runtime: "static_web",
       });
 
