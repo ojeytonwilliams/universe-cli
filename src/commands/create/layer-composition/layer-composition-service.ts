@@ -1,9 +1,6 @@
 import type { CreateSelections } from "../prompt/prompt.port.js";
 import { buildComposeDevYaml } from "./build-compose-dev-yaml.js";
-import { buildDockerfileData } from "./build-dockerfile-data.js";
 import { composeLayerFiles } from "./compose-layer-files.js";
-import { renderDockerfile } from "./layers/dockerfile-template.js";
-import type { DockerfileData } from "./layers/dockerfile-template.js";
 import { servicesLayer } from "./layers/services-layer.js";
 import { LayerTemplateRenderer } from "./layer-template-renderer.js";
 import type { TemplateContext } from "./layer-template-renderer.js";
@@ -20,6 +17,11 @@ import alwaysLayer from "./layers/always.json" with { type: "json" };
 import frameworksLayer from "./layers/framework.json" with { type: "json" };
 import packageManagersLayer from "./layers/package-manager.json" with { type: "json" };
 import runtimeLayer from "./layers/runtime.json" with { type: "json" };
+import type {
+  FrameworkLayerData,
+  PackageManagerLayerData,
+  RuntimeLayerData,
+} from "./layers/layer-types.js";
 
 interface ResolvedLayerSet {
   files: Record<string, string>;
@@ -29,6 +31,33 @@ interface ResolvedLayerSet {
 interface LayerComposer {
   resolveLayers(input: CreateSelections): ResolvedLayerSet;
 }
+
+interface DockerfileData {
+  baseImage?: string;
+  devCmd?: string[];
+  devCopySource?: string;
+  devInstall?: string;
+}
+
+const buildDockerfileData = (
+  runtime: RuntimeLayerData,
+  framework: FrameworkLayerData,
+  packageManager: PackageManagerLayerData,
+): Required<DockerfileData> => ({
+  baseImage: runtime.baseImage,
+  devCmd: packageManager.devCmd,
+  devCopySource: framework.devCopySource,
+  devInstall: packageManager.devInstall,
+});
+
+const renderDockerfile = (data: Required<DockerfileData>): string =>
+  `FROM ${data.baseImage} AS base\n` +
+  `WORKDIR /app\n` +
+  `\n` +
+  `FROM base AS dev\n` +
+  `${data.devInstall}\n` +
+  `${data.devCopySource}\n` +
+  `CMD ${JSON.stringify(data.devCmd)}\n`;
 
 const defaultLayerRegistry: LayerRegistry = {
   always: { always: alwaysLayer },

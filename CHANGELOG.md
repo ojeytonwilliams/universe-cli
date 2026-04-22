@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased]
+
+### refactor: Move Dockerfile data builder to layer-composition-service
+
+- Moved the logic from build-dockerfile-data.ts and its test to layer-composition-service for better cohesion and maintainability.
+- Motivation: Consolidates Dockerfile data construction with related layer composition logic, reducing duplication and improving clarity.
+
 ## [3.19.0] - 2026-04-22
 
 ### feat: Add preinstall script for package manager enforcement
