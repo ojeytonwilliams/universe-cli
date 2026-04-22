@@ -29,8 +29,7 @@ interface LayerData {
   files: Record<string, string>;
 }
 
-type LayerEntry = LayerData & { layerType: LayerType };
-type LayerRegistry = Record<string, LayerEntry | undefined>;
+type LayerRegistry = Partial<Record<LayerType, Record<string, LayerData | undefined>>>;
 
 interface JsonObject {
   [key: string]: JsonValue;
@@ -61,40 +60,27 @@ interface TemplateContext {
 
 const CONFIG_EXTENSIONS = new Set([".json", ".yaml", ".yml"]);
 const NONE_VALUE = DATABASE_OPTIONS.NONE;
-const NODE_RUNTIME_LAYER = "runtime/node";
-const STATIC_RUNTIME_LAYER = "runtime/static";
-
-// ServicesLayer still uses the old flat shape; shim it into LayerData here.
-// Migration is deferred.
-const shimmedServicesLayer: LayerRegistry = Object.fromEntries(
-  Object.entries(servicesLayer).map(([key, files]) => [
-    key,
-    { files, layerType: "services" as LayerType },
-  ]),
-);
 
 const defaultLayerRegistry: LayerRegistry = {
-  always: { ...alwaysLayer, layerType: "always" },
-  "runtime/node": { ...baseNodeLayer, layerType: "runtime" },
-  "runtime/static": { ...baseStaticLayer, layerType: "runtime" },
-  ...Object.fromEntries(
-    Object.entries(frameworksLayer).map(([key, value]) => [
-      key,
-      value === undefined ? undefined : { ...value, layerType: "frameworks" as LayerType },
-    ]),
+  always: { always: alwaysLayer },
+  frameworks: Object.fromEntries(
+    Object.entries(frameworksLayer).map(([key, value]) => [key.slice("frameworks/".length), value]),
   ),
-  ...Object.fromEntries(
+  "package-managers": Object.fromEntries(
     Object.entries(packageManagersLayer).map(([key, value]) => [
-      key,
-      value === undefined ? undefined : { ...value, layerType: "package-managers" as LayerType },
+      key.slice("package-managers/".length),
+      value,
     ]),
   ),
-  ...shimmedServicesLayer,
+  runtime: { node: baseNodeLayer, static: baseStaticLayer },
+  services: Object.fromEntries(
+    Object.entries(servicesLayer).map(([key, files]) => [key.slice("services/".length), { files }]),
+  ),
 };
 
 const defaultRuntimeLayers: Record<string, RuntimeLayerData | undefined> = {
-  "runtime/node": baseNodeLayer,
-  "runtime/static": baseStaticLayer,
+  node: baseNodeLayer,
+  static: baseStaticLayer,
 };
 
 const defaultFrameworkLayers: Record<string, FrameworkLayerData | undefined> = typedFrameworkLayers;
@@ -171,7 +157,7 @@ class LayerCompositionService implements LayerComposer {
     }
 
     const renderer = new LayerTemplateRenderer();
-    const frameworkData = this.frameworkLayers[this.resolveFrameworkLayer(input.framework)];
+    const frameworkData = this.frameworkLayers[`frameworks/${input.framework}`];
 
     let frameworkLabel: string = input.framework;
     let runtimeLabel: string = input.runtime;
@@ -197,15 +183,15 @@ class LayerCompositionService implements LayerComposer {
       ]),
     );
 
-    const runtimeData = this.runtimeLayers[this.resolveRuntimeLayer(input.runtime)];
+    const runtimeData =
+      this.runtimeLayers[input.runtime === RUNTIME_OPTIONS.NODE ? "node" : "static"];
 
     if (
       runtimeData !== undefined &&
       frameworkData !== undefined &&
       input.packageManager !== undefined
     ) {
-      const pmData =
-        this.packageManagerLayers[this.resolvePackageManagerLayer(input.packageManager)];
+      const pmData = this.packageManagerLayers[`package-managers/${input.packageManager}`];
 
       if (pmData !== undefined) {
         renderedFiles["Dockerfile"] = renderDockerfile(
@@ -223,54 +209,31 @@ class LayerCompositionService implements LayerComposer {
 
   private resolveOrderedLayers(input: CreateSelections): ResolvedLayer[] {
     const isNode = input.runtime === RUNTIME_OPTIONS.NODE;
-    const orderedLayerNames = [
-      "always",
-      this.resolveRuntimeLayer(input.runtime),
+    const runtimeId = isNode ? "node" : "static";
+
+    const refs: { id: string; layerType: LayerType }[] = [
+      { id: "always", layerType: "always" },
+      { id: runtimeId, layerType: "runtime" },
       ...(isNode && input.packageManager !== undefined
-        ? [this.resolvePackageManagerLayer(input.packageManager)]
+        ? [{ id: input.packageManager, layerType: "package-managers" as const }]
         : []),
-      this.resolveFrameworkLayer(input.framework),
-      ...this.resolveServiceLayers(input),
+      { id: input.framework, layerType: "frameworks" },
+      ...[...input.databases, ...input.platformServices]
+        .filter((v) => v !== NONE_VALUE)
+        .sort((a, b) => a.localeCompare(b))
+        .map((id) => ({ id, layerType: "services" as const })),
     ];
 
-    return orderedLayerNames.map((layerName) => {
-      const layer = this.layers[layerName];
+    return refs.map(({ id, layerType }) => {
+      const layer = this.layers[layerType]?.[id];
+      const name = layerType === "always" ? id : `${layerType}/${id}`;
 
       if (layer === undefined) {
-        throw new MissingLayerError(layerName);
+        throw new MissingLayerError(name);
       }
 
-      return {
-        files: layer.files,
-        layerType: layer.layerType,
-        name: layerName,
-      };
+      return { files: layer.files, layerType, name };
     });
-  }
-
-  private resolveServiceLayers(input: CreateSelections): string[] {
-    return [...input.databases, ...input.platformServices]
-      .filter((value) => value !== NONE_VALUE)
-      .map((value) => `services/${value}`)
-      .sort((left, right) => left.localeCompare(right));
-  }
-
-  private resolveRuntimeLayer(runtime: CreateSelections["runtime"]): string {
-    if (runtime === RUNTIME_OPTIONS.NODE) {
-      return NODE_RUNTIME_LAYER;
-    }
-
-    return STATIC_RUNTIME_LAYER;
-  }
-
-  private resolvePackageManagerLayer(
-    packageManager: NonNullable<CreateSelections["packageManager"]>,
-  ): string {
-    return `package-managers/${packageManager}`;
-  }
-
-  private resolveFrameworkLayer(framework: CreateSelections["framework"]): string {
-    return `frameworks/${framework}`;
   }
 
   private isConfigFile(filePath: string): boolean {
@@ -352,7 +315,6 @@ export type {
   DockerfileData,
   LayerComposer,
   LayerData,
-  LayerEntry,
   LayerRegistry,
   LayerType,
   ResolvedLayer,

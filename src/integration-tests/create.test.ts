@@ -233,38 +233,27 @@ describe("create", () => {
       platformServices: ["none"],
     });
     const customLayers: LayerRegistry = {
-      always: {
-        files: { "README.md": "# __PROJECT_NAME__\n" },
-        layerType: "always",
-      },
-      "frameworks/express": {
-        files: {
-          "package.json": JSON.stringify({
-            dependencies: {
-              express: "5.1.0",
-            },
-            scripts: {
-              dev: "node framework-dev.js",
-            },
-          }),
+      always: { always: { files: { "README.md": "# __PROJECT_NAME__\n" } } },
+      frameworks: {
+        express: {
+          files: {
+            "package.json": JSON.stringify({
+              dependencies: { express: "5.1.0" },
+              scripts: { dev: "node framework-dev.js" },
+            }),
+          },
         },
-        layerType: "frameworks",
       },
-      "package-managers/pnpm": { files: {}, layerType: "package-managers" },
-      "runtime/node": {
-        files: {
-          "package.json": JSON.stringify({
-            scripts: {
-              build: "tsc -p tsconfig.json",
-              dev: "node base-dev.js",
-            },
-          }),
+      "package-managers": { pnpm: { files: {} } },
+      runtime: {
+        node: {
+          files: {
+            "package.json": JSON.stringify({
+              scripts: { build: "tsc -p tsconfig.json", dev: "node base-dev.js" },
+            }),
+          },
         },
-        layerType: "runtime",
-      },
-      "runtime/static": {
-        files: { "public/index.html": "<h1>Static</h1>\n" },
-        layerType: "runtime",
+        static: { files: { "public/index.html": "<h1>Static</h1>\n" } },
       },
     };
 
@@ -293,19 +282,12 @@ describe("create", () => {
       platformServices: ["none"],
     });
     const customLayers: LayerRegistry = {
-      always: {
-        files: { "README.md": "# from always\n" },
-        layerType: "always",
-      },
-      "frameworks/express": { files: {}, layerType: "frameworks" },
-      "package-managers/pnpm": { files: {}, layerType: "package-managers" },
-      "runtime/node": {
-        files: { "README.md": "# from base\n" },
-        layerType: "runtime",
-      },
-      "runtime/static": {
-        files: { "public/index.html": "<h1>Static</h1>\n" },
-        layerType: "runtime",
+      always: { always: { files: { "README.md": "# from always\n" } } },
+      frameworks: { express: { files: {} } },
+      "package-managers": { pnpm: { files: {} } },
+      runtime: {
+        node: { files: { "README.md": "# from base\n" } },
+        static: { files: { "public/index.html": "<h1>Static</h1>\n" } },
       },
     };
 

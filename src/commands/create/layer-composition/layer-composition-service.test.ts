@@ -8,7 +8,7 @@ import type {
 } from "../prompt/prompt.port.js";
 import { LayerConflictError, MissingLayerError } from "../../../errors/cli-errors.js";
 import { LayerCompositionService, LayerTemplateRenderer } from "./layer-composition-service.js";
-import type { LayerEntry } from "./layer-composition-service.js";
+import type { LayerRegistry } from "./layer-composition-service.js";
 import { typedFrameworkLayers } from "./layers/frameworks-layer.js";
 
 // ---------------------------------------------------------------------------
@@ -101,69 +101,51 @@ const nodeExpressSelection: CreateSelections = {
   runtime: "node",
 };
 
-const createService = (overrides?: Record<string, LayerEntry | undefined>) =>
-  new LayerCompositionService({
+const createService = (overrides?: LayerRegistry) => {
+  const base: LayerRegistry = {
     always: {
-      files: {
-        ".gitignore": "dist\nnode_modules\n",
-        "README.md": "# Hello Universe\n",
+      always: {
+        files: { ".gitignore": "dist\nnode_modules\n", "README.md": "# Hello Universe\n" },
       },
-      layerType: "always",
     },
-    "frameworks/express": {
-      files: {
-        "package.json":
-          '{"dependencies":{"express":"1.2.3"},"scripts":{"dev":"node --watch src/index.js"}}',
-        "src/server.ts": "const start = (): void => {};\nexport { start };\n",
+    frameworks: {
+      express: {
+        files: {
+          "package.json":
+            '{"dependencies":{"express":"1.2.3"},"scripts":{"dev":"node --watch src/index.js"}}',
+          "src/server.ts": "const start = (): void => {};\nexport { start };\n",
+        },
       },
-      layerType: "frameworks",
+      typescript: { files: {} },
     },
-    "frameworks/typescript": { files: {}, layerType: "frameworks" },
-    "package-managers/bun": {
-      files: {
-        "start.sh": "bun install && bun dev\n",
+    "package-managers": {
+      bun: { files: { "start.sh": "bun install && bun dev\n" } },
+      pnpm: { files: { "start.sh": "pnpm install && pnpm dev\n" } },
+    },
+    runtime: {
+      node: {
+        files: {
+          "package.json": '{"scripts":{"build":"tsc","dev":"node src/index.js"}}',
+          "src/index.ts": "export { start } from './server.js';\n",
+        },
       },
-      layerType: "package-managers",
     },
-    "package-managers/pnpm": {
-      files: {
-        "start.sh": "pnpm install && pnpm dev\n",
-      },
-      layerType: "package-managers",
+    services: {
+      auth: { files: { "config/services/auth.json": '{"service":"auth"}' } },
+      email: { files: { "config/services/email.json": '{"service":"email"}' } },
+      postgresql: { files: { "config/resources/postgresql.json": '{"resource":"postgresql"}' } },
+      redis: { files: { "config/resources/redis.json": '{"resource":"redis"}' } },
     },
-    "runtime/node": {
-      files: {
-        "package.json": '{"scripts":{"build":"tsc","dev":"node src/index.js"}}',
-        "src/index.ts": "export { start } from './server.js';\n",
-      },
-      layerType: "runtime",
-    },
-    "services/auth": {
-      files: {
-        "config/services/auth.json": '{"service":"auth"}',
-      },
-      layerType: "services",
-    },
-    "services/email": {
-      files: {
-        "config/services/email.json": '{"service":"email"}',
-      },
-      layerType: "services",
-    },
-    "services/postgresql": {
-      files: {
-        "config/resources/postgresql.json": '{"resource":"postgresql"}',
-      },
-      layerType: "services",
-    },
-    "services/redis": {
-      files: {
-        "config/resources/redis.json": '{"resource":"redis"}',
-      },
-      layerType: "services",
-    },
-    ...overrides,
+  };
+
+  return new LayerCompositionService({
+    always: { ...base.always, ...overrides?.always },
+    frameworks: { ...base.frameworks, ...overrides?.frameworks },
+    "package-managers": { ...base["package-managers"], ...overrides?.["package-managers"] },
+    runtime: { ...base.runtime, ...overrides?.runtime },
+    services: { ...base.services, ...overrides?.services },
   });
+};
 
 describe(LayerCompositionService, () => {
   it("resolves layers in deterministic stage and sorted service order", () => {
@@ -208,7 +190,7 @@ describe(LayerCompositionService, () => {
 
   it("fails with a typed error when a required layer is missing", () => {
     const service = createService({
-      "frameworks/express": undefined,
+      frameworks: { express: undefined },
     });
 
     const act = () => service.resolveLayers(nodeExpressSelection);
@@ -218,10 +200,7 @@ describe(LayerCompositionService, () => {
 
   it("fails with a typed error for non-configuration file collisions across stages", () => {
     const service = createService({
-      "runtime/node": {
-        files: { "README.md": "# Replacement\n" },
-        layerType: "runtime",
-      },
+      runtime: { node: { files: { "README.md": "# Replacement\n" } } },
     });
 
     const act = () => service.resolveLayers(nodeExpressSelection);
@@ -231,13 +210,9 @@ describe(LayerCompositionService, () => {
 
   it("fails with a typed error for same-stage collisions", () => {
     const service = createService({
-      "services/auth": {
-        files: { "config/services/shared.json": '{"service":"auth"}' },
-        layerType: "services",
-      },
-      "services/email": {
-        files: { "config/services/shared.json": '{"service":"email"}' },
-        layerType: "services",
+      services: {
+        auth: { files: { "config/services/shared.json": '{"service":"auth"}' } },
+        email: { files: { "config/services/shared.json": '{"service":"email"}' } },
       },
     });
 
@@ -269,10 +244,10 @@ describe(LayerCompositionService, () => {
   describe("template rendering", () => {
     it("substitutes {{name}} in file content using the selection name", () => {
       const service = new LayerCompositionService({
-        always: { files: { "README.md": "# {{name}}\n" }, layerType: "always" },
-        "frameworks/typescript": { files: {}, layerType: "frameworks" },
-        "package-managers/pnpm": { files: {}, layerType: "package-managers" },
-        "runtime/node": { files: {}, layerType: "runtime" },
+        always: { always: { files: { "README.md": "# {{name}}\n" } } },
+        frameworks: { typescript: { files: {} } },
+        "package-managers": { pnpm: { files: {} } },
+        runtime: { node: { files: {} } },
       });
 
       const result = service.resolveLayers({
@@ -295,10 +270,10 @@ describe(LayerCompositionService, () => {
     //  oxlint-disable-next-line jest/no-disabled-tests
     it.skip("substitutes {{runtime}} and {{framework}} in file content", () => {
       const service = new LayerCompositionService({
-        always: { files: { "meta.txt": "rt={{runtime}} fw={{framework}}\n" }, layerType: "always" },
-        "frameworks/express": { files: {}, layerType: "frameworks" },
-        "package-managers/pnpm": { files: {}, layerType: "package-managers" },
-        "runtime/node": { files: {}, layerType: "runtime" },
+        always: { always: { files: { "meta.txt": "rt={{runtime}} fw={{framework}}\n" } } },
+        frameworks: { express: { files: {} } },
+        "package-managers": { pnpm: { files: {} } },
+        runtime: { node: { files: {} } },
       });
 
       const result = service.resolveLayers({
@@ -316,10 +291,10 @@ describe(LayerCompositionService, () => {
 
     it("leaves unknown placeholders in file content unchanged", () => {
       const service = new LayerCompositionService({
-        always: { files: { "note.txt": "{{name}} {{unknown}}\n" }, layerType: "always" },
-        "frameworks/typescript": { files: {}, layerType: "frameworks" },
-        "package-managers/pnpm": { files: {}, layerType: "package-managers" },
-        "runtime/node": { files: {}, layerType: "runtime" },
+        always: { always: { files: { "note.txt": "{{name}} {{unknown}}\n" } } },
+        frameworks: { typescript: { files: {} } },
+        "package-managers": { pnpm: { files: {} } },
+        runtime: { node: { files: {} } },
       });
 
       const result = service.resolveLayers({
@@ -337,28 +312,41 @@ describe(LayerCompositionService, () => {
   });
 
   describe("yaml config serialisation", () => {
-    const makeYamlService = (overrides?: Record<string, LayerEntry>) =>
-      new LayerCompositionService({
-        always: { files: { "README.md": "# test\n" }, layerType: "always" },
-        "frameworks/express": { files: {}, layerType: "frameworks" },
-        "package-managers/pnpm": { files: {}, layerType: "package-managers" },
-        "runtime/node": { files: { "package.json": '{"name":"test"}' }, layerType: "runtime" },
-        "runtime/static": {
-          files: { "public/index.html": "<h1>test</h1>\n" },
-          layerType: "runtime",
+    const makeYamlService = (overrides?: LayerRegistry) => {
+      const base: LayerRegistry = {
+        always: { always: { files: { "README.md": "# test\n" } } },
+        frameworks: { express: { files: {} } },
+        "package-managers": { pnpm: { files: {} } },
+        runtime: {
+          node: { files: { "package.json": '{"name":"test"}' } },
+          static: { files: { "public/index.html": "<h1>test</h1>\n" } },
         },
-        ...overrides,
+      };
+
+      return new LayerCompositionService({
+        always: { ...base.always, ...overrides?.always },
+        frameworks: { ...base.frameworks, ...overrides?.frameworks },
+        "package-managers": { ...base["package-managers"], ...overrides?.["package-managers"] },
+        runtime: { ...base.runtime, ...overrides?.runtime },
+        services: { ...overrides?.services },
       });
+    };
 
     it("merges YAML config files and emits valid YAML output", () => {
       const service = makeYamlService({
-        "frameworks/express": {
-          files: { "docker-compose.yaml": "services:\n  app:\n    ports:\n      - '3000:3000'\n" },
-          layerType: "frameworks",
+        frameworks: {
+          express: {
+            files: {
+              "docker-compose.yaml": "services:\n  app:\n    ports:\n      - '3000:3000'\n",
+            },
+          },
         },
-        "runtime/node": {
-          files: { "docker-compose.yaml": "version: '3'\nservices:\n  app:\n    image: node:22\n" },
-          layerType: "runtime",
+        runtime: {
+          node: {
+            files: {
+              "docker-compose.yaml": "version: '3'\nservices:\n  app:\n    image: node:22\n",
+            },
+          },
         },
       });
 
@@ -382,14 +370,8 @@ describe(LayerCompositionService, () => {
 
     it("merges .yml config files and emits valid YAML output", () => {
       const service = makeYamlService({
-        "frameworks/express": {
-          files: { "config.yml": "env: extended\n" },
-          layerType: "frameworks",
-        },
-        "runtime/node": {
-          files: { "config.yml": "env: base\nshared: common\n" },
-          layerType: "runtime",
-        },
+        frameworks: { express: { files: { "config.yml": "env: extended\n" } } },
+        runtime: { node: { files: { "config.yml": "env: base\nshared: common\n" } } },
       });
 
       const result = service.resolveLayers({
@@ -411,14 +393,10 @@ describe(LayerCompositionService, () => {
 
     it("preserves JSON round-trip behavior unchanged", () => {
       const service = makeYamlService({
-        "frameworks/express": {
-          files: { "package.json": '{"dependencies":{"express":"5.1.0"}}' },
-          layerType: "frameworks",
+        frameworks: {
+          express: { files: { "package.json": '{"dependencies":{"express":"5.1.0"}}' } },
         },
-        "runtime/node": {
-          files: { "package.json": '{"scripts":{"build":"tsc"}}' },
-          layerType: "runtime",
-        },
+        runtime: { node: { files: { "package.json": '{"scripts":{"build":"tsc"}}' } } },
       });
 
       const result = service.resolveLayers({
@@ -438,19 +416,21 @@ describe(LayerCompositionService, () => {
 
     it("resolves layers containing both JSON and YAML config files", () => {
       const service = makeYamlService({
-        "frameworks/express": {
-          files: {
-            "docker-compose.yaml": "services:\n  app:\n    ports:\n      - '3000:3000'\n",
-            "package.json": '{"dependencies":{"express":"5.1.0"}}',
+        frameworks: {
+          express: {
+            files: {
+              "docker-compose.yaml": "services:\n  app:\n    ports:\n      - '3000:3000'\n",
+              "package.json": '{"dependencies":{"express":"5.1.0"}}',
+            },
           },
-          layerType: "frameworks",
         },
-        "runtime/node": {
-          files: {
-            "docker-compose.yaml": "services:\n  app:\n    image: node:22\n",
-            "package.json": '{"scripts":{"build":"tsc"}}',
+        runtime: {
+          node: {
+            files: {
+              "docker-compose.yaml": "services:\n  app:\n    image: node:22\n",
+              "package.json": '{"scripts":{"build":"tsc"}}',
+            },
           },
-          layerType: "runtime",
         },
       });
 
