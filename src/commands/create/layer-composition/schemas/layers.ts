@@ -26,8 +26,10 @@ const RuntimeSchema = z.record(
 );
 type Runtime = z.infer<typeof RuntimeSchema>;
 
+const PackageManagerOptionSchema = z.literal(["bun", "pnpm"]);
+type PackageManagerOption = z.infer<typeof PackageManagerOptionSchema>;
 const PackageManagerSchema = z.record(
-  z.string(),
+  PackageManagerOptionSchema,
   z.strictObject({
     devCmd: z.array(z.string()),
     devInstall: z.string(),
@@ -42,8 +44,10 @@ type ServiceOption = z.infer<typeof ServiceOptionSchema>;
 const ServiceSchema = z.record(ServiceOptionSchema, z.record(z.string(), z.string()));
 type Service = z.infer<typeof ServiceSchema>;
 
+const FrameworkOptionSchema = z.literal(["express", "html-css-js", "react-vite", "typescript"]);
+type FrameworkOption = z.infer<typeof FrameworkOptionSchema>;
 const FrameworkSchema = z.record(
-  z.string(),
+  FrameworkOptionSchema,
   z.strictObject({
     devCopySource: z.string(),
     files: z.record(z.string(), z.string()),
@@ -68,7 +72,9 @@ export type {
   Runtime,
   RuntimeOption,
   Framework,
+  FrameworkOption,
   PackageManager,
+  PackageManagerOption,
   Service,
   ServiceOption,
 };

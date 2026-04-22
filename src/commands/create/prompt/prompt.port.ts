@@ -1,5 +1,7 @@
 import type {
   DatabaseOption,
+  FrameworkOption,
+  PackageManagerOption,
   RuntimeOption,
   ServiceOption,
 } from "../layer-composition/schemas/layers.js";
@@ -33,10 +35,6 @@ const PACKAGE_MANAGER_OPTIONS = {
   BUN: "bun",
   PNPM: "pnpm",
 } as const;
-
-type FrameworkOption = (typeof FRAMEWORK_OPTIONS)[keyof typeof FRAMEWORK_OPTIONS];
-
-type PackageManagerOption = (typeof PACKAGE_MANAGER_OPTIONS)[keyof typeof PACKAGE_MANAGER_OPTIONS];
 
 interface CreateSelections {
   name: string;
