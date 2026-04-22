@@ -43,11 +43,11 @@ In `design/todo.md`, change `- [ ]` to `- [x]` for the completed item.
 
 Run the following checks **in order**, fixing errors before moving on:
 
-1. `pnpm test` — fix any broken tests (only modify tests that are obviously broken by the implementation change).
-2. `pnpm check` — fix TypeScript errors.
+1. `pnpm check` — fix TypeScript errors.
+2. `pnpm test` — fix any broken tests (only modify tests that are obviously broken by the implementation change).
 3. `pnpm lint:fix` — fix remaining lint errors.
 
-Repeat the cycle (test → check → lint) until all three pass cleanly.
+Repeat the cycle (check → test → lint) until all three pass cleanly.
 
 Then:
 
