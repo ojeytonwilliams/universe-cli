@@ -1,5 +1,30 @@
 # Changelog
 
+## [3.18.0] - 2026-04-22
+
+### refactor: Update layer composition and remove obsolete frameworks-layer
+
+- Refactored layer composition logic and tests to support a new, more flexible framework structure.
+- Removed obsolete frameworks-layer files to reduce confusion and technical debt.
+- Motivation: Simplifies future framework additions and improves maintainability.
+
+### fix: getLabel returns key if label missing
+
+- Ensures that missing labels now return the key, preventing undefined values in UI and logs.
+
+### refactor: Remove legacy allowed-layer-combinations files and update validation
+
+- Removed outdated files and updated validation logic to match the new layer composition system.
+- Motivation: Reduces maintenance burden and aligns validation with current architecture.
+
+### docs/chore/test/feat: Other notable changes
+
+- Improved type safety, validation, and error output across layer composition and manifest logic.
+- Enhanced label lookup and prompt handling for better user experience.
+- Added utilities and helpers for allowed-configuration and label management.
+- Updated documentation and scripts for clarity and developer workflow improvements.
+- Various test and schema updates to support new layer structure and ensure correctness.
+
 ## [3.17.0] - 2026-04-21
 
 ### feat: Cross-combination consistency invariant tests (Phase 7)
