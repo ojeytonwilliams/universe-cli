@@ -89,3 +89,7 @@ All dependency versions are **pinned exactly** (no `^` or `~`). When requesting 
 ### Versioning & changelog
 
 After completing a phase, bump `package.json` version (semver), add a `CHANGELOG.md` entry with `## [x.y.z] - YYYY-MM-DD`, then commit with a conventional commit message. One commit per phase.
+
+## Disallowed practices
+
+- `pnpm install`. Always ask the user if you need to install dependencies.
