@@ -1,4 +1,8 @@
-import type { DatabaseOption, ServiceOption } from "../layer-composition/schemas/layers.js";
+import type {
+  DatabaseOption,
+  RuntimeOption,
+  ServiceOption,
+} from "../layer-composition/schemas/layers.js";
 
 const RUNTIME_OPTIONS = {
   NODE: "node",
@@ -29,8 +33,6 @@ const PACKAGE_MANAGER_OPTIONS = {
   BUN: "bun",
   PNPM: "pnpm",
 } as const;
-
-type RuntimeOption = (typeof RUNTIME_OPTIONS)[keyof typeof RUNTIME_OPTIONS];
 
 type FrameworkOption = (typeof FRAMEWORK_OPTIONS)[keyof typeof FRAMEWORK_OPTIONS];
 

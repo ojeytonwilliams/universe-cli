@@ -11,8 +11,10 @@ type DatabaseOption = z.infer<typeof DatabaseOptionSchema>;
 const DatabaseSchema = z.record(DatabaseOptionSchema, z.record(z.string(), z.string()));
 type Database = z.infer<typeof DatabaseSchema>;
 
+const RuntimeOptionSchema = z.literal(["node", "static_web"]);
+type RuntimeOption = z.infer<typeof RuntimeOptionSchema>;
 const RuntimeSchema = z.record(
-  z.string(),
+  RuntimeOptionSchema,
   z.strictObject({
     baseImage: z.string(),
     databases: z.array(z.string()),
@@ -37,7 +39,7 @@ type PackageManager = z.infer<typeof PackageManagerSchema>;
 
 const ServiceOptionSchema = z.literal(["analytics", "auth", "email"]);
 type ServiceOption = z.infer<typeof ServiceOptionSchema>;
-const ServiceSchema = z.record(z.string(), z.record(z.string(), z.string()));
+const ServiceSchema = z.record(ServiceOptionSchema, z.record(z.string(), z.string()));
 type Service = z.infer<typeof ServiceSchema>;
 
 const FrameworkSchema = z.record(
@@ -64,6 +66,7 @@ export type {
   Database,
   DatabaseOption,
   Runtime,
+  RuntimeOption,
   Framework,
   PackageManager,
   Service,
