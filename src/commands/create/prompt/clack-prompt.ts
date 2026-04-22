@@ -24,6 +24,7 @@ interface ClackPromptApi {
   multiselect(options: {
     message: string;
     options: { label: string; value: string }[];
+    required?: boolean;
   }): Promise<string[] | symbol>;
   select(options: {
     message: string;
@@ -121,6 +122,7 @@ class ClackPrompt implements Prompt {
     const databases = await this.api.multiselect({
       message: "Select databases",
       options: toPromptOptions(databaseOptions(runtime as RuntimeOption), "database"),
+      required: false,
     });
 
     if (this.api.isCancel(databases)) {
@@ -130,6 +132,7 @@ class ClackPrompt implements Prompt {
     const platformServices = await this.api.multiselect({
       message: "Select platform services",
       options: toPromptOptions(serviceOptions(runtime as RuntimeOption), "service"),
+      required: false,
     });
 
     if (this.api.isCancel(platformServices)) {
