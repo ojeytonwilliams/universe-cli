@@ -1,5 +1,5 @@
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
-import { LayerConflictError, MissingLayerError } from "../../../errors/cli-errors.js";
+import { LayerConflictError } from "../../../errors/cli-errors.js";
 import type { LayerType, ResolvedLayer } from "./resolve-ordered-layers.js";
 
 type JsonValue = boolean | JsonObject | JsonValue[] | null | number | string;
@@ -83,7 +83,7 @@ const composeLayerFiles = (
   const owners = new Map<string, FileOwner>();
 
   for (const layer of layers) {
-    const fileEntries = Object.entries(layer.files).sort(([a], [b]) => a.localeCompare(b));
+    const fileEntries = Object.entries(layer.files);
 
     for (const [filePath, content] of fileEntries) {
       const currentOwner = owners.get(filePath);
@@ -96,11 +96,7 @@ const composeLayerFiles = (
       } else if (isConfigFile(filePath)) {
         const existingContent = composedFiles[filePath];
 
-        if (existingContent === undefined) {
-          throw new MissingLayerError(filePath);
-        }
-
-        composedFiles[filePath] = mergeConfigFiles(filePath, existingContent, content);
+        composedFiles[filePath] = mergeConfigFiles(filePath, existingContent!, content);
         owners.set(filePath, { layerName: layer.name, layerType: layer.layerType });
       } else {
         throw new LayerConflictError(filePath, currentOwner.layerName, layer.name);
