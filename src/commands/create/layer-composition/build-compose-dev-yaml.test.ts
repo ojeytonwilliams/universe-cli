@@ -1,6 +1,6 @@
 import { parse as parseYaml } from "yaml";
 import { buildComposeDevYaml } from "./build-compose-dev-yaml.js";
-import type { FrameworkLayerData, PackageManagerLayerData } from "./layers/layer-types.js";
+import type { FrameworkLayerData, PackageManagerLayerData } from "./schemas/layers.js";
 
 const framework: FrameworkLayerData = {
   devCopySource: "COPY src/ ./src/",

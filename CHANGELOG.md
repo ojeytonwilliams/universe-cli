@@ -1,6 +1,11 @@
 # Changelog
 
-## [Unreleased]
+## [3.19.2]
+
+### refactor: Move layer types to schemas/layers
+
+- Moved FrameworkLayerData, PackageManagerLayerData, and RuntimeLayerData types from layers/layer-types.ts to schemas/layers.js.
+- Motivation: Consolidates type definitions with their schemas, reducing duplication and improving maintainability. Updated all imports to reference the new location.
 
 ### refactor: Move Dockerfile data builder to layer-composition-service
 

@@ -59,6 +59,10 @@ const FrameworkSchema = z.record(
 );
 type Framework = z.infer<typeof FrameworkSchema>;
 
+type FrameworkLayerData = Framework[FrameworkOption];
+type PackageManagerLayerData = PackageManager[PackageManagerOption];
+type RuntimeLayerData = Pick<Runtime[RuntimeOption], "baseImage" | "files">;
+
 export {
   AlwaysSchema,
   DatabaseSchema,
@@ -72,12 +76,15 @@ export type {
   Always,
   Database,
   DatabaseOption,
-  Runtime,
-  RuntimeOption,
   Framework,
+  FrameworkLayerData,
   FrameworkOption,
   PackageManager,
+  PackageManagerLayerData,
   PackageManagerOption,
+  Runtime,
+  RuntimeLayerData,
+  RuntimeOption,
   Service,
   ServiceOption,
 };

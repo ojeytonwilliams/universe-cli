@@ -21,7 +21,7 @@ import type {
   FrameworkLayerData,
   PackageManagerLayerData,
   RuntimeLayerData,
-} from "./layers/layer-types.js";
+} from "./schemas/layers.js";
 
 interface ResolvedLayerSet {
   files: Record<string, string>;

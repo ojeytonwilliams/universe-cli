@@ -4,7 +4,7 @@ import type {
   FrameworkLayerData,
   PackageManagerLayerData,
   RuntimeLayerData,
-} from "./layers/layer-types.js";
+} from "./schemas/layers.js";
 
 type LayerType = "always" | "frameworks" | "package-managers" | "runtime" | "services";
 
@@ -14,10 +14,10 @@ interface LayerData {
 
 interface LayerRegistry {
   always: Record<string, LayerData>;
-  frameworks: Record<string, FrameworkLayerData | undefined>;
-  "package-managers": Record<string, PackageManagerLayerData | undefined>;
+  frameworks: Record<string, FrameworkLayerData>;
+  "package-managers": Record<string, PackageManagerLayerData>;
   runtime: Record<string, RuntimeLayerData>;
-  services: Record<string, LayerData | undefined>;
+  services: Record<string, LayerData>;
 }
 
 interface ResolvedLayer {

@@ -1,5 +1,5 @@
 import { stringify as stringifyYaml } from "yaml";
-import type { FrameworkLayerData, PackageManagerLayerData } from "./layers/layer-types.js";
+import type { FrameworkLayerData, PackageManagerLayerData } from "./schemas/layers.js";
 
 const buildComposeDevYaml = (
   framework: FrameworkLayerData,
