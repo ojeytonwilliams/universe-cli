@@ -456,7 +456,8 @@ describe(LayerCompositionService, () => {
   describe("combination coverage with default registry", () => {
     const service = new LayerCompositionService();
 
-    it("resolves Static to always, runtime/static, and frameworks/html-css-js", () => {
+    // Isn't this an implementation detail?
+    it("resolves Static to always, runtime/static_web, and frameworks/html-css-js", () => {
       const result = service.resolveLayers({
         confirmed: true,
         databases: ["none"],
@@ -469,7 +470,7 @@ describe(LayerCompositionService, () => {
 
       expect(result.layers.map((layer) => layer.name)).toStrictEqual([
         "always",
-        "runtime/static",
+        "runtime/static_web",
         "frameworks/html-css-js",
       ]);
     });

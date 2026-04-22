@@ -20,7 +20,7 @@
     "services/email": "Email"
   },
   "packageManager": {
-    "package-managers/bun": "bun",
-    "package-managers/pnpm": "pnpm"
+    "bun": "bun",
+    "pnpm": "pnpm"
   }
 }

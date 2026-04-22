@@ -1,5 +1,5 @@
 {
-  "package-managers/bun": {
+  "bun": {
     "devCmd": ["bun", "run", "dev"],
     "devInstall": "RUN npm install -g bun\nCOPY package.json bun.lock ./\nRUN bun install",
     "files": {
@@ -9,7 +9,7 @@
     },
     "watchRebuild": [{ "path": "./package.json" }, { "path": "./bun.lock" }]
   },
-  "package-managers/pnpm": {
+  "pnpm": {
     "devCmd": ["pnpm", "run", "dev"],
     "devInstall": "COPY package.json pnpm-lock.yaml ./\nRUN corepack enable pnpm && pnpm install",
     "files": {

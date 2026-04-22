@@ -7,7 +7,7 @@
       "package.json": "{\"name\":\"{{name}}\",\"private\":true,\"type\":\"module\"}"
     },
     "frameworks": ["frameworks/express", "frameworks/typescript"],
-    "packageManagers": ["package-managers/pnpm", "package-managers/bun"],
+    "packageManagers": ["pnpm", "bun"],
     "services": ["services/analytics", "services/auth", "services/email"]
   },
   "static_web": {
@@ -19,7 +19,7 @@
       "pnpm-workspace.yaml": ""
     },
     "frameworks": ["frameworks/html-css-js", "frameworks/react-vite"],
-    "packageManagers": ["package-managers/pnpm", "package-managers/bun"],
+    "packageManagers": ["pnpm", "bun"],
     "services": ["services/analytics", "services/auth", "services/email"]
   }
 }

@@ -4,8 +4,6 @@ import { DATABASE_OPTIONS, RUNTIME_OPTIONS } from "../prompt/prompt.port.js";
 import type { CreateSelections } from "../prompt/prompt.port.js";
 import { buildComposeDevYaml } from "./build-compose-dev-yaml.js";
 import { buildDockerfileData } from "./build-dockerfile-data.js";
-import { alwaysLayer } from "./layers/always-layer.js";
-import { baseNodeLayer } from "./layers/base-node-layer.js";
 import { baseStaticLayer } from "./layers/base-static-layer.js";
 import { renderDockerfile } from "./layers/dockerfile-template.js";
 import type { DockerfileData } from "./layers/dockerfile-template.js";
@@ -15,12 +13,14 @@ import type {
   PackageManagerLayerData,
   RuntimeLayerData,
 } from "./layers/layer-types.js";
-import {
-  packageManagersLayer,
-  typedPackageManagerLayers,
-} from "./layers/package-managers-layer.js";
+import { typedPackageManagerLayers } from "./layers/package-managers-layer.js";
 import { servicesLayer } from "./layers/services-layer.js";
 import { getLabel } from "./labels.js";
+
+import alwaysLayer from "./layers/always.json" with { type: "json" };
+import packageManagersLayer from "./layers/package-manager.json" with { type: "json" };
+import runtimeLayer from "./layers/runtime.json" with { type: "json" };
+import { baseNodeLayer } from "./layers/base-node-layer.js";
 
 type LayerType = "always" | "runtime" | "frameworks" | "package-managers" | "services";
 type JsonValue = boolean | JsonObject | JsonValue[] | null | number | string;
@@ -66,13 +66,8 @@ const defaultLayerRegistry: LayerRegistry = {
   frameworks: Object.fromEntries(
     Object.entries(frameworksLayer).map(([key, value]) => [key.slice("frameworks/".length), value]),
   ),
-  "package-managers": Object.fromEntries(
-    Object.entries(packageManagersLayer).map(([key, value]) => [
-      key.slice("package-managers/".length),
-      value,
-    ]),
-  ),
-  runtime: { node: baseNodeLayer, static: baseStaticLayer },
+  "package-managers": packageManagersLayer,
+  runtime: runtimeLayer,
   services: Object.fromEntries(
     Object.entries(servicesLayer).map(([key, files]) => [key.slice("services/".length), { files }]),
   ),
@@ -209,7 +204,7 @@ class LayerCompositionService implements LayerComposer {
 
   private resolveOrderedLayers(input: CreateSelections): ResolvedLayer[] {
     const isNode = input.runtime === RUNTIME_OPTIONS.NODE;
-    const runtimeId = isNode ? "node" : "static";
+    const runtimeId = isNode ? "node" : "static_web";
 
     const refs: { id: string; layerType: LayerType }[] = [
       { id: "always", layerType: "always" },
