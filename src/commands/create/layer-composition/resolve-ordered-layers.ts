@@ -33,13 +33,14 @@ const resolveOrderedLayers = (input: CreateSelections, layers: LayerRegistry): R
   const refs: { id: string; layerType: LayerType }[] = [
     { id: "always", layerType: "always" },
     { id: runtimeId, layerType: "runtime" },
-    ...(isNode && input.packageManager !== undefined
-      ? [{ id: input.packageManager, layerType: "package-managers" as const }]
-      : []),
+    ...(input.packageManager === undefined
+      ? []
+      : [{ id: input.packageManager, layerType: "package-managers" as const }]),
     { id: input.framework, layerType: "frameworks" },
-    ...[...input.databases, ...input.platformServices]
-      .sort((a, b) => a.localeCompare(b))
-      .map((id) => ({ id, layerType: "services" as const })),
+    ...[...input.databases, ...input.platformServices].map((id) => ({
+      id,
+      layerType: "services" as const,
+    })),
   ];
 
   return refs.map(({ id, layerType }) => {

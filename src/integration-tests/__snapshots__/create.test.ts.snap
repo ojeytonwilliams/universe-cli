@@ -2,9 +2,9 @@
 
 exports[`create > snapshots generated Node.js scaffold output 1`] = `
 {
-  ".dockerignore": "node_modules
+  ".dockerignore": ".git
+node_modules
 dist
-.git
 ",
   ".gitignore": "dist
 node_modules
@@ -98,6 +98,8 @@ app.listen(3000, () => {
 exports[`create > snapshots generated Static scaffold output 1`] = `
 {
   ".dockerignore": ".git
+node_modules
+dist
 ",
   ".gitignore": "dist
 node_modules
@@ -148,7 +150,11 @@ name: snapshot-static-app
 schemaVersion: "1"
 stack: static
 ",
-  "pnpm-workspace.yaml": "",
+  "pnpm-workspace.yaml": "blockExoticSubdeps: true
+minimumReleaseAge: 1440
+trustPolicy: no-downgrade
+engineStrict: true
+",
   "public/index.html": "<!doctype html>
 <html lang="en">
   <head>

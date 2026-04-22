@@ -82,10 +82,18 @@ describe(LayerCompositionService, () => {
     );
   });
 
-  it("emits empty pnpm-workspace.yaml for static scaffold", () => {
+  it("emits pnpm-workspace.yaml with security settings for static + pnpm scaffold", () => {
     const result = service.resolveLayers(staticSelection);
 
-    expect(result.files["pnpm-workspace.yaml"]).toBe("");
+    expect(result.files["pnpm-workspace.yaml"]).toBe(
+      [
+        "blockExoticSubdeps: true",
+        "minimumReleaseAge: 1440",
+        "trustPolicy: no-downgrade",
+        "engineStrict: true",
+        "",
+      ].join("\n"),
+    );
   });
 
   it("emits Dockerfile, .dockerignore, and docker-compose.dev.yml for static scaffold", () => {

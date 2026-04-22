@@ -14,7 +14,6 @@
     "baseImage": "node:22-alpine",
     "databases": [],
     "files": {
-      ".dockerignore": ".git\n",
       "Procfile": "web: npx serve public -l {{port}}\n",
       "pnpm-workspace.yaml": ""
     },

@@ -1,5 +1,14 @@
 # Changelog
 
+## [3.20.0] - 2026-04-22
+
+### feat: support .dockerignore merging
+
+- Support for merging .dockerignore and other concat files in layer composition, making custom scaffolds more flexible.
+- pnpm-workspace.yaml now includes security defaults for static + pnpm scaffolds, improving out-of-the-box safety.
+
+These changes make project scaffolding safer and more predictable, and allow new file types to be extended by layers without manual patching. Security defaults help prevent accidental dependency issues in new projects.
+
 ## [3.19.3] - 2026-04-22
 
 ### refactor: Simplify service layer composition

@@ -14,9 +14,16 @@ interface FileOwner {
 }
 
 const CONFIG_EXTENSIONS = new Set([".json", ".yaml", ".yml"]);
+const CONCAT_FILENAMES = new Set([".dockerignore"]);
 
 const isConfigFile = (filePath: string): boolean =>
   [...CONFIG_EXTENSIONS].some((ext) => filePath.endsWith(ext));
+
+const isConcatFile = (filePath: string): boolean =>
+  CONCAT_FILENAMES.has(filePath.split("/").at(-1) ?? filePath);
+
+const isMergeableFile = (filePath: string): boolean =>
+  isConfigFile(filePath) || isConcatFile(filePath);
 
 const isPlainObject = (value: JsonValue): value is JsonObject =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -75,6 +82,11 @@ const stringifyConfig = (filePath: string, value: JsonValue): string => {
 const mergeConfigFiles = (filePath: string, left: string, right: string): string =>
   stringifyConfig(filePath, mergeValues(parseConfig(filePath, left), parseConfig(filePath, right)));
 
+const mergeFiles = (filePath: string, left: string, right: string): string =>
+  isConcatFile(filePath)
+    ? left + (left.endsWith("\n") ? "" : "\n") + right
+    : mergeConfigFiles(filePath, left, right);
+
 const composeLayerFiles = (
   layers: ResolvedLayer[],
   pmPreinstall?: string,
@@ -93,10 +105,8 @@ const composeLayerFiles = (
         owners.set(filePath, { layerName: layer.name, layerType: layer.layerType });
       } else if (currentOwner.layerType === layer.layerType) {
         throw new LayerConflictError(filePath, currentOwner.layerName, layer.name);
-      } else if (isConfigFile(filePath)) {
-        const existingContent = composedFiles[filePath];
-
-        composedFiles[filePath] = mergeConfigFiles(filePath, existingContent!, content);
+      } else if (isMergeableFile(filePath)) {
+        composedFiles[filePath] = mergeFiles(filePath, composedFiles[filePath]!, content);
         owners.set(filePath, { layerName: layer.name, layerType: layer.layerType });
       } else {
         throw new LayerConflictError(filePath, currentOwner.layerName, layer.name);

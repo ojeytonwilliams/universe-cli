@@ -66,19 +66,14 @@ const expectedNodeLayerNames = ({
   framework: (typeof NODE_FRAMEWORKS)[number];
   packageManager: (typeof NODE_PACKAGE_MANAGERS)[number];
   platformServices: CreateSelections["platformServices"];
-}): string[] => {
-  const serviceLayerSlugs = [...databases, ...platformServices]
-    .map((v) => `services/${v}`)
-    .sort((a, b) => a.localeCompare(b));
-
-  return [
-    "always",
-    "runtime/node",
-    `package-managers/${packageManager}`,
-    `frameworks/${framework}`,
-    ...serviceLayerSlugs,
-  ];
-};
+}): string[] => [
+  "always",
+  "runtime/node",
+  `package-managers/${packageManager}`,
+  `frameworks/${framework}`,
+  ...databases.map((v) => `services/${v}`),
+  ...platformServices.map((v) => `services/${v}`),
+];
 
 interface NodeCase {
   databases: CreateSelections["databases"];
@@ -112,7 +107,7 @@ const nodeCombinations: NodeCase[] = NODE_PACKAGE_MANAGERS.flatMap((packageManag
 // ---------------------------------------------------------------------------
 
 describe(resolveOrderedLayers, () => {
-  it("resolves node layers in stage order with sorted services", () => {
+  it("resolves node layers in stage order preserving input order for services", () => {
     const result = resolveOrderedLayers(
       {
         confirmed: true,
@@ -131,31 +126,11 @@ describe(resolveOrderedLayers, () => {
       "runtime/node",
       "package-managers/pnpm",
       "frameworks/express",
-      "services/auth",
-      "services/email",
-      "services/postgresql",
       "services/redis",
+      "services/postgresql",
+      "services/email",
+      "services/auth",
     ]);
-  });
-
-  it("returns identical layer order regardless of input service and database order", () => {
-    const base: CreateSelections = {
-      confirmed: true,
-      databases: ["redis", "postgresql"],
-      framework: "express",
-      name: "test",
-      packageManager: "pnpm",
-      platformServices: ["email", "auth"],
-      runtime: "node",
-    };
-
-    const result1 = resolveOrderedLayers(base, minimalRegistry);
-    const result2 = resolveOrderedLayers(
-      { ...base, databases: ["postgresql", "redis"], platformServices: ["auth", "email"] },
-      minimalRegistry,
-    );
-
-    expect(result1.map((l) => l.name)).toStrictEqual(result2.map((l) => l.name));
   });
 
   it("resolves bun as the package manager layer", () => {
@@ -180,7 +155,7 @@ describe(resolveOrderedLayers, () => {
     ]);
   });
 
-  it("resolves static_web runtime to always, runtime/static_web, and frameworks/html-css-js", () => {
+  it("resolves static_web runtime to always, runtime/static_web, package-managers/pnpm, and frameworks/html-css-js", () => {
     const result = resolveOrderedLayers(
       {
         confirmed: true,
@@ -197,6 +172,7 @@ describe(resolveOrderedLayers, () => {
     expect(result.map((l) => l.name)).toStrictEqual([
       "always",
       "runtime/static_web",
+      "package-managers/pnpm",
       "frameworks/html-css-js",
     ]);
   });
