@@ -275,7 +275,7 @@ describe("create", () => {
     );
 
     expect(generatedPackage).toBe(
-      '{"dependencies":{"express":"5.1.0"},"scripts":{"build":"tsc -p tsconfig.json","dev":"node framework-dev.js"}}',
+      '{"dependencies":{"express":"5.1.0"},"scripts":{"build":"tsc -p tsconfig.json","dev":"node framework-dev.js","preinstall":"npx only-allow pnpm"}}',
     );
   });
 

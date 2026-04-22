@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.19.0] - 2026-04-22
+
+### feat: Add preinstall script for package manager enforcement
+
+- Adds a `preinstall` script to generated `package.json` files for supported package managers (e.g., pnpm), enforcing the use of the correct package manager for installs.
+- Motivation: Prevents accidental use of the wrong package manager, reducing support issues and ensuring consistent local and CI environments.
+
 ## [3.18.0] - 2026-04-22
 
 ### refactor: Update layer composition and remove obsolete frameworks-layer

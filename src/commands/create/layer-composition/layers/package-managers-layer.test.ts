@@ -20,6 +20,15 @@ describe("package-managers/bun layer", () => {
       { path: "./bun.lock" },
     ]);
   });
+
+  it("does not define a preinstall script", () => {
+    expect(bunLayer.preinstall).toBeUndefined();
+  });
+
+  it("does not include package.json or start.sh in files", () => {
+    expect(bunLayer.files["package.json"]).toBeUndefined();
+    expect(bunLayer.files["start.sh"]).toBeUndefined();
+  });
 });
 
 describe("package-managers/pnpm layer", () => {
@@ -46,6 +55,15 @@ describe("package-managers/pnpm layer", () => {
     expect(dockerignore).toContain("node_modules");
     expect(dockerignore).toContain("dist");
     expect(dockerignore).toContain(".git");
+  });
+
+  it("provides a preinstall script to enforce pnpm-only installs", () => {
+    expect(pnpmLayer.preinstall).toBe("npx only-allow pnpm");
+  });
+
+  it("does not include package.json or start.sh in files", () => {
+    expect(pnpmLayer.files["package.json"]).toBeUndefined();
+    expect(pnpmLayer.files["start.sh"]).toBeUndefined();
   });
 
   it("does not include docker-compose.dev.yml in files", () => {

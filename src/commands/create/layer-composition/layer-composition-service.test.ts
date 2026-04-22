@@ -111,8 +111,8 @@ const createService = (overrides?: Partial<LayerRegistry>) => {
       typescript: { devCopySource: "", files: {}, port: 3000, watchSync: [] },
     },
     "package-managers": {
-      bun: { files: { "start.sh": "bun install && bun dev\n" } },
-      pnpm: { files: { "start.sh": "pnpm install && pnpm dev\n" } },
+      bun: { files: {} },
+      pnpm: { files: {} },
     },
     runtime: {
       node: {
@@ -177,7 +177,7 @@ describe(LayerCompositionService, () => {
     const result = service.resolveLayers(nodeExpressSelection);
 
     expect(result.files["package.json"]).toBe(
-      '{"dependencies":{"express":"1.2.3"},"scripts":{"build":"tsc","dev":"node --watch src/index.js"}}',
+      '{"dependencies":{"express":"1.2.3"},"scripts":{"build":"tsc","dev":"node --watch src/index.js","preinstall":"npx only-allow pnpm"}}',
     );
   });
 
@@ -419,7 +419,7 @@ describe(LayerCompositionService, () => {
       });
 
       expect(result.files["package.json"]).toBe(
-        '{"dependencies":{"express":"5.1.0"},"scripts":{"build":"tsc"}}',
+        '{"dependencies":{"express":"5.1.0"},"scripts":{"build":"tsc","preinstall":"npx only-allow pnpm"}}',
       );
     });
 
@@ -458,7 +458,7 @@ describe(LayerCompositionService, () => {
       });
 
       expect(result.files["package.json"]).toBe(
-        '{"dependencies":{"express":"5.1.0"},"scripts":{"build":"tsc"}}',
+        '{"dependencies":{"express":"5.1.0"},"scripts":{"build":"tsc","preinstall":"npx only-allow pnpm"}}',
       );
       expect(result.files["docker-compose.yaml"]).toContain("image: node:22");
       expect(result.files["docker-compose.yaml"]).toContain("3000:3000");

@@ -138,6 +138,18 @@ class LayerCompositionService implements LayerComposer {
       }
     }
 
+    if (input.packageManager !== undefined) {
+      const pmPreinstall =
+        this.packageManagerLayers[`package-managers/${input.packageManager}`]?.preinstall;
+      if (pmPreinstall !== undefined && composedFiles["package.json"] !== undefined) {
+        composedFiles["package.json"] = this.mergeConfigFiles(
+          "package.json",
+          composedFiles["package.json"],
+          JSON.stringify({ scripts: { preinstall: pmPreinstall } }),
+        );
+      }
+    }
+
     const renderer = new LayerTemplateRenderer();
     const frameworkData = this.layers.frameworks?.[input.framework];
 

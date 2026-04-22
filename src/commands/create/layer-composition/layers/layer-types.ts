@@ -23,6 +23,7 @@ interface PackageManagerLayerData {
   devCmd: string[];
   devInstall: string;
   files: Record<string, string>;
+  preinstall?: string;
   watchRebuild: WatchRebuildEntry[];
 }
 
