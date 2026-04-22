@@ -5,7 +5,6 @@ import { buildComposeDevYaml } from "./build-compose-dev-yaml.js";
 import { buildDockerfileData } from "./build-dockerfile-data.js";
 import { renderDockerfile } from "./layers/dockerfile-template.js";
 import type { DockerfileData } from "./layers/dockerfile-template.js";
-import { typedFrameworkLayers } from "./layers/frameworks-layer.js";
 import type {
   FrameworkLayerData,
   PackageManagerLayerData,
@@ -30,7 +29,7 @@ interface LayerData {
 interface LayerRegistry {
   always: Record<string, LayerData>;
   runtime: Record<string, RuntimeLayerData>;
-  frameworks: Record<string, LayerData | undefined>;
+  frameworks: Record<string, FrameworkLayerData | undefined>;
   "package-managers": Record<string, LayerData | undefined>;
   services: Record<string, LayerData | undefined>;
 }
@@ -74,8 +73,6 @@ const defaultLayerRegistry: LayerRegistry = {
   ),
 };
 
-const defaultFrameworkLayers: Record<string, FrameworkLayerData | undefined> = typedFrameworkLayers;
-
 const defaultPackageManagerLayers: Record<string, PackageManagerLayerData | undefined> =
   typedPackageManagerLayers;
 
@@ -95,19 +92,16 @@ class LayerTemplateRenderer {
 
 class LayerCompositionService implements LayerComposer {
   private readonly layers: LayerRegistry;
-  private readonly frameworkLayers: Record<string, FrameworkLayerData | undefined>;
   private readonly packageManagerLayers: Record<string, PackageManagerLayerData | undefined>;
 
   constructor(
     layers: LayerRegistry = defaultLayerRegistry,
-    frameworkLayers: Record<string, FrameworkLayerData | undefined> = defaultFrameworkLayers,
     packageManagerLayers: Record<
       string,
       PackageManagerLayerData | undefined
     > = defaultPackageManagerLayers,
   ) {
     this.layers = layers;
-    this.frameworkLayers = frameworkLayers;
     this.packageManagerLayers = packageManagerLayers;
   }
 
@@ -145,7 +139,7 @@ class LayerCompositionService implements LayerComposer {
     }
 
     const renderer = new LayerTemplateRenderer();
-    const frameworkData = this.frameworkLayers[`frameworks/${input.framework}`];
+    const frameworkData = this.layers.frameworks?.[input.framework];
 
     let frameworkLabel: string = input.framework;
     let runtimeLabel: string = input.runtime;

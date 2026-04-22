@@ -99,13 +99,16 @@ const createService = (overrides?: Partial<LayerRegistry>) => {
     },
     frameworks: {
       express: {
+        devCopySource: "",
         files: {
           "package.json":
             '{"dependencies":{"express":"1.2.3"},"scripts":{"dev":"node --watch src/index.js"}}',
           "src/server.ts": "const start = (): void => {};\nexport { start };\n",
         },
+        port: 3000,
+        watchSync: [],
       },
-      typescript: { files: {} },
+      typescript: { devCopySource: "", files: {}, port: 3000, watchSync: [] },
     },
     "package-managers": {
       bun: { files: { "start.sh": "bun install && bun dev\n" } },
@@ -225,7 +228,7 @@ describe(LayerCompositionService, () => {
     it("substitutes {{name}} in file content using the selection name", () => {
       const service = new LayerCompositionService({
         always: { always: { files: { "README.md": "# {{name}}\n" } } },
-        frameworks: { typescript: { files: {} } },
+        frameworks: { typescript: { devCopySource: "", files: {}, port: 3000, watchSync: [] } },
         "package-managers": { pnpm: { files: {} } },
         runtime: { node: { baseImage: "", files: {} } },
         services: {},
@@ -252,7 +255,7 @@ describe(LayerCompositionService, () => {
     it.skip("substitutes {{runtime}} and {{framework}} in file content", () => {
       const service = new LayerCompositionService({
         always: { always: { files: { "meta.txt": "rt={{runtime}} fw={{framework}}\n" } } },
-        frameworks: { express: { files: {} } },
+        frameworks: { express: { devCopySource: "", files: {}, port: 3000, watchSync: [] } },
         "package-managers": { pnpm: { files: {} } },
         runtime: { node: { baseImage: "", files: {} } },
         services: {},
@@ -274,7 +277,7 @@ describe(LayerCompositionService, () => {
     it("leaves unknown placeholders in file content unchanged", () => {
       const service = new LayerCompositionService({
         always: { always: { files: { "note.txt": "{{name}} {{unknown}}\n" } } },
-        frameworks: { typescript: { files: {} } },
+        frameworks: { typescript: { devCopySource: "", files: {}, port: 3000, watchSync: [] } },
         "package-managers": { pnpm: { files: {} } },
         runtime: { node: { baseImage: "", files: {} } },
         services: {},
@@ -298,7 +301,7 @@ describe(LayerCompositionService, () => {
     const makeYamlService = (overrides?: Partial<LayerRegistry>) => {
       const base: LayerRegistry = {
         always: { always: { files: { "README.md": "# test\n" } } },
-        frameworks: { express: { files: {} } },
+        frameworks: { express: { devCopySource: "", files: {}, port: 3000, watchSync: [] } },
         "package-managers": { pnpm: { files: {} } },
         runtime: {
           node: { baseImage: "", files: { "package.json": '{"name":"test"}' } },
@@ -321,9 +324,12 @@ describe(LayerCompositionService, () => {
         always: {},
         frameworks: {
           express: {
+            devCopySource: "",
             files: {
               "docker-compose.yaml": "services:\n  app:\n    ports:\n      - '3000:3000'\n",
             },
+            port: 3000,
+            watchSync: [],
           },
         },
         runtime: {
@@ -357,7 +363,14 @@ describe(LayerCompositionService, () => {
 
     it("merges .yml config files and emits valid YAML output", () => {
       const service = makeYamlService({
-        frameworks: { express: { files: { "config.yml": "env: extended\n" } } },
+        frameworks: {
+          express: {
+            devCopySource: "",
+            files: { "config.yml": "env: extended\n" },
+            port: 3000,
+            watchSync: [],
+          },
+        },
         runtime: {
           node: { baseImage: "", files: { "config.yml": "env: base\nshared: common\n" } },
         },
@@ -383,7 +396,12 @@ describe(LayerCompositionService, () => {
     it("preserves JSON round-trip behavior unchanged", () => {
       const service = makeYamlService({
         frameworks: {
-          express: { files: { "package.json": '{"dependencies":{"express":"5.1.0"}}' } },
+          express: {
+            devCopySource: "",
+            files: { "package.json": '{"dependencies":{"express":"5.1.0"}}' },
+            port: 3000,
+            watchSync: [],
+          },
         },
         runtime: {
           node: { baseImage: "", files: { "package.json": '{"scripts":{"build":"tsc"}}' } },
@@ -409,10 +427,13 @@ describe(LayerCompositionService, () => {
       const service = makeYamlService({
         frameworks: {
           express: {
+            devCopySource: "",
             files: {
               "docker-compose.yaml": "services:\n  app:\n    ports:\n      - '3000:3000'\n",
               "package.json": '{"dependencies":{"express":"5.1.0"}}',
             },
+            port: 3000,
+            watchSync: [],
           },
         },
         runtime: {

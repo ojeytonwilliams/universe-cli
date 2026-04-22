@@ -236,12 +236,15 @@ describe("create", () => {
       always: { always: { files: { "README.md": "# __PROJECT_NAME__\n" } } },
       frameworks: {
         express: {
+          devCopySource: "",
           files: {
             "package.json": JSON.stringify({
               dependencies: { express: "5.1.0" },
               scripts: { dev: "node framework-dev.js" },
             }),
           },
+          port: 3000,
+          watchSync: [],
         },
       },
       "package-managers": { pnpm: { files: {} } },
@@ -285,7 +288,7 @@ describe("create", () => {
     });
     const customLayers: LayerRegistry = {
       always: { always: { files: { "README.md": "# from always\n" } } },
-      frameworks: { express: { files: {} } },
+      frameworks: { express: { devCopySource: "", files: {}, port: 3000, watchSync: [] } },
       "package-managers": { pnpm: { files: {} } },
       runtime: {
         node: { baseImage: "", files: { "README.md": "# from base\n" } },
