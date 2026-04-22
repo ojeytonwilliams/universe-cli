@@ -11,7 +11,8 @@ type DatabaseOption = z.infer<typeof DatabaseOptionSchema>;
 const DatabaseSchema = z.record(DatabaseOptionSchema, z.record(z.string(), z.string()));
 type Database = z.infer<typeof DatabaseSchema>;
 
-const RuntimeOptionSchema = z.literal(["node", "static_web"]);
+const RUNTIME_OPTIONS = { NODE: "node", STATIC_WEB: "static_web" } as const;
+const RuntimeOptionSchema = z.literal(Object.values(RUNTIME_OPTIONS));
 type RuntimeOption = z.infer<typeof RuntimeOptionSchema>;
 const RuntimeSchema = z.record(
   RuntimeOptionSchema,
@@ -64,6 +65,7 @@ export {
   RuntimeSchema,
   PackageManagerSchema,
   ServiceSchema,
+  RUNTIME_OPTIONS,
 };
 export type {
   Always,

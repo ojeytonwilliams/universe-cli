@@ -1,9 +1,9 @@
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { RUNTIME_OPTIONS } from "../commands/create/prompt/prompt.port.js";
 import type { CreateSelections } from "../commands/create/prompt/prompt.port.js";
 import type { ProjectReaderPort } from "../io/project-reader.port.js";
 import { ManifestInvalidError } from "../errors/cli-errors.js";
+import { RUNTIME_OPTIONS } from "../commands/create/layer-composition/schemas/layers.js";
 
 // ---------------------------------------------------------------------------
 // Schema version
