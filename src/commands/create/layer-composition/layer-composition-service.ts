@@ -22,14 +22,15 @@ import {
 import { servicesLayer } from "./layers/services-layer.js";
 import { getLabel } from "./labels.js";
 
-type LayerStage = "always" | "base" | "frameworks" | "package-managers" | "services";
+type LayerType = "always" | "runtime" | "frameworks" | "package-managers" | "services";
 type JsonValue = boolean | JsonObject | JsonValue[] | null | number | string;
 
 interface LayerData {
   files: Record<string, string>;
 }
 
-type LayerRegistry = Record<string, LayerData | undefined>;
+type LayerEntry = LayerData & { layerType: LayerType };
+type LayerRegistry = Record<string, LayerEntry | undefined>;
 
 interface JsonObject {
   [key: string]: JsonValue;
@@ -38,7 +39,7 @@ interface JsonObject {
 interface ResolvedLayer {
   files: Record<string, string>;
   name: string;
-  stage: LayerStage;
+  layerType: LayerType;
 }
 
 interface ResolvedLayerSet {
@@ -48,7 +49,7 @@ interface ResolvedLayerSet {
 
 interface FileOwner {
   layerName: string;
-  stage: LayerStage;
+  layerType: LayerType;
 }
 
 interface TemplateContext {
@@ -60,27 +61,40 @@ interface TemplateContext {
 
 const CONFIG_EXTENSIONS = new Set([".json", ".yaml", ".yml"]);
 const NONE_VALUE = DATABASE_OPTIONS.NONE;
-const NODE_RUNTIME_LAYER = "base/node";
-const STATIC_RUNTIME_LAYER = "base/static";
+const NODE_RUNTIME_LAYER = "runtime/node";
+const STATIC_RUNTIME_LAYER = "runtime/static";
 
 // ServicesLayer still uses the old flat shape; shim it into LayerData here.
 // Migration is deferred.
 const shimmedServicesLayer: LayerRegistry = Object.fromEntries(
-  Object.entries(servicesLayer).map(([key, files]) => [key, { files }]),
+  Object.entries(servicesLayer).map(([key, files]) => [
+    key,
+    { files, layerType: "services" as LayerType },
+  ]),
 );
 
 const defaultLayerRegistry: LayerRegistry = {
-  always: alwaysLayer,
-  "base/node": baseNodeLayer,
-  "base/static": baseStaticLayer,
-  ...frameworksLayer,
-  ...packageManagersLayer,
+  always: { ...alwaysLayer, layerType: "always" },
+  "runtime/node": { ...baseNodeLayer, layerType: "runtime" },
+  "runtime/static": { ...baseStaticLayer, layerType: "runtime" },
+  ...Object.fromEntries(
+    Object.entries(frameworksLayer).map(([key, value]) => [
+      key,
+      value === undefined ? undefined : { ...value, layerType: "frameworks" as LayerType },
+    ]),
+  ),
+  ...Object.fromEntries(
+    Object.entries(packageManagersLayer).map(([key, value]) => [
+      key,
+      value === undefined ? undefined : { ...value, layerType: "package-managers" as LayerType },
+    ]),
+  ),
   ...shimmedServicesLayer,
 };
 
 const defaultRuntimeLayers: Record<string, RuntimeLayerData | undefined> = {
-  "base/node": baseNodeLayer,
-  "base/static": baseStaticLayer,
+  "runtime/node": baseNodeLayer,
+  "runtime/static": baseStaticLayer,
 };
 
 const defaultFrameworkLayers: Record<string, FrameworkLayerData | undefined> = typedFrameworkLayers;
@@ -138,8 +152,8 @@ class LayerCompositionService implements LayerComposer {
 
         if (currentOwner === undefined) {
           composedFiles[filePath] = content;
-          owners.set(filePath, { layerName: layer.name, stage: layer.stage });
-        } else if (currentOwner.stage === layer.stage) {
+          owners.set(filePath, { layerName: layer.name, layerType: layer.layerType });
+        } else if (currentOwner.layerType === layer.layerType) {
           throw new LayerConflictError(filePath, currentOwner.layerName, layer.name);
         } else if (this.isConfigFile(filePath)) {
           const existingContent = composedFiles[filePath];
@@ -149,7 +163,7 @@ class LayerCompositionService implements LayerComposer {
           }
 
           composedFiles[filePath] = this.mergeConfigFiles(filePath, existingContent, content);
-          owners.set(filePath, { layerName: layer.name, stage: layer.stage });
+          owners.set(filePath, { layerName: layer.name, layerType: layer.layerType });
         } else {
           throw new LayerConflictError(filePath, currentOwner.layerName, layer.name);
         }
@@ -228,8 +242,8 @@ class LayerCompositionService implements LayerComposer {
 
       return {
         files: layer.files,
+        layerType: layer.layerType,
         name: layerName,
-        stage: this.resolveStage(layerName),
       };
     });
   }
@@ -257,26 +271,6 @@ class LayerCompositionService implements LayerComposer {
 
   private resolveFrameworkLayer(framework: CreateSelections["framework"]): string {
     return `frameworks/${framework}`;
-  }
-
-  private resolveStage(layerName: string): LayerStage {
-    if (layerName === "always") {
-      return "always";
-    }
-
-    if (layerName.startsWith("base/")) {
-      return "base";
-    }
-
-    if (layerName.startsWith("package-managers/")) {
-      return "package-managers";
-    }
-
-    if (layerName.startsWith("frameworks/")) {
-      return "frameworks";
-    }
-
-    return "services";
   }
 
   private isConfigFile(filePath: string): boolean {
@@ -358,7 +352,9 @@ export type {
   DockerfileData,
   LayerComposer,
   LayerData,
+  LayerEntry,
   LayerRegistry,
+  LayerType,
   ResolvedLayer,
   ResolvedLayerSet,
   TemplateContext,
