@@ -247,7 +247,9 @@ describe("create", () => {
           watchSync: [],
         },
       },
-      "package-managers": { pnpm: { files: {} } },
+      "package-managers": {
+        pnpm: { devCmd: [], devInstall: "", files: {}, watchRebuild: [] },
+      },
       runtime: {
         node: {
           baseImage: "node:22-alpine",
@@ -275,7 +277,7 @@ describe("create", () => {
     );
 
     expect(generatedPackage).toBe(
-      '{"dependencies":{"express":"5.1.0"},"scripts":{"build":"tsc -p tsconfig.json","dev":"node framework-dev.js","preinstall":"npx only-allow pnpm"}}',
+      '{"dependencies":{"express":"5.1.0"},"scripts":{"build":"tsc -p tsconfig.json","dev":"node framework-dev.js"}}',
     );
   });
 
@@ -289,7 +291,9 @@ describe("create", () => {
     const customLayers: LayerRegistry = {
       always: { always: { files: { "README.md": "# from always\n" } } },
       frameworks: { express: { devCopySource: "", files: {}, port: 3000, watchSync: [] } },
-      "package-managers": { pnpm: { files: {} } },
+      "package-managers": {
+        pnpm: { devCmd: [], devInstall: "", files: {}, watchRebuild: [] },
+      },
       runtime: {
         node: { baseImage: "", files: { "README.md": "# from base\n" } },
         static: { baseImage: "", files: { "public/index.html": "<h1>Static</h1>\n" } },

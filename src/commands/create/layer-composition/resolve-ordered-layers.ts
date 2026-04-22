@@ -1,6 +1,10 @@
 import { MissingLayerError } from "../../../errors/cli-errors.js";
 import type { CreateSelections } from "../prompt/prompt.port.js";
-import type { FrameworkLayerData, RuntimeLayerData } from "./layers/layer-types.js";
+import type {
+  FrameworkLayerData,
+  PackageManagerLayerData,
+  RuntimeLayerData,
+} from "./layers/layer-types.js";
 
 type LayerType = "always" | "frameworks" | "package-managers" | "runtime" | "services";
 
@@ -11,7 +15,7 @@ interface LayerData {
 interface LayerRegistry {
   always: Record<string, LayerData>;
   frameworks: Record<string, FrameworkLayerData | undefined>;
-  "package-managers": Record<string, LayerData | undefined>;
+  "package-managers": Record<string, PackageManagerLayerData | undefined>;
   runtime: Record<string, RuntimeLayerData>;
   services: Record<string, LayerData | undefined>;
 }

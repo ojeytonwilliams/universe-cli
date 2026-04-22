@@ -4,8 +4,6 @@ import { buildDockerfileData } from "./build-dockerfile-data.js";
 import { composeLayerFiles } from "./compose-layer-files.js";
 import { renderDockerfile } from "./layers/dockerfile-template.js";
 import type { DockerfileData } from "./layers/dockerfile-template.js";
-import type { PackageManagerLayerData } from "./layers/layer-types.js";
-import { typedPackageManagerLayers } from "./layers/package-managers-layer.js";
 import { servicesLayer } from "./layers/services-layer.js";
 import { LayerTemplateRenderer } from "./layer-template-renderer.js";
 import type { TemplateContext } from "./layer-template-renderer.js";
@@ -42,22 +40,11 @@ const defaultLayerRegistry: LayerRegistry = {
   ),
 };
 
-const defaultPackageManagerLayers: Record<string, PackageManagerLayerData | undefined> =
-  typedPackageManagerLayers;
-
 class LayerCompositionService implements LayerComposer {
   private readonly layers: LayerRegistry;
-  private readonly packageManagerLayers: Record<string, PackageManagerLayerData | undefined>;
 
-  constructor(
-    layers: LayerRegistry = defaultLayerRegistry,
-    packageManagerLayers: Record<
-      string,
-      PackageManagerLayerData | undefined
-    > = defaultPackageManagerLayers,
-  ) {
+  constructor(layers: LayerRegistry = defaultLayerRegistry) {
     this.layers = layers;
-    this.packageManagerLayers = packageManagerLayers;
   }
 
   resolveLayers(input: CreateSelections): ResolvedLayerSet {
@@ -66,7 +53,7 @@ class LayerCompositionService implements LayerComposer {
     const pmPreinstall =
       input.packageManager === undefined
         ? undefined
-        : this.packageManagerLayers[`package-managers/${input.packageManager}`]?.preinstall;
+        : this.layers["package-managers"][input.packageManager]?.preinstall;
 
     const composedFiles = composeLayerFiles(resolvedLayers, pmPreinstall);
 
@@ -105,7 +92,7 @@ class LayerCompositionService implements LayerComposer {
       frameworkData !== undefined &&
       input.packageManager !== undefined
     ) {
-      const pmData = this.packageManagerLayers[`package-managers/${input.packageManager}`];
+      const pmData = this.layers["package-managers"][input.packageManager];
 
       if (pmData !== undefined) {
         renderedFiles["Dockerfile"] = renderDockerfile(
