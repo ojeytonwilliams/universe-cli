@@ -2,7 +2,9 @@
 
 ## Phase 1: Scaffold Files Tree
 
-- [ ] TASK: Create `/files/` directory tree with all scaffold files and `.gitkeep` sentinels per the structure in `plans/universe-cli/layer-file-repository.md` — covering `always/`, `runtime/`, `package-manager/`, `framework/`, `service/`, and `database/` subtrees
+- [x] TASK: Create `/files/` directory tree with all scaffold files and `.gitkeep` sentinels per the structure in `plans/universe-cli/layer-file-repository.md` — covering `always/`, `runtime/`, `package-manager/`, `framework/`, `service/`, and `database/` subtrees
+
+- [x] TASK: Add `files/**` to the oxlint ignore config so the linter skips scaffold files
 
 ## Phase 2: Codegen Script
 
@@ -48,8 +50,6 @@
 
 ## Phase 5: Tooling Integration and Validation
 
-- [ ] TASK: Add `"files/**"` to the `exclude` array in `tsconfig.json` so TypeScript ignores scaffold `.ts`/`.tsx` files that use template variables and uninstalled imports
-- [ ] TASK: Add `files/**` to the oxlint ignore config so the linter skips scaffold files
 - [ ] CODE: Wire up Vitest `globalSetup` to run codegen before tests
   - Feature: Add `scripts/vitest-setup.mjs` that imports and calls `generateLayerFiles()`, then register it under `globalSetup` in `vitest.config.ts` so JSON files are written once in the main process before any test worker imports them
   - Files: `scripts/vitest-setup.mjs`, `vitest.config.ts`
