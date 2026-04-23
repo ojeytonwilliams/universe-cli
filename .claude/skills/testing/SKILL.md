@@ -15,7 +15,9 @@ Follow these rules when writing tests. These are generic guidelines. If a langua
 
 ## Test pyramid
 
-Prioritize creating unit tests over integration tests over e2e tests. Ideally projects should have many unit tests, some integration tests and a few e2e tests.
+Prioritize creating unit tests over integration tests over e2e tests. Only create e2e tests if the behaviour cannot be adequately tested with integration or unit tests. Only create integration tests if the behaviour cannot be adequately tested with unit tests.
+
+Ideally projects should have many unit tests, some integration tests and a few e2e tests.
 
 ## Magic numbers
 
