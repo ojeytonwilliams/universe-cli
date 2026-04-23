@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.22.1] - 2026-04-23
+
+### fix: Ensure lockfiles are pinned after dependency specification
+
+- The package manager adapters for Bun and pnpm now re-run the lockfile install after pinning versions in package.json. This guarantees that the lockfile reflects the pinned versions, preventing accidental upgrades and improving reproducibility for new projects. Tests were added to verify this behavior.
+
 ## [3.22.0] - 2026-04-23
 
 ### chore: Remove redundant install step

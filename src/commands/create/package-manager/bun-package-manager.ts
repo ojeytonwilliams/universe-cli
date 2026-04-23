@@ -104,6 +104,14 @@ class BunPackageManager implements PackageManager {
     const versions = extractVersions(listOutput);
     const pinned = pinVersions(pkg, versions);
     await this.filesystem.writeFile(packageJsonPath, JSON.stringify(pinned));
+
+    // Re-run install to update the lockfile with pinned versions
+    try {
+      await this.bun.installLockfileOnly(projectDirectory);
+      listOutput = await this.bun.list(projectDirectory);
+    } catch (error) {
+      throw new PackageInstallError((error as Error).message);
+    }
   }
 }
 

@@ -66,6 +66,24 @@ describe(PnpmPackageManager, () => {
       expect(written.devDependencies["typescript"]).toBe("5.9.3");
     });
 
+    /** This isn't a great test, since it's mostly testing mocks. If we see
+        regressions, we may want to add an integration test that runs pnpm in a temp directory */
+    it("produces a pinned lockfile", async () => {
+      const { pnpm, filesystem } = makeMock();
+      pnpm.installLockfileOnly.mockResolvedValue(undefined);
+      pnpm.list.mockResolvedValueOnce(PNPM_LIST_OUTPUT);
+      filesystem.readFile.mockResolvedValueOnce(
+        JSON.stringify({ dependencies: { express: "^5" }, devDependencies: { typescript: "^5" } }),
+      );
+      filesystem.writeFile.mockResolvedValueOnce(undefined);
+      const adapter = new PnpmPackageManager(pnpm, filesystem);
+
+      await adapter.specifyDeps("/proj");
+
+      // The first lockfile is unpinned, the second is pinned.
+      expect(pnpm.installLockfileOnly).toHaveBeenCalledTimes(2);
+    });
+
     it("throws PackageInstallError when installLockfileOnly fails", async () => {
       const { pnpm, filesystem } = makeMock();
       pnpm.installLockfileOnly.mockRejectedValueOnce(new Error("pnpm exited with code 1"));

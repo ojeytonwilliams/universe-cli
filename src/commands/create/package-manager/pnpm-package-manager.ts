@@ -115,6 +115,14 @@ class PnpmPackageManager implements PackageManager {
     const pinned = pinVersions(pkg, versions);
 
     await this.filesystem.writeFile(packageJsonPath, JSON.stringify(pinned));
+
+    // Re-run install to update the lockfile with pinned versions
+    try {
+      await this.pnpm.installLockfileOnly(projectDirectory);
+      listOutput = await this.pnpm.list(projectDirectory);
+    } catch (error) {
+      throw new PackageInstallError((error as Error).message);
+    }
   }
 }
 
