@@ -3,7 +3,6 @@ import { BunPackageManager } from "./bun-package-manager.js";
 describe(BunPackageManager, () => {
   const makeMock = () => {
     const bun = {
-      install: vi.fn(),
       installLockfileOnly: vi.fn(),
       list: vi.fn(),
     };
@@ -15,7 +14,7 @@ describe(BunPackageManager, () => {
   };
 
   describe("specifyDeps", () => {
-    it("creates a lockfile and does not install modules", async () => {
+    it("creates a lockfile", async () => {
       const { bun, filesystem } = makeMock();
       bun.installLockfileOnly.mockResolvedValueOnce(undefined);
       bun.list.mockResolvedValueOnce("node_modules (1)\n├── foo@1.2.3\n");
@@ -25,7 +24,6 @@ describe(BunPackageManager, () => {
       await adapter.specifyDeps("/proj");
       expect(bun.installLockfileOnly).toHaveBeenCalledWith("/proj");
       expect(bun.list).toHaveBeenCalledWith("/proj");
-      expect(bun.install).not.toHaveBeenCalled();
     });
 
     it("pins versions in package.json", async () => {
@@ -42,27 +40,12 @@ describe(BunPackageManager, () => {
         JSON.stringify({ dependencies: { foo: "1.2.3" } }),
       );
     });
-  });
 
-  it("runs a full install for install", async () => {
-    const { bun, filesystem } = makeMock();
-    bun.install.mockResolvedValueOnce(undefined);
-    const adapter = new BunPackageManager(bun, filesystem);
-    await adapter.install("/proj");
-    expect(bun.install).toHaveBeenCalledWith("/proj");
-  });
-
-  it("throws PackageInstallError on specifyDeps failure", async () => {
-    const { bun, filesystem } = makeMock();
-    bun.installLockfileOnly.mockRejectedValueOnce(new Error("fail"));
-    const adapter = new BunPackageManager(bun, filesystem);
-    await expect(adapter.specifyDeps("/proj")).rejects.toThrow("fail");
-  });
-
-  it("throws PackageInstallError on install failure", async () => {
-    const { bun, filesystem } = makeMock();
-    bun.install.mockRejectedValueOnce(new Error("fail"));
-    const adapter = new BunPackageManager(bun, filesystem);
-    await expect(adapter.install("/proj")).rejects.toThrow("fail");
+    it("throws PackageInstallError on specifyDeps failure", async () => {
+      const { bun, filesystem } = makeMock();
+      bun.installLockfileOnly.mockRejectedValueOnce(new Error("fail"));
+      const adapter = new BunPackageManager(bun, filesystem);
+      await expect(adapter.specifyDeps("/proj")).rejects.toThrow("fail");
+    });
   });
 });

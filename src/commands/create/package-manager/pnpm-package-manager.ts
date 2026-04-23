@@ -9,7 +9,6 @@ const execFileAsync = promisify(execFile);
 
 interface PnpmRunner {
   installLockfileOnly(cwd: string): Promise<void>;
-  install(cwd: string): Promise<void>;
   list(cwd: string): Promise<string>;
 }
 
@@ -34,9 +33,6 @@ interface PackageJson {
 }
 
 const defaultPnpmRunner: PnpmRunner = {
-  async install(cwd) {
-    await execFileAsync("pnpm", ["install"], { cwd, encoding: "utf8" });
-  },
   async installLockfileOnly(cwd) {
     await execFileAsync("pnpm", ["install", "--lockfile-only"], { cwd, encoding: "utf8" });
   },
@@ -119,14 +115,6 @@ class PnpmPackageManager implements PackageManager {
     const pinned = pinVersions(pkg, versions);
 
     await this.filesystem.writeFile(packageJsonPath, JSON.stringify(pinned));
-  }
-
-  async install(projectDirectory: string): Promise<void> {
-    try {
-      await this.pnpm.install(projectDirectory);
-    } catch (error) {
-      throw new PackageInstallError((error as Error).message);
-    }
   }
 }
 

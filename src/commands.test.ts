@@ -133,7 +133,7 @@ describe(handleCreate, () => {
         },
       },
       packageManager: {
-        run: () => Promise.resolve(),
+        specifyDeps: () => Promise.resolve(),
       },
       platformManifestGenerator: {
         generatePlatformManifest(_input: CreateSelections) {
@@ -185,7 +185,7 @@ describe(handleCreate, () => {
         },
       },
       packageManager: {
-        run(): never {
+        specifyDeps(): never {
           throw new Error("packageManager not used in this test");
         },
       },
@@ -235,7 +235,7 @@ describe(handleCreate, () => {
             },
           },
           packageManager: {
-            run(): never {
+            specifyDeps(): never {
               throw new Error("packageManager not used in this test");
             },
           },
@@ -285,7 +285,7 @@ describe(handleCreate, () => {
             },
           },
           packageManager: {
-            run(): never {
+            specifyDeps(): never {
               throw new Error("packageManager not used in this test");
             },
           },

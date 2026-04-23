@@ -17,7 +17,6 @@ const PNPM_LIST_OUTPUT = JSON.stringify([
 describe(PnpmPackageManager, () => {
   const makeMock = () => {
     const pnpm = {
-      install: vi.fn(),
       installLockfileOnly: vi.fn(),
       list: vi.fn(),
     };
@@ -29,7 +28,7 @@ describe(PnpmPackageManager, () => {
   };
 
   describe("specifyDeps", () => {
-    it("creates a lockfile and does not install modules", async () => {
+    it("creates a lockfile", async () => {
       const { pnpm, filesystem } = makeMock();
       pnpm.installLockfileOnly.mockResolvedValueOnce(undefined);
       pnpm.list.mockResolvedValueOnce(PNPM_LIST_OUTPUT);
@@ -43,7 +42,6 @@ describe(PnpmPackageManager, () => {
 
       expect(pnpm.installLockfileOnly).toHaveBeenCalledWith("/proj");
       expect(pnpm.list).toHaveBeenCalledWith("/proj");
-      expect(pnpm.install).not.toHaveBeenCalled();
     });
 
     it("pins versions in package.json", async () => {
@@ -73,25 +71,6 @@ describe(PnpmPackageManager, () => {
       pnpm.installLockfileOnly.mockRejectedValueOnce(new Error("pnpm exited with code 1"));
       const adapter = new PnpmPackageManager(pnpm, filesystem);
       await expect(adapter.specifyDeps("/proj")).rejects.toBeInstanceOf(PackageInstallError);
-    });
-  });
-
-  describe("install", () => {
-    it("runs a full install in the given directory", async () => {
-      const { pnpm, filesystem } = makeMock();
-      pnpm.install.mockResolvedValueOnce(undefined);
-      const adapter = new PnpmPackageManager(pnpm, filesystem);
-
-      await adapter.install("/proj");
-
-      expect(pnpm.install).toHaveBeenCalledWith("/proj");
-    });
-
-    it("throws PackageInstallError when install fails", async () => {
-      const { pnpm, filesystem } = makeMock();
-      pnpm.install.mockRejectedValueOnce(new Error("pnpm exited with code 1"));
-      const adapter = new PnpmPackageManager(pnpm, filesystem);
-      await expect(adapter.install("/proj")).rejects.toBeInstanceOf(PackageInstallError);
     });
   });
 });

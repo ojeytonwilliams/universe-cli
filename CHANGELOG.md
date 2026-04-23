@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.22.0] - 2026-04-23
+
+### chore: Remove redundant install step
+
+- The install step is no longer needed because the Docker image now includes all dependencies by default.
+
 ## [3.21.0] - 2026-04-23
 
 ### feat: Automate layer file generation and enforce .gitkeep presence
