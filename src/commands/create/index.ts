@@ -41,7 +41,7 @@ export const handleCreate = async (
   await deps.filesystemWriter.writeProject(targetDirectory, projectFiles);
 
   if (validatedInput.runtime === "node") {
-    await deps.packageManager.run({
+    await deps.packageManager.specifyDeps({
       manager: validatedInput.packageManager!,
       projectDirectory: targetDirectory,
     });

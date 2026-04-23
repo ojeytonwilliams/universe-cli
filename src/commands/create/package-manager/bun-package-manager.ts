@@ -9,7 +9,6 @@ const execFileAsync = promisify(execFile);
 
 interface BunRunner {
   installLockfileOnly(cwd: string): Promise<void>;
-  install(cwd: string): Promise<void>;
   list(cwd: string): Promise<string>;
 }
 
@@ -19,9 +18,6 @@ interface FilesystemApi {
 }
 
 const defaultBunRunner: BunRunner = {
-  async install(cwd) {
-    await execFileAsync("bun", ["install"], { cwd, encoding: "utf8" });
-  },
   async installLockfileOnly(cwd) {
     await execFileAsync("bun", ["install", "--lockfile-only"], { cwd, encoding: "utf8" });
   },
@@ -108,14 +104,6 @@ class BunPackageManager implements PackageManager {
     const versions = extractVersions(listOutput);
     const pinned = pinVersions(pkg, versions);
     await this.filesystem.writeFile(packageJsonPath, JSON.stringify(pinned));
-  }
-
-  async install(projectDirectory: string): Promise<void> {
-    try {
-      await this.bun.install(projectDirectory);
-    } catch (error) {
-      throw new PackageInstallError((error as Error).message);
-    }
   }
 }
 

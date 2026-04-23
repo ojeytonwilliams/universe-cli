@@ -143,7 +143,7 @@ const createRouteDeps = (overrides: Partial<RouteDeps> = {}): RouteDeps => ({
   layerResolver: passThroughLayerResolver,
   listClient: defaultListClient,
   logsClient: defaultLogsClient,
-  packageManager: { run: () => Promise.resolve() },
+  packageManager: { specifyDeps: () => Promise.resolve() },
   platformManifestGenerator: manifestGenerator,
   projectReader: defaultProjectReader,
   promoteClient: defaultPromoteClient,

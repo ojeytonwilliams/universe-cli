@@ -188,15 +188,15 @@ describe("create", () => {
       platformServices: [],
     });
 
-    const run = vi.fn((_opts: RunOptions) => Promise.resolve());
+    const specifyDeps = vi.fn((_opts: RunOptions) => Promise.resolve());
 
     const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection), {
-      packageManagerService: { run },
+      packageManagerService: { specifyDeps },
     });
     const result = await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
 
     expect(result.exitCode).toBe(0);
-    expect(run).toHaveBeenCalledWith({
+    expect(specifyDeps).toHaveBeenCalledWith({
       manager: "pnpm",
       projectDirectory: join(rootDirectory, name),
     });
@@ -206,15 +206,15 @@ describe("create", () => {
     const name = "static-no-install-spy";
     const selection = createStaticSelection(name);
 
-    const run = vi.fn((_opts: RunOptions) => Promise.resolve());
+    const specifyDeps = vi.fn((_opts: RunOptions) => Promise.resolve());
 
     const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection), {
-      packageManagerService: { run },
+      packageManagerService: { specifyDeps },
     });
     const result = await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
 
     expect(result.exitCode).toBe(0);
-    expect(run).not.toHaveBeenCalled();
+    expect(specifyDeps).not.toHaveBeenCalled();
   });
 
   it("calls repoInitialiser.initialise with the target directory for Node.js scaffold", async () => {
