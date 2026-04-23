@@ -8,7 +8,7 @@
 
 ## Phase 2: Codegen Script
 
-- [ ] CODE: Write `scripts/generate-layer-files.mjs` codegen script
+- [x] CODE: Write `scripts/generate-layer-files.mjs` codegen script
   - Feature: Plain ESM script that walks `/files/{type}/{key}/`, validates filesystem/JSON consistency (stale-folder check and missing-folder check both run before any writes), then injects the `files` key into every layer JSON
   - Files: `scripts/generate-layer-files.mjs`
   - Acceptance:
@@ -18,7 +18,7 @@
     - Script exits with an informative error when a `/files/` subfolder has no matching JSON entry (stale folder)
     - Script exits with an informative error when a JSON entry has no matching folder (missing folder)
     - Neither check writes anything; both must pass before any JSON is touched
-- [ ] CODE: Add `.gitkeep` presence validation to `scripts/generate-layer-files.mjs`
+- [x] CODE: Add `.gitkeep` presence validation to `scripts/generate-layer-files.mjs`
   - Feature: Before processing, verify every `/files/{type}/{key}/` folder contains a `.gitkeep` file; emit a distinct, actionable error message for each violation type
   - Files: `scripts/generate-layer-files.mjs`
   - Acceptance:

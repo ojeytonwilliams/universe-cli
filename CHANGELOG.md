@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.21.0] - 2026-04-23
+
+### feat: Automate layer file generation and enforce .gitkeep presence
+
+- Implements `scripts/generate-layer-files.mjs` to automate the injection of file maps into layer JSON and validate consistency between the filesystem and manifest entries.
+- Adds validation to ensure every `/files/{type}/{key}/` folder contains a `.gitkeep` file, preventing missing or stale folders from causing silent errors.
+- Motivation: Reduces manual errors, ensures all layer files are tracked, and improves reliability of the codegen process.
+
 ## [3.20.0] - 2026-04-22
 
 ### feat: support .dockerignore merging
