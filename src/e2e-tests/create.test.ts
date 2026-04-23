@@ -103,7 +103,7 @@ describe("create e2e — docker", () => {
       observability,
     );
 
-    expect(result.exitCode).toBe(0);
+    expect(result.exitCode, result.output).toBe(0);
 
     const projectDirectory = join(rootDirectory, selection.name);
 

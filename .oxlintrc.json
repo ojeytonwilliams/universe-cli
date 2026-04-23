@@ -46,6 +46,8 @@
     /* TEST SPECIFIC RULES BELOW. Move to override when override bugs are fixed */
     "vitest/prefer-describe-function-title": "error",
     "jest/valid-title": "off",
+    /* This doesn't apply to vitest and the vitest version does not work */
+    "jest/valid-expect": "off",
     /* describe blocks include functions and can be quite large, so this doesn't make sense*/
     "max-lines-per-function": "off",
     /* each test is a statement */
