@@ -4,6 +4,7 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
     dir: "src/e2e-tests",
+    globalSetup: ["./scripts/vitest-setup.mjs"],
     globals: true,
     hookTimeout: 30_000,
     testTimeout: 30_000,
