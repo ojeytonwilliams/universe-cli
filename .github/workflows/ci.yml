@@ -11,6 +11,8 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - name: Install pnpm
         uses: pnpm/action-setup@903f9c1a6ebcba6cf41d87230be49611ac97822e # v6
+        with:
+          run_install: true
 
       # Install Node 24
       - name: Setup Node
@@ -35,7 +37,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4
         with:
-          version: 10
+          run_install: true
 
       # Install Node 24
       - name: Setup Node
@@ -43,9 +45,6 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-
-      - name: Install Dependencies
-        run: pnpm i
 
       - name: Run Tests
         run: pnpm test
