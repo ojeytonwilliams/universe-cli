@@ -61,7 +61,7 @@ const renderDockerfile = (data: Required<DockerfileData>): string =>
   `CMD ${JSON.stringify(data.devCmd)}\n`;
 
 const defaultLayerRegistry: LayerRegistry = {
-  always: { always: alwaysLayer },
+  always: alwaysLayer,
   frameworks: frameworksLayer,
   "package-managers": packageManagersLayer,
   runtime: runtimeLayer,

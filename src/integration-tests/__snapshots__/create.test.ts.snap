@@ -81,7 +81,17 @@ app.listen(3000, () => {
   console.log("Universe app running on http://localhost:3000");
 });
 ",
-  "tsconfig.json": "{"compilerOptions":{"module":"NodeNext","moduleResolution":"NodeNext","outDir":"dist","strict":true,"target":"ES2022"},"include":["src/**/*"]}",
+  "tsconfig.json": "{
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "outDir": "dist",
+    "strict": true,
+    "target": "ES2022"
+  },
+  "include": ["src/**/*"]
+}
+",
   "universe/services/analytics.md": "Analytics service selected for snapshot-node-app.
 ",
   "universe/services/auth.md": "Auth service selected for snapshot-node-app.

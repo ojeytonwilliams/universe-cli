@@ -1,6 +1,6 @@
 {
   "name": "universe",
-  "version": "3.20.0",
+  "version": "3.21.0",
   "description": "",
   "keywords": [],
   "license": "BSD-3-Clause",
@@ -14,6 +14,7 @@
     "build": "tsc -p tsconfig.build.json",
     "check": "tsc --noEmit",
     "clean": "rm -rf dist",
+    "codegen": "node scripts/generate-layer-files.mjs",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "start": "node dist/bin.js",

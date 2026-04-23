@@ -16,7 +16,7 @@ import labelsJson from "../labels.json" with { type: "json" };
 import { LabelsSchema } from "./labels.js";
 
 describe("always layer", () => {
-  it("should match the schema", () => {
+  it("always.json matches the schema", () => {
     const parsed = AlwaysSchema.safeParse(alwaysJson);
     expect(parsed.error).toBeUndefined();
   });

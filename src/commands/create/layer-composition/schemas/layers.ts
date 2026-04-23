@@ -1,8 +1,9 @@
 import { z } from "zod";
 
-const AlwaysSchema = z.strictObject({
-  files: z.record(z.string(), z.string()),
-});
+const AlwaysSchema = z.record(
+  z.literal("always"),
+  z.strictObject({ files: z.record(z.string(), z.string()) }),
+);
 type Always = z.infer<typeof AlwaysSchema>;
 
 const DatabaseOptionSchema = z.literal(["postgresql", "redis"]);

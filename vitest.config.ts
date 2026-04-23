@@ -5,6 +5,7 @@ export default defineConfig({
   test: {
     dir: "src",
     exclude: [...defaultExclude, "**/e2e-tests/**"],
+    globalSetup: ["./scripts/vitest-setup.mjs"],
     globals: true,
   },
 });

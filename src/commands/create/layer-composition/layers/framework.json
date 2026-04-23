@@ -1,51 +1,71 @@
 {
   "express": {
     "devCopySource": "COPY src/ ./src/\nCOPY tsconfig.json ./",
-    "files": {
-      "package.json": "{\"dependencies\":{\"express\":\"^5\"},\"devDependencies\":{\"@types/express\":\"^5\",\"@types/node\":\"^24\",\"typescript\":\"^5\"},\"scripts\":{\"build\":\"tsc -p tsconfig.json\",\"dev\":\"PORT={{port}} node dist/index.js\",\"start\":\"node dist/index.js\"}}",
-      "src/index.ts": "import express from \"express\";\n\nconst app = express();\n\napp.get(\"/\", (_req, res) => {\n  res.json({ name: \"{{name}}\", status: \"ok\" });\n});\n\napp.listen({{port}}, () => {\n  console.log(\"Universe app running on http://localhost:{{port}}\");\n});\n",
-      "tsconfig.json": "{\"compilerOptions\":{\"module\":\"NodeNext\",\"moduleResolution\":\"NodeNext\",\"outDir\":\"dist\",\"strict\":true,\"target\":\"ES2022\"},\"include\":[\"src/**/*\"]}"
-    },
     "port": 3000,
-    "watchSync": [{ "path": "./src", "target": "/app/src" }]
+    "watchSync": [
+      {
+        "path": "./src",
+        "target": "/app/src"
+      }
+    ],
+    "files": {
+      "package.json": "{\n  \"dependencies\": {\n    \"express\": \"^5\"\n  },\n  \"devDependencies\": {\n    \"@types/express\": \"^5\",\n    \"@types/node\": \"^24\",\n    \"typescript\": \"^5\"\n  },\n  \"scripts\": {\n    \"build\": \"tsc -p tsconfig.json\",\n    \"dev\": \"PORT={{port}} node dist/index.js\",\n    \"start\": \"node dist/index.js\"\n  }\n}\n",
+      "tsconfig.json": "{\n  \"compilerOptions\": {\n    \"module\": \"NodeNext\",\n    \"moduleResolution\": \"NodeNext\",\n    \"outDir\": \"dist\",\n    \"strict\": true,\n    \"target\": \"ES2022\"\n  },\n  \"include\": [\"src/**/*\"]\n}\n",
+      "src/index.ts": "import express from \"express\";\n\nconst app = express();\n\napp.get(\"/\", (_req, res) => {\n  res.json({ name: \"{{name}}\", status: \"ok\" });\n});\n\napp.listen({{port}}, () => {\n  console.log(\"Universe app running on http://localhost:{{port}}\");\n});\n"
+    }
   },
   "html-css-js": {
     "devCopySource": "COPY public public",
+    "port": 3000,
+    "watchSync": [
+      {
+        "path": "./public",
+        "target": "/app/public"
+      }
+    ],
     "files": {
-      "package.json": "{\"devDependencies\":{\"serve\":\"^14\"},\"name\":\"{{name}}\",\"private\":true,\"scripts\":{\"dev\":\"serve public -l {{port}}\"}}",
+      "package.json": "{\n  \"devDependencies\": {\n    \"serve\": \"^14\"\n  },\n  \"name\": \"{{name}}\",\n  \"private\": true,\n  \"scripts\": {\n    \"dev\": \"serve public -l {{port}}\"\n  }\n}\n",
       "public/index.html": "<!doctype html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"utf-8\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />\n    <title>{{name}}</title>\n    <link rel=\"stylesheet\" href=\"./styles.css\" />\n  </head>\n  <body>\n    <main class=\"page\">\n      <h1>{{name}}</h1>\n      <p>Your static Universe project is ready.</p>\n      <button id=\"ping-button\">Ping</button>\n      <p id=\"output\">Waiting...</p>\n    </main>\n    <script type=\"module\" src=\"./main.js\"></script>\n  </body>\n</html>\n",
       "public/main.js": "const output = document.querySelector(\"#output\");\nconst button = document.querySelector(\"#ping-button\");\n\nbutton?.addEventListener(\"click\", () => {\n  if (output !== null) {\n    output.textContent = \"Universe static scaffold is alive.\";\n  }\n});\n",
       "public/styles.css": ":root {\n  color-scheme: dark;\n  font-family: Inter, system-ui, sans-serif;\n}\n\nbody {\n  margin: 0;\n  min-height: 100vh;\n  background: linear-gradient(180deg, #0f172a, #020617);\n  color: #e2e8f0;\n}\n\n.page {\n  margin: 0 auto;\n  max-width: 48rem;\n  padding: 6rem 1.5rem;\n}\n\nbutton {\n  border: 0;\n  border-radius: 999px;\n  background: #38bdf8;\n  color: #020617;\n  cursor: pointer;\n  padding: 0.75rem 1.25rem;\n}\n"
-    },
-    "port": 3000,
-    "watchSync": [{ "path": "./public", "target": "/app/public" }]
+    }
   },
   "react-vite": {
     "devCopySource": "COPY src src\nCOPY index.html .\nCOPY vite.config.ts .\nCOPY tsconfig*.json .",
+    "port": 5173,
+    "watchSync": [
+      {
+        "path": "./src",
+        "target": "/app/src"
+      }
+    ],
     "files": {
       "eslint.config.js": "import js from '@eslint/js'\nimport globals from 'globals'\nimport reactHooks from 'eslint-plugin-react-hooks'\nimport reactRefresh from 'eslint-plugin-react-refresh'\nimport tseslint from 'typescript-eslint'\nimport { defineConfig, globalIgnores } from 'eslint/config'\n\nexport default defineConfig([\n  globalIgnores(['dist']),\n  {\n    files: ['**/*.{ts,tsx}'],\n    extends: [\n      js.configs.recommended,\n      tseslint.configs.recommended,\n      reactHooks.configs.flat.recommended,\n      reactRefresh.configs.vite,\n    ],\n    languageOptions: {\n      ecmaVersion: 2020,\n      globals: globals.browser,\n    },\n  },\n])\n",
       "index.html": "<!doctype html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <link rel=\"icon\" type=\"image/png\" href=\"/favicon-32x32.png\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n    <title>{{name}}</title>\n  </head>\n  <body>\n    <div id=\"root\"></div>\n    <script type=\"module\" src=\"/src/main.tsx\"></script>\n  </body>\n</html>\n",
-      "package.json": "{\"dependencies\":{\"react\":\"^19\",\"react-dom\":\"^19\"},\"devDependencies\":{\"@eslint/js\":\"^9\",\"@testing-library/react\":\"^16\",\"@testing-library/user-event\":\"^14\",\"@types/node\":\"^24\",\"@types/react\":\"^19\",\"@types/react-dom\":\"^19\",\"@vitejs/plugin-react\":\"^6\",\"eslint\":\"^9\",\"eslint-plugin-react-hooks\":\"^7\",\"eslint-plugin-react-refresh\":\"^0\",\"globals\":\"^17\",\"jsdom\":\"^26\",\"typescript\":\"^5\",\"typescript-eslint\":\"^8\",\"vite\":\"^8\",\"vitest\":\"^3\"},\"name\":\"{{name}}\",\"private\":true,\"scripts\":{\"build\":\"tsc -b && vite build\",\"dev\":\"vite --host --port {{port}}\",\"lint\":\"eslint .\",\"preview\":\"vite preview\",\"test\":\"vitest --run\"},\"type\":\"module\",\"version\":\"0.0.0\"}",
+      "package.json": "{\n  \"dependencies\": {\n    \"react\": \"^19\",\n    \"react-dom\": \"^19\"\n  },\n  \"devDependencies\": {\n    \"@eslint/js\": \"^9\",\n    \"@testing-library/react\": \"^16\",\n    \"@testing-library/user-event\": \"^14\",\n    \"@types/node\": \"^24\",\n    \"@types/react\": \"^19\",\n    \"@types/react-dom\": \"^19\",\n    \"@vitejs/plugin-react\": \"^6\",\n    \"eslint\": \"^9\",\n    \"eslint-plugin-react-hooks\": \"^7\",\n    \"eslint-plugin-react-refresh\": \"^0\",\n    \"globals\": \"^17\",\n    \"jsdom\": \"^26\",\n    \"typescript\": \"^5\",\n    \"typescript-eslint\": \"^8\",\n    \"vite\": \"^8\",\n    \"vitest\": \"^3\"\n  },\n  \"name\": \"{{name}}\",\n  \"private\": true,\n  \"scripts\": {\n    \"build\": \"tsc -b && vite build\",\n    \"dev\": \"vite --host --port {{port}}\",\n    \"lint\": \"eslint .\",\n    \"preview\": \"vite preview\",\n    \"test\": \"vitest --run\"\n  },\n  \"type\": \"module\",\n  \"version\": \"0.0.0\"\n}\n",
+      "tsconfig.app.json": "{\n  \"compilerOptions\": {\n    \"allowImportingTsExtensions\": true,\n    \"erasableSyntaxOnly\": true,\n    \"jsx\": \"react-jsx\",\n    \"lib\": [\"ES2023\", \"DOM\", \"DOM.Iterable\"],\n    \"module\": \"ESNext\",\n    \"moduleDetection\": \"force\",\n    \"moduleResolution\": \"bundler\",\n    \"noEmit\": true,\n    \"noFallthroughCasesInSwitch\": true,\n    \"noUncheckedSideEffectImports\": true,\n    \"noUnusedLocals\": true,\n    \"noUnusedParameters\": true,\n    \"skipLibCheck\": true,\n    \"strict\": true,\n    \"target\": \"ES2023\",\n    \"tsBuildInfoFile\": \"./node_modules/.tmp/tsconfig.app.tsbuildinfo\",\n    \"types\": [\"vite/client\"],\n    \"useDefineForClassFields\": true,\n    \"verbatimModuleSyntax\": true\n  },\n  \"include\": [\"src\"]\n}\n",
+      "tsconfig.node.json": "{\n  \"compilerOptions\": {\n    \"allowImportingTsExtensions\": true,\n    \"erasableSyntaxOnly\": true,\n    \"lib\": [\"ES2023\"],\n    \"module\": \"ESNext\",\n    \"moduleDetection\": \"force\",\n    \"moduleResolution\": \"bundler\",\n    \"noEmit\": true,\n    \"noFallthroughCasesInSwitch\": true,\n    \"noUncheckedSideEffectImports\": true,\n    \"noUnusedLocals\": true,\n    \"noUnusedParameters\": true,\n    \"skipLibCheck\": true,\n    \"strict\": true,\n    \"target\": \"ES2023\",\n    \"tsBuildInfoFile\": \"./node_modules/.tmp/tsconfig.node.tsbuildinfo\",\n    \"types\": [\"node\"],\n    \"verbatimModuleSyntax\": true\n  },\n  \"include\": [\"vite.config.ts\"]\n}\n",
+      "tsconfig.json": "{\n  \"files\": [],\n  \"references\": [\n    { \"path\": \"./tsconfig.app.json\" },\n    { \"path\": \"./tsconfig.node.json\" }\n  ]\n}\n",
+      "vite.config.ts": "import { defineConfig } from 'vitest/config'\nimport react from '@vitejs/plugin-react'\n\nexport default defineConfig({\n  // eslint-disable-next-line @typescript-eslint/ban-ts-comment\n  // @ts-expect-error\n  plugins: [react()],\n  test: { environment: 'jsdom', globals: true },\n})\n",
       "src/App.css": "",
       "src/App.tsx": "import './App.css'\n\nfunction App() {\n  return (\n    <h1>{{name}}</h1>\n  )\n}\n\nexport default App\n",
       "src/global.css": "@import url('https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Inconsolata:wght@400;700&display=swap');\n\n*,\n*::before,\n*::after {\n  box-sizing: border-box;\n  margin: 0;\n  padding: 0;\n}\n\n:root {\n  /* Brand */\n  --theme-color: #0a0a23;\n  --yellow-gold: #ffbf00;\n\n  /* Neutrals */\n  --gray-00: #ffffff; /* primary */\n  --gray-05: #f5f6f7; /* secondary */\n  --gray-10: #dfdfe2; /* tertiary */\n  --gray-15: #d0d0d5; /* quaternary */\n  --gray-45: #858591; /* neutral */\n  --gray-75: #3b3b4f; /* quaternary */\n  --gray-80: #2a2a40; /* tertiary */\n  --gray-85: #1b1b32; /* secondary */\n  --gray-90: #0a0a23; /* primary */\n  --gray-90-translucent: rgba(10, 10, 35, 0.85);\n\n  /* Blue */\n  --blue-light: rgb(153, 201, 255);\n  --blue-light-translucent: rgba(153, 201, 255, 0.15);\n  --blue-mid: #198eee;\n\n  /* Yellow */\n  --yellow-light: #ffc300;\n  --yellow-dark: #4d3800;\n\n  /* Green */\n  --green-light: #acd157;\n\n  /* Red */\n  --red-light: #ffadad;\n\n  /* Semantic */\n  --color-bg: var(--gray-90);\n  --color-surface: var(--gray-85);\n  --color-surface-raised: var(--gray-80);\n  --color-border: var(--gray-75);\n  --color-text-primary: var(--gray-00);\n  --color-text-secondary: var(--gray-15);\n  --color-text-muted: var(--gray-45);\n  --color-accent: var(--yellow-gold);\n  --color-accent-hover: var(--yellow-light);\n  --color-success: var(--green-light);\n  --color-danger: var(--red-light);\n\n  /* Typography */\n  --font-body: 'Lato', sans-serif;\n  --font-mono: 'Inconsolata', monospace;\n  --text-xs: 0.75rem;\n  --text-sm: 0.875rem;\n  --text-md: 1rem;\n  --text-lg: 1.25rem;\n  --text-xl: 1.5rem;\n  --text-2xl: 2rem;\n  --weight-normal: 400;\n  --weight-bold: 700;\n  --line-height-tight: 1.2;\n  --line-height-normal: 1.5;\n\n  /* Spacing */\n  --space-1: 4px;\n  --space-2: 8px;\n  --space-3: 12px;\n  --space-4: 16px;\n  --space-5: 24px;\n  --space-6: 32px;\n  --space-7: 48px;\n  --space-8: 64px;\n\n  /* Radius */\n  --radius-sm: 4px;\n  --radius-md: 8px;\n  --radius-lg: 16px;\n  --radius-full: 9999px;\n\n  /* Borders */\n  --border-default: 1px solid var(--color-border);\n  --border-accent: 2px solid var(--color-accent);\n  --border-focus: 2px solid var(--blue-mid);\n\n  /* Shadows */\n  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);\n  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);\n  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);\n  --shadow-accent: 0 0 12px rgba(255, 191, 0, 0.3);\n\n  /* Transitions */\n  --transition-fast: 120ms ease;\n  --transition-default: 200ms ease;\n  --transition-slow: 350ms ease;\n}\n\nbody {\n  font-family: var(--font-body);\n  font-size: var(--text-md);\n  font-weight: var(--weight-normal);\n  line-height: var(--line-height-normal);\n  color: var(--color-text-primary);\n  background-color: var(--color-bg);\n  min-height: 100vh;\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  padding: var(--space-5);\n  -webkit-font-smoothing: antialiased;\n}\n\n.dark-palette {\n  --primary-color-translucent: var(--gray-00-translucent);\n  --primary-color: var(--gray-00);\n  --secondary-color: var(--gray-05);\n  --tertiary-color: var(--gray-10);\n  --quaternary-color: var(--gray-15);\n  --quaternary-background: var(--gray-75);\n  --tertiary-background: var(--gray-80);\n  --secondary-background: var(--gray-85);\n  --primary-background: var(--gray-90);\n  --primary-background-translucent: var(--gray-90-translucent);\n  --highlight-color: var(--blue-light);\n  --highlight-background: var(--blue-dark);\n  --selection-color: var(--blue-light-translucent);\n  --success-color: var(--green-light);\n  --success-background: var(--green-dark);\n  --danger-color: var(--red-light);\n  --danger-background: var(--red-dark);\n  --yellow-background: var(--yellow-dark);\n  --yellow-color: var(--yellow-light);\n  --purple-background: var(--purple-light);\n  --purple-color: var(--purple-dark);\n  --love-color: var(--love-light);\n  --editor-background: var(--editor-background-dark);\n}\n\n.light-palette {\n  --primary-color-translucent: var(--gray-90-translucent);\n  --primary-color: var(--gray-90);\n  --secondary-color: var(--gray-85);\n  --tertiary-color: var(--gray-80);\n  --quaternary-color: var(--gray-75);\n  --quaternary-background: var(--gray-15);\n  --tertiary-background: var(--gray-10);\n  --secondary-background: var(--gray-05);\n  --primary-background: var(--gray-00);\n  --primary-background-translucent: var(--gray-00-translucent);\n  --highlight-color: var(--blue-dark);\n  --highlight-background: var(--blue-light);\n  --selection-color: var(--blue-dark-translucent);\n  --success-color: var(--green-dark);\n  --success-background: var(--green-light);\n  --danger-color: var(--red-dark);\n  --danger-background: var(--red-light);\n  --yellow-background: var(--yellow-light);\n  --yellow-color: var(--yellow-dark);\n  --purple-background: var(--purple-light);\n  --purple-color: var(--purple-dark);\n  --love-color: var(--love-dark);\n  --editor-background: var(--editor-background-light);\n}\n",
-      "src/main.tsx": "import { StrictMode } from 'react'\nimport { createRoot } from 'react-dom/client'\nimport './global.css'\nimport App from './App.tsx'\n\ncreateRoot(document.getElementById('root')!).render(\n  <StrictMode>\n    <App />\n  </StrictMode>,\n)\n",
-      "tsconfig.app.json": "{\"compilerOptions\":{\"allowImportingTsExtensions\":true,\"erasableSyntaxOnly\":true,\"jsx\":\"react-jsx\",\"lib\":[\"ES2023\",\"DOM\",\"DOM.Iterable\"],\"module\":\"ESNext\",\"moduleDetection\":\"force\",\"moduleResolution\":\"bundler\",\"noEmit\":true,\"noFallthroughCasesInSwitch\":true,\"noUncheckedSideEffectImports\":true,\"noUnusedLocals\":true,\"noUnusedParameters\":true,\"skipLibCheck\":true,\"strict\":true,\"target\":\"ES2023\",\"tsBuildInfoFile\":\"./node_modules/.tmp/tsconfig.app.tsbuildinfo\",\"types\":[\"vite/client\"],\"useDefineForClassFields\":true,\"verbatimModuleSyntax\":true},\"include\":[\"src\"]}",
-      "tsconfig.json": "{\"files\":[],\"references\":[{\"path\":\"./tsconfig.app.json\"},{\"path\":\"./tsconfig.node.json\"}]}",
-      "tsconfig.node.json": "{\"compilerOptions\":{\"allowImportingTsExtensions\":true,\"erasableSyntaxOnly\":true,\"lib\":[\"ES2023\"],\"module\":\"ESNext\",\"moduleDetection\":\"force\",\"moduleResolution\":\"bundler\",\"noEmit\":true,\"noFallthroughCasesInSwitch\":true,\"noUncheckedSideEffectImports\":true,\"noUnusedLocals\":true,\"noUnusedParameters\":true,\"skipLibCheck\":true,\"strict\":true,\"target\":\"ES2023\",\"tsBuildInfoFile\":\"./node_modules/.tmp/tsconfig.node.tsbuildinfo\",\"types\":[\"node\"],\"verbatimModuleSyntax\":true},\"include\":[\"vite.config.ts\"]}",
-      "vite.config.ts": "import { defineConfig } from 'vitest/config'\nimport react from '@vitejs/plugin-react'\n\nexport default defineConfig({\n  // eslint-disable-next-line @typescript-eslint/ban-ts-comment\n  // @ts-expect-error\n  plugins: [react()],\n  test: { environment: 'jsdom', globals: true },\n})\n"
-    },
-    "port": 5173,
-    "watchSync": [{ "path": "./src", "target": "/app/src" }]
+      "src/main.tsx": "import { StrictMode } from 'react'\nimport { createRoot } from 'react-dom/client'\nimport './global.css'\nimport App from './App.tsx'\n\ncreateRoot(document.getElementById('root')!).render(\n  <StrictMode>\n    <App />\n  </StrictMode>,\n)\n"
+    }
   },
   "typescript": {
     "devCopySource": "COPY src/ ./src/\nCOPY tsconfig.json ./",
-    "files": {
-      "package.json": "{\"devDependencies\":{\"@types/node\":\"^24\",\"typescript\":\"^5\"},\"scripts\":{\"build\":\"tsc -p tsconfig.json\",\"dev\":\"PORT={{port}} node dist/index.js\",\"start\":\"node dist/index.js\"}}",
-      "src/index.ts": "import { createServer } from \"node:http\";\n\nconst server = createServer((_request, response) => {\n  response.writeHead(200, { \"content-type\": \"application/json\" });\n  response.end(JSON.stringify({ name: \"{{name}}\", status: \"ok\" }));\n});\n\nserver.listen({{port}}, () => {\n  console.log(\"Universe app running on http://localhost:{{port}}\");\n});\n",
-      "tsconfig.json": "{\"compilerOptions\":{\"module\":\"NodeNext\",\"moduleResolution\":\"NodeNext\",\"outDir\":\"dist\",\"strict\":true,\"target\":\"ES2022\"},\"include\":[\"src/**/*\"]}"
-    },
     "port": 3000,
-    "watchSync": [{ "path": "./src", "target": "/app/src" }]
+    "watchSync": [
+      {
+        "path": "./src",
+        "target": "/app/src"
+      }
+    ],
+    "files": {
+      "package.json": "{\n  \"devDependencies\": {\n    \"@types/node\": \"^24\",\n    \"typescript\": \"^5\"\n  },\n  \"scripts\": {\n    \"build\": \"tsc -p tsconfig.json\",\n    \"dev\": \"PORT={{port}} node dist/index.js\",\n    \"start\": \"node dist/index.js\"\n  }\n}\n",
+      "tsconfig.json": "{\n  \"compilerOptions\": {\n    \"module\": \"NodeNext\",\n    \"moduleResolution\": \"NodeNext\",\n    \"outDir\": \"dist\",\n    \"strict\": true,\n    \"target\": \"ES2022\"\n  },\n  \"include\": [\"src/**/*\"]\n}\n",
+      "src/index.ts": "import { createServer } from \"node:http\";\n\nconst server = createServer((_request, response) => {\n  response.writeHead(200, { \"content-type\": \"application/json\" });\n  response.end(JSON.stringify({ name: \"{{name}}\", status: \"ok\" }));\n});\n\nserver.listen({{port}}, () => {\n  console.log(\"Universe app running on http://localhost:{{port}}\");\n});\n"
+    }
   }
 }
