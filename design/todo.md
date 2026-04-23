@@ -27,13 +27,7 @@
     - All `.gitkeep` checks run as part of the pre-write validation pass (no writes occur if any check fails)
     - A folder that has a `.gitkeep` plus other files passes validation and proceeds to codegen normally
 
-## Phase 3: Layer JSON Restructuring
-
-- [ ] TASK: Strip the `files` key from `layers/runtime.json`, `layers/package-manager.json`, `layers/framework.json`, `layers/service.json`, and `layers/database.json`
-- [ ] TASK: Restructure `layers/always.json` to `{ "always": {} }` (add top-level `"always"` key, remove any existing `files` content)
-- [ ] TASK: Run `node scripts/generate-layer-files.mjs` and verify the output in each JSON matches the file content in the corresponding `/files/` subtree
-
-## Phase 4: Schema and Service Updates
+## Phase 3: Schema and Service Updates
 
 - [ ] CODE: Update `AlwaysSchema` in `src/commands/create/layer-composition/schemas/layers.ts`
   - Feature: Change `AlwaysSchema` from `z.strictObject({ files: ... })` to a record keyed by `z.literal("always")` matching the new `{ "always": { files: ... } }` shape
@@ -48,6 +42,12 @@
     - Layer composition service correctly resolves `always` layer files at runtime
     - All existing layer-composition tests pass
 
+## Phase 4: Layer JSON Restructuring
+
+- [ ] TASK: Strip the `files` key from `layers/runtime.json`, `layers/package-manager.json`, `layers/framework.json`, `layers/service.json`, and `layers/database.json`
+- [ ] TASK: Restructure `layers/always.json` to `{ "always": {} }` (add top-level `"always"` key, remove any existing `files` content)
+- [ ] TASK: Run `node scripts/generate-layer-files.mjs` and verify the output in each JSON matches the file content in the corresponding `/files/` subtree
+
 ## Phase 5: Tooling Integration and Validation
 
 - [ ] CODE: Wire up Vitest `globalSetup` to run codegen before tests
@@ -58,25 +58,3 @@
     - No test worker receives stale or empty `files` values
 - [ ] TASK: Add `"codegen": "node scripts/generate-layer-files.mjs"` to `package.json` scripts
 - [ ] TASK: Run `pnpm test`; confirm all tests pass with no failures
-
-## Traceability Matrix
-
-| Requirement ID                          | TODO Item                                                 | Status |
-| --------------------------------------- | --------------------------------------------------------- | ------ |
-| REQ-1 (files tree)                      | Phase 1 / TASK: Create `/files/` directory tree           | mapped |
-| REQ-2 (codegen script)                  | Phase 2 / CODE: Write `scripts/generate-layer-files.mjs`  | mapped |
-| REQ-3 (validation before writes)        | Phase 2 / CODE: Write `scripts/generate-layer-files.mjs`  | mapped |
-| REQ-11 (.gitkeep presence check)        | Phase 2 / CODE: Add `.gitkeep` presence validation        | mapped |
-| REQ-4 (strip files from JSONs)          | Phase 3 / TASK: Strip `files` key from layer JSONs        | mapped |
-| REQ-4 (restructure always.json)         | Phase 3 / TASK: Restructure `layers/always.json`          | mapped |
-| REQ-4 (verify round-trip)               | Phase 3 / TASK: Run codegen and verify output             | mapped |
-| REQ-5 (AlwaysSchema)                    | Phase 4 / CODE: Update `AlwaysSchema`                     | mapped |
-| REQ-6 (layer-composition-service)       | Phase 4 / CODE: Update `layer-composition-service.ts`     | mapped |
-| REQ-7 (TypeScript exclusion)            | Phase 5 / TASK: Add `files/**` to `tsconfig.json` exclude | mapped |
-| REQ-8 (oxlint exclusion)                | Phase 5 / TASK: Add `files/**` to oxlint ignore config    | mapped |
-| REQ-9 (Vitest globalSetup)              | Phase 5 / CODE: Wire up Vitest `globalSetup`              | mapped |
-| REQ-10 (codegen script in package.json) | Phase 5 / TASK: Add `codegen` script to `package.json`    | mapped |
-| NFR-1 (plain ESM, no transpiler)        | Phase 2 / CODE: Write `scripts/generate-layer-files.mjs`  | mapped |
-| NFR-2 (atomic validation)               | Phase 2 / CODE: Write `scripts/generate-layer-files.mjs`  | mapped |
-| NFR-3 (SEA compatibility)               | Phase 4 / CODE: Update `layer-composition-service.ts`     | mapped |
-| NFR-4 (committed JSONs reflect files/)  | Phase 3 / TASK: Run codegen and verify output             | mapped |
