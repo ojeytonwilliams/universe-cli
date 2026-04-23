@@ -1,6 +1,10 @@
 {
   "bun": {
-    "devCmd": ["bun", "run", "dev"],
+    "devCmd": [
+      "bun",
+      "run",
+      "dev"
+    ],
     "devInstall": "RUN npm install -g bun\nCOPY package.json bun.lock ./\nRUN bun install",
     "watchRebuild": [
       {
@@ -15,7 +19,11 @@
     }
   },
   "pnpm": {
-    "devCmd": ["pnpm", "run", "dev"],
+    "devCmd": [
+      "pnpm",
+      "run",
+      "dev"
+    ],
     "devInstall": "COPY package.json pnpm-lock.yaml ./\nRUN corepack enable pnpm && pnpm install",
     "preinstall": "npx only-allow pnpm",
     "watchRebuild": [

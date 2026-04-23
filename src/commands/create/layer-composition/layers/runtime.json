@@ -1,10 +1,23 @@
 {
   "node": {
     "baseImage": "node:22-alpine",
-    "databases": ["postgresql", "redis"],
-    "frameworks": ["express", "typescript"],
-    "packageManagers": ["pnpm", "bun"],
-    "services": ["analytics", "auth", "email"],
+    "databases": [
+      "postgresql",
+      "redis"
+    ],
+    "frameworks": [
+      "express",
+      "typescript"
+    ],
+    "packageManagers": [
+      "pnpm",
+      "bun"
+    ],
+    "services": [
+      "analytics",
+      "auth",
+      "email"
+    ],
     "files": {
       "Procfile": "web: node dist/index.js\n",
       "package.json": "{\n  \"name\": \"{{name}}\",\n  \"private\": true,\n  \"type\": \"module\"\n}\n"
@@ -13,9 +26,19 @@
   "static_web": {
     "baseImage": "node:22-alpine",
     "databases": [],
-    "frameworks": ["html-css-js", "react-vite"],
-    "packageManagers": ["pnpm", "bun"],
-    "services": ["analytics", "auth", "email"],
+    "frameworks": [
+      "html-css-js",
+      "react-vite"
+    ],
+    "packageManagers": [
+      "pnpm",
+      "bun"
+    ],
+    "services": [
+      "analytics",
+      "auth",
+      "email"
+    ],
     "files": {
       "Procfile": "web: npx serve public -l {{port}}\n",
       "pnpm-workspace.yaml": ""

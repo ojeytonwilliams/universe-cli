@@ -1,4 +1,4 @@
 {
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
-  "ignorePatterns": ["files/**", "dist/**"]
+  "ignorePatterns": ["files/**", "dist/**", "src/commands/create/layer-composition/layers/*.json"]
 }
