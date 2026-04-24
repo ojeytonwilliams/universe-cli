@@ -239,4 +239,24 @@ describe(generateLayerFiles, () => {
 }
 `);
   });
+
+  it("handles json arrays without modification", async () => {
+    await writeFile(
+      join(root, LAYERS_SUBDIR, "runtime.json"),
+      JSON.stringify({ node: { watchSync: [{ path: "src", target: "/app/src" }] } }, null, 2),
+    );
+    await makeFolder(root, "runtime", "node", {
+      extraFiles: { "src/index.ts": "export {};\n" },
+    });
+
+    await generateLayerFiles(root);
+
+    const result = await readJson(root, "runtime.json");
+    expect(result).toMatchObject({
+      node: {
+        files: { "src/index.ts": "export {};\n" },
+        watchSync: [{ path: "src", target: "/app/src" }],
+      },
+    });
+  });
 });

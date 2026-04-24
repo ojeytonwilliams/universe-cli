@@ -40,13 +40,15 @@ const walkDir = async (base, dir, files) => {
  * @returns {unknown}
  */
 const orderObjectKeys = (obj) => {
-  if (typeof obj !== "object" || obj === null) {
+  if (typeof obj !== "object" || obj === null || Array.isArray(obj)) {
     return obj;
   }
-  const ordered = {};
+  // eslint-disable-next-line typescript/no-unsafe-assignment
+  const ordered = Object.create(null);
   Object.keys(obj)
     .sort((a, b) => a.localeCompare(b))
     .forEach((key) => {
+      // eslint-disable-next-line typescript/no-unsafe-member-access
       ordered[key] = orderObjectKeys(obj[key]);
     });
   return ordered;

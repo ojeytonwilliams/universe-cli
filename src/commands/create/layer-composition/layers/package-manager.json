@@ -6,6 +6,9 @@
       "dev"
     ],
     "devInstall": "RUN npm install -g bun\nCOPY package.json bun.lock ./\nRUN bun install",
+    "files": {
+      ".dockerignore": "node_modules\ndist\n"
+    },
     "watchRebuild": [
       {
         "path": "./package.json"
@@ -13,10 +16,7 @@
       {
         "path": "./bun.lock"
       }
-    ],
-    "files": {
-      ".dockerignore": "node_modules\ndist\n"
-    }
+    ]
   },
   "pnpm": {
     "devCmd": [
@@ -25,6 +25,10 @@
       "dev"
     ],
     "devInstall": "COPY package.json pnpm-lock.yaml ./\nRUN corepack enable pnpm && pnpm install",
+    "files": {
+      ".dockerignore": "node_modules\ndist\n",
+      "pnpm-workspace.yaml": "blockExoticSubdeps: true\nminimumReleaseAge: 1440\ntrustPolicy: no-downgrade\nengineStrict: true\n"
+    },
     "preinstall": "npx only-allow pnpm",
     "watchRebuild": [
       {
@@ -33,10 +37,6 @@
       {
         "path": "./pnpm-lock.yaml"
       }
-    ],
-    "files": {
-      ".dockerignore": "node_modules\ndist\n",
-      "pnpm-workspace.yaml": "blockExoticSubdeps: true\nminimumReleaseAge: 1440\ntrustPolicy: no-downgrade\nengineStrict: true\n"
-    }
+    ]
   }
 }
