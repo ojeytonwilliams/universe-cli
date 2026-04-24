@@ -65,8 +65,9 @@ services:
 stack: app
 ",
   "pnpm-workspace.yaml": "blockExoticSubdeps: true
-minimumReleaseAge: 1440
+minimumReleaseAge: 4320 # packages under 3 days old are simply rejected.
 trustPolicy: no-downgrade
+trustPolicyIgnoreAfter: 20160 # packages between 3 and 14 days old with no signature are also rejected.
 engineStrict: true
 ",
   "src/index.ts": "import express from "express";
@@ -161,8 +162,9 @@ schemaVersion: "1"
 stack: static
 ",
   "pnpm-workspace.yaml": "blockExoticSubdeps: true
-minimumReleaseAge: 1440
+minimumReleaseAge: 4320
 trustPolicy: no-downgrade
+trustPolicyIgnoreAfter: 20160
 engineStrict: true
 ",
   "public/index.html": "<!doctype html>

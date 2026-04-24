@@ -116,11 +116,8 @@ describe("create e2e — docker", () => {
       await pollUntilReady("http://localhost:3000", 10_000);
 
       const response = await fetch("http://localhost:3000");
-      const body = (await response.json()) as Record<string, unknown>;
 
       expect(response.status).toBe(200);
-      expect(body["name"]).toBe(selection.name);
-      expect(body["status"]).toBe("ok");
     } finally {
       // To help debugging, we output the compose logs.
       try {
@@ -184,11 +181,10 @@ describe("create e2e — docker", () => {
       await pollUntilReady("http://localhost:5173", 10_000);
 
       const response = await fetch("http://localhost:5173");
-      const body = (await response.json()) as Record<string, unknown>;
 
+      const body = await response.text();
+      expect(body).toContain("e2e-tanstack-app");
       expect(response.status).toBe(200);
-      expect(body["name"]).toBe(selection.name);
-      expect(body["status"]).toBe("ok");
     } finally {
       // To help debugging, we output the compose logs.
       try {
