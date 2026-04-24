@@ -8,7 +8,7 @@ allowed-tools: AskUserQuestion Read Edit Bash Glob
 
 Guide the user through registering a new framework in the layers-composition system.
 
-## Step 1 — Gather information
+## Step 1 - Gather information
 
 Ask the user these questions **one at a time** using `AskUserQuestion`:
 
@@ -19,16 +19,14 @@ Ask the user these questions **one at a time** using `AskUserQuestion`:
 3. **Display label** — the human-readable name shown in the CLI prompt (e.g. `Fastify`, `Hono`, `Vite`).
 4. **Boilerplate directory** — an optional path to a directory containing example starter files (e.g. `/tmp/my-fastify-app`). If provided, the files in that directory will be used to populate the layer. If omitted, hand-write a minimal starter instead.
 
-## Step 2 — Build the file map
+## Step 2 - Build the file map
 
 ### If a boilerplate directory was provided
 
-Use `Glob` with pattern `**/*` on the directory to discover all files, then `Read` each file.
+Copy all files from the boilerplate directory into `files/<framework-key>/`. If this contains any agent files e.g. CLAUDE.md or AGENTS.md, read them to better understand the framework. Do NOT read other files while copying.
 
-For each file:
+After copying:
 
-- Use a path relative to the boilerplate root as the key (e.g. `src/index.ts`, `package.json`).
-- Use the raw file content as the value.
 - Replace any hard-coded project name strings with `{{name}}` (rendered at build time).
 
 **Dependency version normalisation** — if the boilerplate contains a `package.json`, convert every dependency version to a caret major-only range before inlining it:
@@ -44,58 +42,40 @@ Apply this to all of `dependencies`, `devDependencies`, `peerDependencies`, and 
 
 Hand-write a minimal set of starter files appropriate for the runtime and framework. Model on the existing `express` (node) or `none` (static_web) entries in `frameworks-layer.ts`.
 
-## Step 3 — Implement the framework layer
+## Step 3 - Add metadata to configs
 
-Open `src/commands/create/layers-composition/layers/frameworks-layer.ts`.
+Open `src/commands/create/layers-composition/layers/frameworks.json`.
 
-Add a new entry to the `frameworksLayer` object with the key `"frameworks/<key>"`:
+Add a new entry with the key `"<framework-key>"`:
 
 ```ts
-"frameworks/<key>": {
-  // include dockerfileData when runtime is node (see below)
-  files: {
-    "src/index.ts": `...`,
-    "package.json": JSON.stringify({ ... }),
-    // other files
-  },
+"<framework-key>": {
+   "devCopySource": "",
+   "port": 0,
+   "watchSync": []
 },
 ```
 
-**Runtime guidance for `dockerfileData`:**
+The values for `devCopySource`, `port`, and `watchSync` depend on the framework. DO NOT GUESS. Ask the user if unsure.
 
-- **node**: include `dockerfileData` with at minimum `baseImage` (e.g. `"node:22-alpine"`) and `devCopySource`. Model it on the existing `express` or `typescript` entries.
-- **static_web**: omit `dockerfileData` entirely — the base static layer supplies the Dockerfile.
+- `devCopySource` is the Dockerfile entry that copies the source code into the container. E.g. "COPY src ./src/\nCOPY tsconfig.json ./".
 
-Keep entries sorted alphabetically by key within the object.
+- `port` is the default port to run on (e.g. `3000`).
 
-## Step 4 — Register the option key and label
+- `watchSync` is an array of the mappings between source and container. E.g. `[{ "path": "src", "target": "/app/src" }]`.
 
-Open `src/commands/create/prompt/prompt.port.ts`.
+## Step 4 - update layer schema
 
-1. Add the new key to `FRAMEWORK_OPTIONS` (alphabetical order):
-   ```ts
-   MYFRAMEWORK: "<key>",
-   ```
-2. Add the display label to `FRAMEWORK_LABELS` (same order):
-   ```ts
-   [FRAMEWORK_OPTIONS.MYFRAMEWORK]: "<Display Label>",
-   ```
+Open `src/commands/create/layer-composition/schemas/layers.ts`.
 
-## Step 5 — Register in allowed-layer-combinations config
+Add the framework key to `FrameworkOptionSchema`.
 
-Open `src/commands/create/allowed-layer-combinations.json`.
-
-Add the new framework key to the appropriate runtime's `"frameworks"` array:
-
-- **node** runtime: add `"<key>"` to `node.frameworks` (keep sorted alphabetically, before `"none"`).
-- **static_web** runtime: add `"<key>"` to `static_web.frameworks` (keep sorted alphabetically, before `"none"`).
-
-## Step 6 — Verify
+## Step 5 - Verify
 
 Run `pnpm test` to confirm nothing is broken. If tests fail, diagnose and fix before finishing.
 
 ## Constraints
 
 - Follow all rules in the `typescript-guidelines` skill when editing `.ts` files.
-- The only files that need changing when adding a framework are `allowed-layer-combinations.json`, `frameworks-layer.ts`, and `prompt.port.ts`.
+- The only files and folders that need changing when adding a framework are `/files` and `framework.json`.
 - Do not add new test files.
