@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createAdapterStubs } from "./adapter-stubs.js";
-import { StubPackageManager } from "../commands/create/package-manager/package-manager.stub.js";
+import { StubPackageSpecifier } from "../commands/create/package-manager/package-specifier.stub.js";
 import { LocalFilesystemWriter } from "../io/local-filesystem-writer.js";
 import { LocalProjectReader } from "../io/local-project-reader.js";
 import { CreateInputValidationService } from "../commands/create/create-input-validation-service.js";
@@ -36,8 +36,8 @@ const makeDeps = (cwd: string, prompt: Prompt) => {
     layerResolver: new LayerCompositionService(),
     observability,
     packageManager: new PackageManagerService({
-      bun: new StubPackageManager(),
-      pnpm: new StubPackageManager(),
+      bun: new StubPackageSpecifier(),
+      pnpm: new StubPackageSpecifier(),
     }),
     platformManifestGenerator: new PlatformManifestService(),
     projectReader: new LocalProjectReader(),

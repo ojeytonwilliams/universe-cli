@@ -10,7 +10,7 @@ import { PlatformManifestService } from "../services/platform-manifest-service.j
 import { route } from "../bin.js";
 import type { CreateSelections, Prompt } from "../commands/create/prompt/prompt.port.js";
 import { PackageManagerService } from "../commands/create/package-manager/package-manager.service.js";
-import { StubPackageManager } from "../commands/create/package-manager/package-manager.stub.js";
+import { StubPackageSpecifier } from "../commands/create/package-manager/package-specifier.stub.js";
 
 const createNodeSelection = (name: string): CreateSelections => ({
   confirmed: true,
@@ -36,8 +36,8 @@ const makeDeps = (cwd: string, prompt: Prompt) => {
     layerResolver: new LayerCompositionService(),
     observability,
     packageManager: new PackageManagerService({
-      bun: new StubPackageManager(),
-      pnpm: new StubPackageManager(),
+      bun: new StubPackageSpecifier(),
+      pnpm: new StubPackageSpecifier(),
     }),
     platformManifestGenerator: new PlatformManifestService(),
     projectReader: new LocalProjectReader(),

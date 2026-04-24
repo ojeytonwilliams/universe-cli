@@ -1,18 +1,18 @@
-import type { PackageManager } from "./package-manager.port.js";
+import type { PackageSpecifier } from "./package-specifier.port.js";
 
 interface RunOptions {
   manager: "pnpm" | "bun";
   projectDirectory: string;
 }
 
-interface PackageSpecifier {
+interface PackageManager {
   specifyDeps(options: RunOptions): Promise<void>;
 }
 
-class PackageManagerService implements PackageSpecifier {
-  private readonly adapters: Record<string, PackageManager>;
+class PackageManagerService implements PackageManager {
+  private readonly adapters: Record<string, PackageSpecifier>;
 
-  constructor(adapters: { pnpm: PackageManager; bun: PackageManager }) {
+  constructor(adapters: { pnpm: PackageSpecifier; bun: PackageSpecifier }) {
     this.adapters = adapters;
   }
 
@@ -27,4 +27,4 @@ class PackageManagerService implements PackageSpecifier {
 }
 
 export { PackageManagerService };
-export type { PackageSpecifier as PackageManagerRunner, RunOptions };
+export type { PackageManager, RunOptions };

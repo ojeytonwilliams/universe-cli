@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.21.3] - 2026-04-24
+
+### refactor: use factory to DRY out package-manager logic
+
+- bun and pnpm package manager adapters were almost identical, so this DRYs things out by injecting the functions that differ into a common facotry.
+
 ## [3.21.2] - 2026-04-24
 
 ### fix: specifyDeps iff package manager is used + handle prompting for runtimes without db access

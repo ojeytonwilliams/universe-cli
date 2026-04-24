@@ -1,68 +1,134 @@
+// oxlint-disable jest/no-conditional-in-test
+// oxlint-disable typescript/require-await
+import { access, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+import { PackageInstallError } from "../../../errors/cli-errors.js";
 import { BunPackageManager } from "./bun-package-manager.js";
 
+const BUN_LIST_OUTPUT = "node_modules (1)\n├── foo@1.2.3\n";
+
 describe(BunPackageManager, () => {
-  const makeMock = () => {
-    const bun = {
-      installLockfileOnly: vi.fn(),
-      list: vi.fn(),
-    };
-    const filesystem = {
-      readFile: vi.fn(),
-      writeFile: vi.fn(),
-    };
-    return { bun, filesystem };
-  };
+  let tmpDir: string;
+
+  beforeEach(async () => {
+    tmpDir = await mkdtemp(join(tmpdir(), "bun-pm-test-"));
+    await writeFile(
+      join(tmpDir, "package.json"),
+      JSON.stringify({ dependencies: { foo: "^1.0.0" } }),
+      "utf8",
+    );
+  });
+
+  afterEach(async () => {
+    await rm(tmpDir, { force: true, recursive: true });
+  });
+
+  const makeHappyRunner = () => ({
+    async installLockfileOnly(cwd: string) {
+      await writeFile(join(cwd, "bun.lock"), "", "utf8");
+    },
+    async list(_cwd: string) {
+      return BUN_LIST_OUTPUT;
+    },
+  });
 
   describe("specifyDeps", () => {
     it("creates a lockfile", async () => {
-      const { bun, filesystem } = makeMock();
-      bun.installLockfileOnly.mockResolvedValueOnce(undefined);
-      bun.list.mockResolvedValueOnce("node_modules (1)\n├── foo@1.2.3\n");
-      filesystem.readFile.mockResolvedValueOnce('{"dependencies":{"foo":"^1.0.0"}}');
-      filesystem.writeFile.mockResolvedValueOnce(undefined);
-      const adapter = new BunPackageManager(bun, filesystem);
-      await adapter.specifyDeps("/proj");
-      expect(bun.installLockfileOnly).toHaveBeenCalledWith("/proj");
-      expect(bun.list).toHaveBeenCalledWith("/proj");
+      const adapter = new BunPackageManager(makeHappyRunner());
+      await adapter.specifyDeps(tmpDir);
+      await expect(access(join(tmpDir, "bun.lock"))).resolves.toBeUndefined();
     });
 
     it("pins versions in package.json", async () => {
-      const { bun, filesystem } = makeMock();
-      bun.installLockfileOnly.mockResolvedValueOnce(undefined);
-      bun.list.mockResolvedValueOnce("node_modules (1)\n├── foo@1.2.3\n");
-      filesystem.readFile.mockResolvedValueOnce('{"dependencies":{"foo":"^1.0.0"}}');
-      filesystem.writeFile.mockResolvedValueOnce(undefined);
-      const adapter = new BunPackageManager(bun, filesystem);
-      await adapter.specifyDeps("/proj");
-      expect(filesystem.readFile).toHaveBeenCalledWith("/proj/package.json");
-      expect(filesystem.writeFile).toHaveBeenCalledWith(
-        "/proj/package.json",
-        JSON.stringify({ dependencies: { foo: "1.2.3" } }),
-      );
+      const adapter = new BunPackageManager(makeHappyRunner());
+      await adapter.specifyDeps(tmpDir);
+      const content = JSON.parse(await readFile(join(tmpDir, "package.json"), "utf8")) as {
+        dependencies: Record<string, string>;
+      };
+      expect(content.dependencies["foo"]).toBe("1.2.3");
     });
 
-    /** This isn't a great test, since it's mostly testing mocks. If we see
-        regressions, we may want to add an integration test that runs pnpm in a temp directory */
-    it("produces a pinned lockfile", async () => {
-      const { bun, filesystem } = makeMock();
-      bun.installLockfileOnly.mockResolvedValue(undefined);
-      bun.list.mockResolvedValueOnce("node_modules (1)\n├── foo@1.2.3\n");
-      filesystem.readFile.mockResolvedValueOnce('{"dependencies":{"foo":"^1.0.0"}}');
-
-      filesystem.writeFile.mockResolvedValueOnce(undefined);
-      const adapter = new BunPackageManager(bun, filesystem);
-
-      await adapter.specifyDeps("/proj");
-
-      // The first lockfile is unpinned, the second is pinned.
-      expect(bun.installLockfileOnly).toHaveBeenCalledTimes(2);
+    it("installs a pinned lockfile", async () => {
+      let installCount = 0;
+      const runner = {
+        async installLockfileOnly(cwd: string) {
+          installCount++;
+          await writeFile(join(cwd, "bun.lock"), "", "utf8");
+        },
+        async list(_cwd: string) {
+          return BUN_LIST_OUTPUT;
+        },
+      };
+      const adapter = new BunPackageManager(runner);
+      await adapter.specifyDeps(tmpDir);
+      expect(installCount).toBe(2);
     });
 
-    it("throws PackageInstallError on specifyDeps failure", async () => {
-      const { bun, filesystem } = makeMock();
-      bun.installLockfileOnly.mockRejectedValueOnce(new Error("fail"));
-      const adapter = new BunPackageManager(bun, filesystem);
-      await expect(adapter.specifyDeps("/proj")).rejects.toThrow("fail");
+    it("throws PackageInstallError when installLockfileOnly fails", async () => {
+      const runner = {
+        async installLockfileOnly(_cwd: string) {
+          throw new Error("bun exited with code 1");
+        },
+        async list(_cwd: string) {
+          return "";
+        },
+      };
+      const adapter = new BunPackageManager(runner);
+      await expect(adapter.specifyDeps(tmpDir)).rejects.toBeInstanceOf(PackageInstallError);
+    });
+
+    it("throws PackageInstallError if lockfile was not created after the first install", async () => {
+      let listCalled = false;
+      const runner = {
+        async installLockfileOnly(_cwd: string) {
+          // Deliberately does not create a lockfile
+        },
+        async list(_cwd: string) {
+          listCalled = true;
+          return BUN_LIST_OUTPUT;
+        },
+      };
+      const adapter = new BunPackageManager(runner);
+      await expect(adapter.specifyDeps(tmpDir)).rejects.toBeInstanceOf(PackageInstallError);
+      expect(listCalled).toBe(false);
+    });
+
+    it("throws PackageInstallError when the pinning install fails", async () => {
+      let installCount = 0;
+      const runner = {
+        async installLockfileOnly(cwd: string) {
+          installCount++;
+          if (installCount === 1) {
+            await writeFile(join(cwd, "bun.lock"), "", "utf8");
+          } else {
+            throw new Error("bun exited with code 1");
+          }
+        },
+        async list(_cwd: string) {
+          return BUN_LIST_OUTPUT;
+        },
+      };
+      const adapter = new BunPackageManager(runner);
+      await expect(adapter.specifyDeps(tmpDir)).rejects.toBeInstanceOf(PackageInstallError);
+    });
+
+    it("throws PackageInstallError if lockfile was not created after the pinning install", async () => {
+      let installCount = 0;
+      const runner = {
+        async installLockfileOnly(cwd: string) {
+          installCount++;
+          if (installCount === 1) {
+            await writeFile(join(cwd, "bun.lock"), "", "utf8");
+          }
+          // Second call: deliberately does not create a lockfile
+        },
+        async list(_cwd: string) {
+          return BUN_LIST_OUTPUT;
+        },
+      };
+      const adapter = new BunPackageManager(runner);
+      await expect(adapter.specifyDeps(tmpDir)).rejects.toBeInstanceOf(PackageInstallError);
     });
   });
 });

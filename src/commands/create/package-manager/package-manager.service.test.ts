@@ -1,13 +1,13 @@
 import { PackageManagerService } from "./package-manager.service.js";
-import type { PackageManager } from "./package-manager.port.js";
+import type { PackageSpecifier } from "./package-specifier.port.js";
 
-const makeMockManager = (): PackageManager => ({
+const makeMockManager = (): PackageSpecifier => ({
   specifyDeps: vi.fn().mockResolvedValue(undefined),
 });
 
 describe(PackageManagerService, () => {
-  let pnpm: PackageManager;
-  let bun: PackageManager;
+  let pnpm: PackageSpecifier;
+  let bun: PackageSpecifier;
   let svc: PackageManagerService;
 
   beforeEach(() => {

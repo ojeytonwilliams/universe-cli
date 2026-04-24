@@ -137,8 +137,8 @@ describe("create e2e — docker", () => {
       });
     }
   });
-  
-    it("static + tanstack + bun scaffold produces a reachable container on port 5173", async () => {
+
+  it("static + tanstack + bun scaffold produces a reachable container on port 5173", async () => {
     const selection: CreateSelections = {
       confirmed: true,
       databases: [],

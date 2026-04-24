@@ -18,7 +18,7 @@ import type { LogsClient } from "./platform/logs-client.port.js";
 import type { LayerComposer } from "./commands/create/layer-composition/layer-composition-service.js";
 import type { PlatformManifestGenerator } from "./services/platform-manifest-service.js";
 import type { CreateInputValidator } from "./commands/create/create-input-validation-service.js";
-import type { PackageManagerRunner } from "./commands/create/package-manager/package-manager.service.js";
+import type { PackageManager } from "./commands/create/package-manager/package-manager.service.js";
 import { ClackPrompt } from "./commands/create/prompt/clack-prompt.js";
 import { LocalFilesystemWriter } from "./io/local-filesystem-writer.js";
 import { LocalProjectReader } from "./io/local-project-reader.js";
@@ -56,7 +56,7 @@ interface RouteDeps {
   layerResolver: LayerComposer;
   listClient: ListClient;
   logsClient: LogsClient;
-  packageManager: PackageManagerRunner;
+  packageManager: PackageManager;
   platformManifestGenerator: PlatformManifestGenerator;
   projectReader: ProjectReaderPort;
   prompt: Prompt;

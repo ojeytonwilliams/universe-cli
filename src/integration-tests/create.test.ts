@@ -2,11 +2,11 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { createAdapterStubs } from "./adapter-stubs.js";
-import { StubPackageManager } from "../commands/create/package-manager/package-manager.stub.js";
+import { StubPackageSpecifier } from "../commands/create/package-manager/package-specifier.stub.js";
 import { LayerCompositionService } from "../commands/create/layer-composition/layer-composition-service.js";
 import { PackageManagerService } from "../commands/create/package-manager/package-manager.service.js";
 import type {
-  PackageManagerRunner,
+  PackageManager,
   RunOptions,
 } from "../commands/create/package-manager/package-manager.service.js";
 import { PlatformManifestService } from "../services/platform-manifest-service.js";
@@ -23,7 +23,7 @@ interface AdapterOverrides {
 
 interface MakeDepsOptions {
   adapterOverrides?: AdapterOverrides;
-  packageManagerService?: PackageManagerRunner;
+  packageManagerService?: PackageManager;
 }
 
 const createPromptPort = (selection: CreateSelections | null): Prompt => ({
@@ -99,8 +99,8 @@ const makeDeps = (cwd: string, prompt: Prompt, options: MakeDepsOptions = {}) =>
     packageManager:
       packageManagerService ??
       new PackageManagerService({
-        bun: new StubPackageManager(),
-        pnpm: new StubPackageManager(),
+        bun: new StubPackageSpecifier(),
+        pnpm: new StubPackageSpecifier(),
       }),
     platformManifestGenerator: new PlatformManifestService(),
     projectReader: new LocalProjectReader(),
@@ -179,7 +179,7 @@ describe("create", () => {
     expect(generatedFiles).toMatchSnapshot();
   });
 
-  it("calls packageManager.run with the target directory for Node.js scaffold", async () => {
+  it("calls packageManager.specifyDeps with the target directory for Node.js scaffold", async () => {
     const name = "node-install-spy";
     const selection = createNodeSelection({
       databases: [],
@@ -202,7 +202,7 @@ describe("create", () => {
     });
   });
 
-  it("does not call packageManager.run for Static scaffold", async () => {
+  it("calls packageManager.specifyDeps with the target directory for Static scaffold", async () => {
     const name = "static-no-install-spy";
     const selection = createStaticSelection(name);
 
@@ -214,7 +214,10 @@ describe("create", () => {
     const result = await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
 
     expect(result.exitCode).toBe(0);
-    expect(specifyDeps).not.toHaveBeenCalled();
+    expect(specifyDeps).toHaveBeenCalledWith({
+      manager: "pnpm",
+      projectDirectory: join(rootDirectory, name),
+    });
   });
 
   it("calls repoInitialiser.initialise with the target directory for Node.js scaffold", async () => {

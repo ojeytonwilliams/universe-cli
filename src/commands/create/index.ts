@@ -1,6 +1,6 @@
 import type { FilesystemWriter } from "../../io/filesystem-writer.port.js";
 import type { LayerComposer } from "./layer-composition/layer-composition-service.js";
-import type { PackageManagerRunner } from "./package-manager/package-manager.service.js";
+import type { PackageManager } from "./package-manager/package-manager.service.js";
 import type { PlatformManifestGenerator } from "../../services/platform-manifest-service.js";
 import type { Prompt } from "./prompt/prompt.port.js";
 import type { RepoInitialiser } from "../../io/repo-initialiser.port.js";
@@ -17,7 +17,7 @@ export const handleCreate = async (
   deps: {
     filesystemWriter: FilesystemWriter;
     layerResolver: LayerComposer;
-    packageManager: PackageManagerRunner;
+    packageManager: PackageManager;
     platformManifestGenerator: PlatformManifestGenerator;
     prompt: Prompt;
     repoInitialiser: RepoInitialiser;
