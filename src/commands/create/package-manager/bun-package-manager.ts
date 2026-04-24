@@ -25,8 +25,8 @@ const defaultBunRunner: BunRunner = {
 // Parses the tree output from `bun list` (not JSON)
 const extractVersions = (listOutput: string): Record<string, string> => {
   const versions: Record<string, string> = {};
-  // Match lines like: ├── the-answer@1.0.0 or └── typescript@5.9.3
-  const regex = /^[├└]──\s+([^@\s]+)@([\w.-]+)/gm;
+  // Match lines like: ├── the-answer@1.0.0, └── typescript@5.9.3 or ├── @types/node@18.16.18
+  const regex = /^[├└]──\s+(@?[^@\s]+)@([\w.-]+)/gm;
   let match: RegExpExecArray | null;
   while ((match = regex.exec(listOutput)) !== null) {
     const [, name, version] = match;
@@ -42,20 +42,25 @@ const extractVersions = (listOutput: string): Record<string, string> => {
   return versions;
 };
 
-const pinVersions = (pkg: PackageJson, versions: Record<string, string>): PackageJson => {
+const pinVersions = (
+  packageJson: PackageJson,
+  pinnedVersionMap: Record<string, string>,
+): PackageJson => {
   const pin = (deps: Record<string, string> = {}) =>
     Object.fromEntries(
       Object.entries(deps).map(([name, range]) => {
-        const pinnedVersion = versions[name];
+        const pinnedVersion = pinnedVersionMap[name];
         if (pinnedVersion === "" || pinnedVersion === undefined) {
           throw new PackageInstallError(
-            `Dependency mismatch - no pinned version found for package "${name}"`,
+            `Dependency mismatch - no pinned version found for package "${name}".
+If this happens, it likely means that extractVersions failed to parse the output of "bun list".
+Please check that the output format of "bun list" has not changed, and that extractVersions is correctly parsing it.`,
           );
         }
-        return [name, versions[name] ?? range];
+        return [name, pinnedVersionMap[name] ?? range];
       }),
     );
-  const { dependencies, devDependencies, ...rest } = pkg;
+  const { dependencies, devDependencies, ...rest } = packageJson;
   const pinned: PackageJson = { ...rest };
   if (dependencies !== undefined) {
     pinned.dependencies = pin(dependencies);
@@ -84,4 +89,4 @@ class BunPackageManager implements PackageSpecifier {
   }
 }
 
-export { BunPackageManager };
+export { BunPackageManager, extractVersions };

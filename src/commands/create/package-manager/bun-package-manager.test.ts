@@ -4,9 +4,31 @@ import { access, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { PackageInstallError } from "../../../errors/cli-errors.js";
-import { BunPackageManager } from "./bun-package-manager.js";
+import { BunPackageManager, extractVersions } from "./bun-package-manager.js";
 
 const BUN_LIST_OUTPUT = "node_modules (1)\n├── foo@1.2.3\n";
+
+describe(extractVersions, () => {
+  it("extracts versions from bun list output", () => {
+    const output = `
+node_modules (2)
+├── foo@1.2.3
+└── bar@4.5.6
+`;
+    const versions = extractVersions(output);
+    expect(versions).toStrictEqual({ bar: "4.5.6", foo: "1.2.3" });
+  });
+
+  it("handles @scoped packages", () => {
+    const output = `
+node_modules (2)
+├── @scope/foo@1.2.3
+└── @scope/bar@4.5.6
+`;
+    const versions = extractVersions(output);
+    expect(versions).toStrictEqual({ "@scope/bar": "4.5.6", "@scope/foo": "1.2.3" });
+  });
+});
 
 describe(BunPackageManager, () => {
   let tmpDir: string;
