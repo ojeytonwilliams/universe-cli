@@ -53,7 +53,13 @@ const ServiceSchema = z.record(
 );
 type Service = z.infer<typeof ServiceSchema>;
 
-const FrameworkOptionSchema = z.literal(["express", "html-css-js", "react-vite", "typescript"]);
+const FrameworkOptionSchema = z.literal([
+  "express",
+  "html-css-js",
+  "react-vite",
+  "tanstack-shadcn",
+  "typescript",
+]);
 type FrameworkOption = z.infer<typeof FrameworkOptionSchema>;
 const FrameworkSchema = z.record(
   FrameworkOptionSchema,

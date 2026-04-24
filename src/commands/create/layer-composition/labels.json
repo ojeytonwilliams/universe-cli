@@ -7,6 +7,7 @@
     "express": "Express",
     "html-css-js": "HTML/CSS/JS",
     "react-vite": "React (Vite)",
+    "tanstack-shadcn": "TanStack + shadcn/ui",
     "typescript": "TypeScript"
   },
   "database": {

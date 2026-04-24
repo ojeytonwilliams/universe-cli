@@ -32,7 +32,8 @@
     },
     "frameworks": [
       "html-css-js",
-      "react-vite"
+      "react-vite",
+      "tanstack-shadcn"
     ],
     "packageManagers": [
       "pnpm",
