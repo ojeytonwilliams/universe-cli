@@ -26,7 +26,6 @@ interface Config {
   deleteBeforeFirstInstall: boolean;
   runner: Runner;
   extractVersions(output: string): Record<string, string>;
-  pinVersions(pkg: PackageJson, versions: Record<string, string>): PackageJson;
 }
 
 const filesystemApi: FilesystemApi = {
@@ -39,6 +38,35 @@ const filesystemApi: FilesystemApi = {
       .catch(() => false),
   readFile: (path) => readFile(path, "utf8"),
   writeFile: (path, content) => writeFile(path, content, "utf8"),
+};
+
+const pinVersions = (
+  packageJson: PackageJson,
+  pinnedVersionMap: Record<string, string>,
+): PackageJson => {
+  const pin = (deps: Record<string, string> = {}) =>
+    Object.fromEntries(
+      Object.entries(deps).map(([name, range]) => {
+        const pinnedVersion = pinnedVersionMap[name];
+        if (pinnedVersion === "" || pinnedVersion === undefined) {
+          throw new PackageInstallError(
+            `Dependency mismatch - no pinned version found for package "${name}".
+If this happens, it likely means that extractVersions failed to parse the output of the runner's list().
+Please check that the output format of list() has not changed, and that extractVersions is correctly parsing it.`,
+          );
+        }
+        return [name, pinnedVersionMap[name] ?? range];
+      }),
+    );
+  const { dependencies, devDependencies, ...rest } = packageJson;
+  const pinned: PackageJson = { ...rest };
+  if (dependencies !== undefined) {
+    pinned.dependencies = pin(dependencies);
+  }
+  if (devDependencies !== undefined) {
+    pinned.devDependencies = pin(devDependencies);
+  }
+  return pinned;
 };
 
 const createPackageSpecifier = (config: Config): PackageSpecifier => ({
@@ -75,7 +103,7 @@ const createPackageSpecifier = (config: Config): PackageSpecifier => ({
     const packageJsonContent = await filesystemApi.readFile(packageJsonPath);
     const pkg = JSON.parse(packageJsonContent) as PackageJson;
     const versions = config.extractVersions(listOutput);
-    const pinned = config.pinVersions(pkg, versions);
+    const pinned = pinVersions(pkg, versions);
 
     await filesystemApi.writeFile(packageJsonPath, JSON.stringify(pinned));
     await filesystemApi.deleteFile(lockfilePath);

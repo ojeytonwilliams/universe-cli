@@ -1,7 +1,6 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { createPackageSpecifier } from "./package-json-specifier.js";
-import type { PackageJson } from "./package-json-specifier.js";
 import type { PackageSpecifier } from "./package-specifier.port.js";
 
 const execFileAsync = promisify(execFile);
@@ -50,26 +49,6 @@ const extractVersions = (listOutput: string): Record<string, string> => {
   return versions;
 };
 
-const pinVersions = (pkg: PackageJson, versions: Record<string, string>): PackageJson => {
-  const pin = (deps: Record<string, string>): Record<string, string> =>
-    Object.fromEntries(
-      Object.entries(deps).map(([name, range]) => [name, versions[name] ?? range]),
-    );
-
-  const { dependencies, devDependencies, ...rest } = pkg;
-  const pinned: PackageJson = { ...rest };
-
-  if (dependencies !== undefined) {
-    pinned.dependencies = pin(dependencies);
-  }
-
-  if (devDependencies !== undefined) {
-    pinned.devDependencies = pin(devDependencies);
-  }
-
-  return pinned;
-};
-
 class PnpmPackageManager implements PackageSpecifier {
   private readonly impl: PackageSpecifier;
 
@@ -78,7 +57,6 @@ class PnpmPackageManager implements PackageSpecifier {
       deleteBeforeFirstInstall: false,
       extractVersions,
       lockfileName: "pnpm-lock.yaml",
-      pinVersions,
       runner,
     });
   }

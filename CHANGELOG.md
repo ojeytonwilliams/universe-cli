@@ -24,6 +24,14 @@
 
 - The package manager adapters for Bun and pnpm now re-run the lockfile install after pinning versions in package.json. This guarantees that the lockfile reflects the pinned versions, preventing accidental upgrades and improving reproducibility for new projects. Tests were added to verify this behavior.
 
+## [3.22.0] - 2026-04-24
+
+### refactor: Unify and harden package manager dependency pinning
+
+- Refactored Bun and pnpm package manager adapters to use a shared factory for dependency pinning logic, reducing duplication and improving maintainability.
+- Improved error handling and test coverage for edge cases in dependency version extraction and lockfile generation.
+- Motivation: Ensures more reliable and reproducible dependency management for new projects, and makes it easier to add support for new package managers in the future.
+
 ## [3.22.0] - 2026-04-23
 
 ### chore: Remove redundant install step

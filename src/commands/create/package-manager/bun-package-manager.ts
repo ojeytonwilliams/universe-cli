@@ -1,8 +1,6 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { PackageInstallError } from "../../../errors/cli-errors.js";
 import { createPackageSpecifier } from "./package-json-specifier.js";
-import type { PackageJson } from "./package-json-specifier.js";
 import type { PackageSpecifier } from "./package-specifier.port.js";
 
 const execFileAsync = promisify(execFile);
@@ -42,35 +40,6 @@ const extractVersions = (listOutput: string): Record<string, string> => {
   return versions;
 };
 
-const pinVersions = (
-  packageJson: PackageJson,
-  pinnedVersionMap: Record<string, string>,
-): PackageJson => {
-  const pin = (deps: Record<string, string> = {}) =>
-    Object.fromEntries(
-      Object.entries(deps).map(([name, range]) => {
-        const pinnedVersion = pinnedVersionMap[name];
-        if (pinnedVersion === "" || pinnedVersion === undefined) {
-          throw new PackageInstallError(
-            `Dependency mismatch - no pinned version found for package "${name}".
-If this happens, it likely means that extractVersions failed to parse the output of "bun list".
-Please check that the output format of "bun list" has not changed, and that extractVersions is correctly parsing it.`,
-          );
-        }
-        return [name, pinnedVersionMap[name] ?? range];
-      }),
-    );
-  const { dependencies, devDependencies, ...rest } = packageJson;
-  const pinned: PackageJson = { ...rest };
-  if (dependencies !== undefined) {
-    pinned.dependencies = pin(dependencies);
-  }
-  if (devDependencies !== undefined) {
-    pinned.devDependencies = pin(devDependencies);
-  }
-  return pinned;
-};
-
 class BunPackageManager implements PackageSpecifier {
   private readonly impl: PackageSpecifier;
 
@@ -79,7 +48,6 @@ class BunPackageManager implements PackageSpecifier {
       deleteBeforeFirstInstall: true,
       extractVersions,
       lockfileName: "bun.lock",
-      pinVersions,
       runner,
     });
   }
