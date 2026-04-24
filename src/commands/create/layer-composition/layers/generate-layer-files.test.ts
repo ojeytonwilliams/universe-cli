@@ -54,8 +54,11 @@ const makeBaseProject = async (root: string): Promise<void> => {
   await makeFolder(root, "always", "always");
 };
 
+const readRaw = (root: string, filename: string): Promise<string> =>
+  readFile(join(root, LAYERS_SUBDIR, filename), "utf-8");
+
 const readJson = async (root: string, filename: string): Promise<unknown> =>
-  JSON.parse(await readFile(join(root, LAYERS_SUBDIR, filename), "utf-8"));
+  JSON.parse(await readRaw(root, filename));
 
 describe(generateLayerFiles, () => {
   let root: string;
@@ -178,5 +181,62 @@ describe(generateLayerFiles, () => {
 
     const result = await readJson(root, "runtime.json");
     expect(result).toStrictEqual({ missing: {}, node: {} });
+  });
+
+  it("generates JSON files with consistent key ordering", async () => {
+    await writeFile(
+      join(root, LAYERS_SUBDIR, "runtime.json"),
+
+      /** This deliberately has keys in a different order than the expected
+      output */
+      // oxlint-disable-next-line sort-keys
+      JSON.stringify({ node: {}, extra: {}, a: {} }, null, 2),
+    );
+    await makeFolder(root, "runtime", "node");
+    await makeFolder(root, "runtime", "extra");
+    await makeFolder(root, "runtime", "a");
+
+    await generateLayerFiles(root);
+
+    const result = await readRaw(root, "runtime.json");
+    expect(result).toBe(`{
+  "a": {
+    "files": {}
+  },
+  "extra": {
+    "files": {}
+  },
+  "node": {
+    "files": {}
+  }
+}
+`);
+  });
+
+  it("recursively orders the JSON keys", async () => {
+    await writeFile(
+      join(root, LAYERS_SUBDIR, "runtime.json"),
+
+      /** This deliberately has keys in a different order than the expected
+      output */
+      // oxlint-disable-next-line sort-keys
+      JSON.stringify({ node: { files: { b: "", a: "" }, devCopySource: "" } }, null, 2),
+    );
+    // oxlint-disable-next-line sort-keys
+    await makeFolder(root, "runtime", "node", { extraFiles: { b: "", a: "" } });
+
+    await generateLayerFiles(root);
+
+    const result = await readRaw(root, "runtime.json");
+    expect(result).toBe(`{
+  "node": {
+    "devCopySource": "",
+    "files": {
+      "a": "",
+      "b": ""
+    }
+  }
+}
+`);
   });
 });

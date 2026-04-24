@@ -36,6 +36,23 @@ const walkDir = async (base, dir, files) => {
 };
 
 /**
+ * @param {unknown} obj
+ * @returns {unknown}
+ */
+const orderObjectKeys = (obj) => {
+  if (typeof obj !== "object" || obj === null) {
+    return obj;
+  }
+  const ordered = {};
+  Object.keys(obj)
+    .sort((a, b) => a.localeCompare(b))
+    .forEach((key) => {
+      ordered[key] = orderObjectKeys(obj[key]);
+    });
+  return ordered;
+};
+
+/**
  * @param {string} [projectRoot]
  * @returns {Promise<void>}
  */
@@ -121,7 +138,7 @@ const generateLayerFiles = async (projectRoot = defaultRoot()) => {
           }
         }),
       );
-      await writeFile(jsonPath, `${JSON.stringify(json, null, 2)}\n`, "utf-8");
+      await writeFile(jsonPath, `${JSON.stringify(orderObjectKeys(json), null, 2)}\n`, "utf-8");
     }),
   );
 };
