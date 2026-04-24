@@ -40,9 +40,11 @@ export const handleCreate = async (
 
   await deps.filesystemWriter.writeProject(targetDirectory, projectFiles);
 
-  if (validatedInput.runtime === "node") {
+  const manager = validatedInput.packageManager;
+
+  if (manager !== undefined) {
     await deps.packageManager.specifyDeps({
-      manager: validatedInput.packageManager!,
+      manager,
       projectDirectory: targetDirectory,
     });
   }

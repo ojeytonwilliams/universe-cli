@@ -103,4 +103,13 @@ describe(LayerCompositionService, () => {
     expect(result.files[".dockerignore"]).toBeDefined();
     expect(result.files["docker-compose.dev.yml"]).toBeDefined();
   });
+  
+  it("emits a client folder for the tanstack-shadcn framework", () => {
+    const result = service.resolveLayers({
+      ...staticSelection,
+      framework: "tanstack-shadcn",
+    });
+
+    expect(result.files["client/app.tsx"]).toBeDefined();
+  });
 });

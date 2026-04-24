@@ -119,11 +119,16 @@ class ClackPrompt implements Prompt {
       }
     }
 
-    const databases = await this.api.multiselect({
-      message: "Select databases",
-      options: toPromptOptions(databaseOptions(runtime as RuntimeOption), "database"),
-      required: false,
-    });
+    const availableDatabases = databaseOptions(runtime as RuntimeOption);
+
+    let databases: string[] | symbol = [];
+    if (availableDatabases.length > 0) {
+      databases = await this.api.multiselect({
+        message: "Select databases",
+        options: toPromptOptions(availableDatabases, "database"),
+        required: false,
+      });
+    }
 
     if (this.api.isCancel(databases)) {
       return null;

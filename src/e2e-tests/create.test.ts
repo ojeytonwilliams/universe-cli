@@ -137,4 +137,72 @@ describe("create e2e — docker", () => {
       });
     }
   });
+  
+    it("static + tanstack + bun scaffold produces a reachable container on port 5173", async () => {
+    const selection: CreateSelections = {
+      confirmed: true,
+      databases: [],
+      framework: "tanstack-shadcn",
+      name: "e2e-tanstack-app",
+      packageManager: "bun",
+      platformServices: [],
+      runtime: "static_web",
+    };
+
+    const { observability, ...adapterStubs } = createAdapterStubs();
+    const result = await route(
+      ["create"],
+      {
+        ...adapterStubs,
+        filesystemWriter: new LocalFilesystemWriter(),
+        layerResolver: new LayerCompositionService(),
+        packageManager: new PackageManagerService({
+          bun: new BunPackageManager(),
+          pnpm: new PnpmPackageManager(),
+        }),
+        platformManifestGenerator: new PlatformManifestService(),
+        projectReader: new LocalProjectReader(),
+        prompt: createPromptPort(selection),
+        validator: new CreateInputValidationService((path) =>
+          existsSync(join(rootDirectory, path)),
+        ),
+      },
+      { cwd: rootDirectory },
+      observability,
+    );
+
+    expect(result.exitCode, result.output).toBe(0);
+
+    const projectDirectory = join(rootDirectory, selection.name);
+
+    execFileSync("docker", ["compose", "-f", "docker-compose.dev.yml", "up", "--build", "-d"], {
+      cwd: projectDirectory,
+      stdio: "inherit",
+    });
+
+    try {
+      await pollUntilReady("http://localhost:5173", 10_000);
+
+      const response = await fetch("http://localhost:5173");
+      const body = (await response.json()) as Record<string, unknown>;
+
+      expect(response.status).toBe(200);
+      expect(body["name"]).toBe(selection.name);
+      expect(body["status"]).toBe("ok");
+    } finally {
+      // To help debugging, we output the compose logs.
+      try {
+        execFileSync("docker", ["compose", "-f", "docker-compose.dev.yml", "logs"], {
+          cwd: projectDirectory,
+          stdio: "inherit",
+        });
+      } catch {
+        // Container may not have started
+      }
+      execFileSync("docker", ["compose", "-f", "docker-compose.dev.yml", "down"], {
+        cwd: projectDirectory,
+        stdio: "inherit",
+      });
+    }
+  });
 });

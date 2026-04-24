@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.21.2] - 2026-04-24
+
+### fix: specifyDeps iff package manager is used + handle prompting for runtimes without db access
+
+- Made the package manager usage be conditional on the presense of a package manager, not implicit via runtime.
+- Stopped the prompt from crashing if the runtime has no database access (e.g. static_web)
+
+### test: Add coverage for tanstack-shadcn client
+
+- Added tests to ensure the tanstack-shadcn framework emits a client folder
+- Added an e2e test covering static_web.
+
 ## [3.22.1] - 2026-04-23
 
 ### fix: Ensure lockfiles are pinned after dependency specification
