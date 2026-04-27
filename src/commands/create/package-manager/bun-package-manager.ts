@@ -7,7 +7,7 @@ interface BunRunner {
   list(cwd: string): Promise<string>;
 }
 
-const createDockerBunRunner = (): BunRunner => ({
+const bunRunner: BunRunner = {
   async installLockfileOnly(cwd) {
     await runCmd(cwd, ["bun", "install", "--lockfile-only"]);
   },
@@ -15,7 +15,7 @@ const createDockerBunRunner = (): BunRunner => ({
     const output = await runCmd(cwd, ["bun", "list"]);
     return output;
   },
-});
+};
 
 // Parses the tree output from `bun list` (not JSON)
 const extractVersions = (listOutput: string): Record<string, string> => {
@@ -40,7 +40,7 @@ const extractVersions = (listOutput: string): Record<string, string> => {
 class BunPackageManager implements PackageSpecifier {
   private readonly impl: PackageSpecifier;
 
-  constructor(runner: BunRunner = createDockerBunRunner()) {
+  constructor(runner: BunRunner = bunRunner) {
     this.impl = createPackageSpecifier({
       deleteBeforeFirstInstall: true,
       extractVersions,
@@ -54,4 +54,4 @@ class BunPackageManager implements PackageSpecifier {
   }
 }
 
-export { BunPackageManager, createDockerBunRunner, extractVersions };
+export { BunPackageManager, extractVersions };
