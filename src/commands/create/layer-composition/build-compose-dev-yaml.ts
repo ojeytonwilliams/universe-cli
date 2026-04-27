@@ -14,9 +14,10 @@ const buildComposeDevYaml = (
     target: entry.target,
   }));
 
-  const rebuildEntries = packageManager.watchRebuild.map((entry) => ({
+  const rebuildFiles = [...packageManager.manifests, packageManager.lockfile];
+  const rebuildEntries = rebuildFiles.map((file) => ({
     action: "rebuild" as const,
-    path: entry.path,
+    path: `./${file}`,
   }));
 
   const compose = {

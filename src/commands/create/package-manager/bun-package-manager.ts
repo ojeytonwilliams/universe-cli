@@ -1,6 +1,13 @@
 import { createPackageSpecifier } from "./package-json-specifier.js";
 import type { PackageSpecifier } from "./package-specifier.port.js";
-import { runCmd } from "./docker-runner.js";
+import { runCmdForFiles, runCmdForStdout } from "./docker-runner.js";
+
+/**
+ * These values are intrinsic to bun. If they change, also update
+ * layer-composition/layers/package-manager.json (manifests/lockfile fields).
+ */
+const LOCKFILE = "bun.lock";
+const MANIFESTS = ["package.json"];
 
 interface BunRunner {
   installLockfileOnly(cwd: string): Promise<void>;
@@ -9,11 +16,10 @@ interface BunRunner {
 
 const bunRunner: BunRunner = {
   async installLockfileOnly(cwd) {
-    await runCmd(cwd, ["bun", "install", "--lockfile-only"]);
+    await runCmdForFiles(cwd, ["bun", "install", "--lockfile-only"], MANIFESTS, [LOCKFILE]);
   },
-  async list(cwd) {
-    const output = await runCmd(cwd, ["bun", "list"]);
-    return output;
+  list(cwd) {
+    return runCmdForStdout(cwd, ["bun", "list"], [...MANIFESTS, LOCKFILE]);
   },
 };
 
@@ -44,7 +50,7 @@ class BunPackageManager implements PackageSpecifier {
     this.impl = createPackageSpecifier({
       deleteBeforeFirstInstall: true,
       extractVersions,
-      lockfileName: "bun.lock",
+      lockfileName: LOCKFILE,
       runner,
     });
   }

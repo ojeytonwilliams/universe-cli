@@ -11,10 +11,10 @@ const framework: FrameworkLayerData = {
 
 const packageManager: PackageManagerLayerData = {
   devCmd: ["pnpm", "run", "dev"],
-  devInstall: "COPY package.json pnpm-lock.yaml ./",
   files: {},
+  lockfile: "pnpm-lock.yaml",
+  manifests: ["package.json"],
   pmInstall: "RUN corepack enable pnpm",
-  watchRebuild: [{ path: "./package.json" }, { path: "./pnpm-lock.yaml" }],
 };
 
 const parseResult = (f: FrameworkLayerData, pm: PackageManagerLayerData) => {

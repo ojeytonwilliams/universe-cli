@@ -1,6 +1,14 @@
 import { createPackageSpecifier } from "./package-json-specifier.js";
 import type { PackageSpecifier } from "./package-specifier.port.js";
-import { runCmd } from "./docker-runner.js";
+import { runCmdForFiles, runCmdForStdout } from "./docker-runner.js";
+
+/**
+ * These values are intrinsic to pnpm. If they change, also update
+ * layer-composition/layers/package-manager.json (manifests/lockfile fields).
+ */
+
+const LOCKFILE = "pnpm-lock.yaml";
+const MANIFESTS = ["package.json"];
 
 interface PnpmRunner {
   installLockfileOnly(cwd: string): Promise<void>;
@@ -18,11 +26,14 @@ interface ListedPackage {
 
 const defaultPnpmRunner: PnpmRunner = {
   async installLockfileOnly(cwd) {
-    await runCmd(cwd, ["pnpm", "install", "--lockfile-only"]);
+    await runCmdForFiles(cwd, ["pnpm", "install", "--lockfile-only"], MANIFESTS, [LOCKFILE]);
   },
-  async list(cwd) {
-    const output = await runCmd(cwd, ["pnpm", "list", "--json", "--depth=0", "--lockfile-only"]);
-    return output;
+  list(cwd) {
+    return runCmdForStdout(
+      cwd,
+      ["pnpm", "list", "--json", "--depth=0", "--lockfile-only"],
+      [...MANIFESTS, LOCKFILE],
+    );
   },
 };
 
@@ -49,7 +60,7 @@ class PnpmPackageManager implements PackageSpecifier {
     this.impl = createPackageSpecifier({
       deleteBeforeFirstInstall: false,
       extractVersions,
-      lockfileName: "pnpm-lock.yaml",
+      lockfileName: LOCKFILE,
       runner,
     });
   }

@@ -1,5 +1,30 @@
 # Changelog
 
+## [3.24.0] - 2026-04-27
+
+### feat: docker cp-based container execution for package manager operations
+
+- `docker-runner.ts` replaces the bind-mount `runCmd` with two new functions:
+  `runCmdForFiles` (create → cp inputs → start → cp outputs → rm) and
+  `runCmdForStdout` (same lifecycle, returns stdout). No `-v` flag is used anywhere.
+- `pnpm-package-manager.ts` and `bun-package-manager.ts` are updated to use the new
+  runner API. `manifests` and `lockfile` values are now hardcoded in each file rather
+  than imported from the layer-composition config, keeping module boundaries clean.
+- File copies within each lifecycle phase run in parallel via `Promise.all`.
+
+## [3.23.0] - 2026-04-27
+
+### feat: explicit manifests/lockfile in package-manager config; derive devInstall and watchRebuild
+
+- `package-manager.json` now declares `manifests` (array) and `lockfile` (string) for each
+  entry instead of storing pre-built `devInstall` and `watchRebuild` strings. This makes the
+  config the single source of truth and avoids three-way duplication when a lockfile name changes.
+- `devInstall` (Dockerfile COPY + RUN) and `watchRebuild` (Compose Watch rebuild paths) are
+  now derived at composition time from `manifests`, `lockfile`, and the first element of
+  `devCmd` — no longer stored in the JSON.
+- The TypeScript schema for package-manager entries is updated to match: `devInstall` and
+  `watchRebuild` are removed; `manifests` and `lockfile` are added as required fields.
+
 ## [3.21.3] - 2026-04-24
 
 ### refactor: use factory to DRY out package-manager logic

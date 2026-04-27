@@ -33,6 +33,18 @@ describe(LayerCompositionService, () => {
     expect(result.files["Dockerfile"]).toContain('CMD ["pnpm","run","dev"]');
   });
 
+  it("derives devInstall from manifests and lockfile for pnpm", () => {
+    const result = service.resolveLayers(nodeExpressSelection);
+    expect(result.files["Dockerfile"]).toContain("COPY package.json pnpm-lock.yaml ./");
+    expect(result.files["Dockerfile"]).toContain("RUN pnpm install");
+  });
+
+  it("derives devInstall from manifests and lockfile for bun", () => {
+    const result = service.resolveLayers({ ...nodeExpressSelection, packageManager: "bun" });
+    expect(result.files["Dockerfile"]).toContain("COPY package.json bun.lock ./");
+    expect(result.files["Dockerfile"]).toContain("RUN bun install");
+  });
+
   it("emits a docker-compose.dev.yml for node + express + pnpm", () => {
     const result = service.resolveLayers(nodeExpressSelection);
 

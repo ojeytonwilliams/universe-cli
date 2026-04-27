@@ -2,9 +2,9 @@
 
 ## Phase 1: Config Schema
 
-- [ ] TASK: Update `src/commands/create/layer-composition/layers/package-manager.json` — add `manifests` (array) and `lockfile` (string) to each PM entry; remove `devInstall` and `watchRebuild` from pnpm and bun entries
+- [x] TASK: Update `src/commands/create/layer-composition/layers/package-manager.json` — add `manifests` (array) and `lockfile` (string) to each PM entry; remove `devInstall` and `watchRebuild` from pnpm and bun entries
 
-- [ ] CODE: Update the TypeScript schema for package-manager layer entries
+- [x] CODE: Update the TypeScript schema for package-manager layer entries
   - Feature: Add `manifests: z.array(z.string())` and `lockfile: z.string()` to the package-manager entry schema; remove `devInstall` and `watchRebuild` fields
   - Files: `src/commands/create/layer-composition/schemas/layers.ts`
   - Acceptance:
@@ -14,7 +14,7 @@
 
 ## Phase 2: Composition Service
 
-- [ ] CODE: Derive `devInstall` and `watchRebuild` from `manifests` and `lockfile` at composition time
+- [x] CODE: Derive `devInstall` and `watchRebuild` from `manifests` and `lockfile` at composition time
   - Feature: In the layer composition service (or Dockerfile data builder), `devInstall` needs to be completed using mainfests and lockfile `COPY ${[...manifests, lockfile].join(' ')} ./\nRUN <package manager specific install>` and `watchRebuild` as `[...manifests, lockfile].map(f => ({ path: './' + f }))` — reading both from the config rather than from stored fields
   - Files: `src/commands/create/layer-composition/layer-composition-service.ts` (and any related Dockerfile template helpers)
   - Acceptance:
@@ -26,7 +26,7 @@
 
 ## Phase 3: Docker Runner
 
-- [ ] CODE: Implement `runCmdForFiles` and `runCmdForStdout` in `docker-runner.ts`
+- [x] CODE: Implement `runCmdForFiles` and `runCmdForStdout` in `docker-runner.ts`
   - Feature: Replace the bind-mount `runCmd` with two new functions. `runCmdForFiles` creates a container, copies each input file in via `docker cp`, starts the container and waits, copies each output file out via `docker cp`, then removes the container (always, via `finally`). `runCmdForStdout` does the same but returns the command's stdout instead of copying output files.
   - Files: `src/commands/create/package-manager/docker-runner.ts`
   - Acceptance:
@@ -39,7 +39,7 @@
 
 ## Phase 4: Package Manager Classes
 
-- [ ] CODE: Update `pnpm-package-manager.ts` to use the new docker runner API
+- [x] CODE: Update `pnpm-package-manager.ts` to use the new docker runner API
   - Feature: Replace `runCmd` calls with `runCmdForFiles` (inputs: `["package.json"]`, outputs: `["pnpm-lock.yaml"]`) for `installLockfileOnly`, and `runCmdForStdout` (inputs: `["package.json", "pnpm-lock.yaml"]`) for `list`. Source `lockfileName` in `createPackageSpecifier` from the config `lockfile` field rather than hardcoding it.
   - Files: `src/commands/create/package-manager/pnpm-package-manager.ts`
   - Acceptance:
@@ -49,7 +49,7 @@
     - `PnpmRunner` interface signatures are unchanged
     - All existing pnpm package manager tests pass
 
-- [ ] CODE: Update `bun-package-manager.ts` to use the new docker runner API
+- [x] CODE: Update `bun-package-manager.ts` to use the new docker runner API
   - Feature: Replace `runCmd` calls with `runCmdForFiles` (inputs: `["package.json"]`, outputs: `["bun.lock"]`) for `installLockfileOnly`, and `runCmdForStdout` (inputs: `["package.json", "bun.lock"]`) for `list`. Source `lockfileName` in `createPackageSpecifier` from the config `lockfile` field rather than hardcoding it.
   - Files: `src/commands/create/package-manager/bun-package-manager.ts`
   - Acceptance:
