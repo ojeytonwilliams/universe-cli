@@ -1,9 +1,6 @@
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
 import { createPackageSpecifier } from "./package-json-specifier.js";
 import type { PackageSpecifier } from "./package-specifier.port.js";
-
-const execFileAsync = promisify(execFile);
+import { runCmd } from "./docker-runner.js";
 
 interface PnpmRunner {
   installLockfileOnly(cwd: string): Promise<void>;
@@ -21,15 +18,11 @@ interface ListedPackage {
 
 const defaultPnpmRunner: PnpmRunner = {
   async installLockfileOnly(cwd) {
-    await execFileAsync("pnpm", ["install", "--lockfile-only"], { cwd, encoding: "utf8" });
+    await runCmd(cwd, ["pnpm", "install", "--lockfile-only"]);
   },
   async list(cwd) {
-    const { stdout } = await execFileAsync(
-      "pnpm",
-      ["list", "--json", "--depth=0", "--lockfile-only"],
-      { cwd, encoding: "utf8" },
-    );
-    return stdout;
+    const output = await runCmd(cwd, ["pnpm", "list", "--json", "--depth=0", "--lockfile-only"]);
+    return output;
   },
 };
 
