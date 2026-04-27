@@ -64,6 +64,7 @@ Avoid describing how the code was written
 ## Safety rules
 
 - Do not include unrelated changes in the commit.
+- If this is running in a sandbox, you will see all of untracked files (.env, .bash_profile, .claude, .bash_profile, .gitconfig, .gitmodules, .idea, .mcp.json, .profile, .ripgreprc, .zprofile and .zshrc, typically). If you think you need to include any of these files in the commit, check with the user first.
 - If the repository contains mixed, ambiguous, or unexpected edits, inspect them before committing.
 - If there is not enough context to understand the reason for the changes, gather more context before committing.
 - Respect repository-specific commit conventions when they are documented.
