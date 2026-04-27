@@ -14,8 +14,8 @@ const minimalRegistry: LayerRegistry = {
     typescript: { devCopySource: "", files: {}, port: 3000, watchSync: [] },
   },
   "package-managers": {
-    bun: { devCmd: [], devInstall: "", files: {}, watchRebuild: [] },
-    pnpm: { devCmd: [], devInstall: "", files: {}, watchRebuild: [] },
+    bun: { devCmd: [], devInstall: "", files: {}, pmInstall: "", watchRebuild: [] },
+    pnpm: { devCmd: [], devInstall: "", files: {}, pmInstall: "", watchRebuild: [] },
   },
   runtime: {
     node: { baseImage: "", files: {} },

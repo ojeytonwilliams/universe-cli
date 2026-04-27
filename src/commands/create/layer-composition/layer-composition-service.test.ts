@@ -29,7 +29,7 @@ describe(LayerCompositionService, () => {
 
     expect(result.files["Dockerfile"]).toBeDefined();
     expect(result.files["Dockerfile"]).toContain("FROM node:22-alpine AS base");
-    expect(result.files["Dockerfile"]).toContain("FROM base AS dev");
+    expect(result.files["Dockerfile"]).toContain("FROM package-manager AS dev");
     expect(result.files["Dockerfile"]).toContain('CMD ["pnpm","run","dev"]');
   });
 

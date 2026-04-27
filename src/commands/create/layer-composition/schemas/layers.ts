@@ -39,6 +39,7 @@ const PackageManagerSchema = z.record(
     devCmd: z.array(z.string()),
     devInstall: z.string(),
     files: z.record(z.string(), z.string()),
+    pmInstall: z.string(),
     preinstall: z.string().optional(),
     watchRebuild: z.array(z.strictObject({ path: z.string() })),
   }),

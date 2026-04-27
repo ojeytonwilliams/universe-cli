@@ -13,6 +13,7 @@ const packageManager: PackageManagerLayerData = {
   devCmd: ["pnpm", "run", "dev"],
   devInstall: "COPY package.json pnpm-lock.yaml ./",
   files: {},
+  pmInstall: "RUN corepack enable pnpm",
   watchRebuild: [{ path: "./package.json" }, { path: "./pnpm-lock.yaml" }],
 };
 

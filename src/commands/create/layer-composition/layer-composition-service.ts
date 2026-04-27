@@ -34,28 +34,33 @@ interface LayerComposer {
 }
 
 interface DockerfileData {
-  baseImage?: string;
-  devCmd?: string[];
-  devCopySource?: string;
-  devInstall?: string;
+  baseImage: string;
+  devCmd: string[];
+  devCopySource: string;
+  devInstall: string;
+  pmInstall: string;
 }
 
 const buildDockerfileData = (
   runtime: RuntimeLayerData,
   framework: FrameworkLayerData,
   packageManager: PackageManagerLayerData,
-): Required<DockerfileData> => ({
+): DockerfileData => ({
   baseImage: runtime.baseImage,
   devCmd: packageManager.devCmd,
   devCopySource: framework.devCopySource,
   devInstall: packageManager.devInstall,
+  pmInstall: packageManager.pmInstall,
 });
 
-const renderDockerfile = (data: Required<DockerfileData>): string =>
+const renderDockerfile = (data: DockerfileData): string =>
   `FROM ${data.baseImage} AS base\n` +
   `WORKDIR /app\n` +
   `\n` +
-  `FROM base AS dev\n` +
+  `FROM base AS package-manager\n` +
+  `${data.pmInstall} \n` +
+  `\n` +
+  `FROM package-manager AS dev\n` +
   `${data.devInstall}\n` +
   `${data.devCopySource}\n` +
   `CMD ${JSON.stringify(data.devCmd)}\n`;
@@ -128,7 +133,6 @@ class LayerCompositionService implements LayerComposer {
 
 export { defaultLayerRegistry, LayerCompositionService };
 export type {
-  DockerfileData,
   LayerComposer,
   LayerData,
   LayerRegistry,
