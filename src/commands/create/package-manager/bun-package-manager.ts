@@ -1,21 +1,27 @@
 import { createPackageSpecifier } from "./package-json-specifier.js";
 import type { PackageSpecifier } from "./package-specifier.port.js";
-import { runCmd } from "./docker-runner.js";
+import { runCmdForFiles, runCmdForStdout } from "./docker-runner.js";
+
+/**
+ * These values are intrinsic to bun. If they change, also update
+ * layer-composition/layers/package-manager.json (manifests/lockfile fields).
+ */
+const LOCKFILE = "bun.lock";
+const MANIFESTS = ["package.json"];
 
 interface BunRunner {
   installLockfileOnly(cwd: string): Promise<void>;
   list(cwd: string): Promise<string>;
 }
 
-const createDockerBunRunner = (): BunRunner => ({
+const bunRunner: BunRunner = {
   async installLockfileOnly(cwd) {
-    await runCmd(cwd, ["bun", "install", "--lockfile-only"]);
+    await runCmdForFiles(cwd, ["bun", "install", "--lockfile-only"], MANIFESTS, [LOCKFILE]);
   },
-  async list(cwd) {
-    const output = await runCmd(cwd, ["bun", "list"]);
-    return output;
+  list(cwd) {
+    return runCmdForStdout(cwd, ["bun", "list"], [...MANIFESTS, LOCKFILE]);
   },
-});
+};
 
 // Parses the tree output from `bun list` (not JSON)
 const extractVersions = (listOutput: string): Record<string, string> => {
@@ -40,11 +46,11 @@ const extractVersions = (listOutput: string): Record<string, string> => {
 class BunPackageManager implements PackageSpecifier {
   private readonly impl: PackageSpecifier;
 
-  constructor(runner: BunRunner = createDockerBunRunner()) {
+  constructor(runner: BunRunner = bunRunner) {
     this.impl = createPackageSpecifier({
       deleteBeforeFirstInstall: true,
       extractVersions,
-      lockfileName: "bun.lock",
+      lockfileName: LOCKFILE,
       runner,
     });
   }
@@ -54,4 +60,4 @@ class BunPackageManager implements PackageSpecifier {
   }
 }
 
-export { BunPackageManager, createDockerBunRunner, extractVersions };
+export { BunPackageManager, extractVersions };

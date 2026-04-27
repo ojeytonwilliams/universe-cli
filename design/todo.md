@@ -1,60 +1,82 @@
 # TODO
 
-## Phase 1: Scaffold Files Tree
+## Phase 1: Config Schema
 
-- [x] TASK: Create `/files/` directory tree with all scaffold files and `.gitkeep` sentinels per the structure in `plans/universe-cli/layer-file-repository.md` — covering `always/`, `runtime/`, `package-manager/`, `framework/`, `service/`, and `database/` subtrees
+- [x] TASK: Update `src/commands/create/layer-composition/layers/package-manager.json` — add `manifests` (array) and `lockfile` (string) to each PM entry; remove `devInstall` and `watchRebuild` from pnpm and bun entries
 
-- [x] TASK: Add `files/**` to the oxlint ignore config so the linter skips scaffold files
-
-## Phase 2: Codegen Script
-
-- [x] CODE: Write `scripts/generate-layer-files.mjs` codegen script
-  - Feature: Plain ESM script that walks `/files/{type}/{key}/`, validates filesystem/JSON consistency (stale-folder check and missing-folder check both run before any writes), then injects the `files` key into every layer JSON
-  - Files: `scripts/generate-layer-files.mjs`
-  - Acceptance:
-    - `node scripts/generate-layer-files.mjs` populates `files` in all six layer JSONs with correct UTF-8 content
-    - `.gitkeep` is excluded from every generated `files` map
-    - A folder containing only `.gitkeep` produces `files: {}`
-    - Script exits with an informative error when a `/files/` subfolder has no matching JSON entry (stale folder)
-    - Script exits with an informative error when a JSON entry has no matching folder (missing folder)
-    - Neither check writes anything; both must pass before any JSON is touched
-- [x] CODE: Add `.gitkeep` presence validation to `scripts/generate-layer-files.mjs`
-  - Feature: Before processing, verify every `/files/{type}/{key}/` folder contains a `.gitkeep` file; emit a distinct, actionable error message for each violation type
-  - Files: `scripts/generate-layer-files.mjs`
-  - Acceptance:
-    - When a folder has a matching JSON entry but no `.gitkeep`, the script exits with: `Error: files/{type}/{key}/ is missing a .gitkeep — please add one`
-    - When a folder has no `.gitkeep` AND no matching JSON entry, the script exits with: `Error: files/{type}/{key}/ has no .gitkeep and no entry in {type}.json — add the JSON entry or remove the folder`
-    - All `.gitkeep` checks run as part of the pre-write validation pass (no writes occur if any check fails)
-    - A folder that has a `.gitkeep` plus other files passes validation and proceeds to codegen normally
-
-## Phase 3: Schema and Service Updates
-
-- [x] CODE: Update `AlwaysSchema` in `src/commands/create/layer-composition/schemas/layers.ts`
-  - Feature: Change `AlwaysSchema` from `z.strictObject({ files: ... })` to a record keyed by `z.literal("always")` matching the new `{ "always": { files: ... } }` shape
+- [x] CODE: Update the TypeScript schema for package-manager layer entries
+  - Feature: Add `manifests: z.array(z.string())` and `lockfile: z.string()` to the package-manager entry schema; remove `devInstall` and `watchRebuild` fields
   - Files: `src/commands/create/layer-composition/schemas/layers.ts`
   - Acceptance:
-    - Schema validates `{ "always": { "files": { ... } } }` and rejects any other shape
-    - Parsing the restructured `always.json` through the schema succeeds without errors
-- [x] CODE: Update `layer-composition-service.ts` to remove the manual `always` wrapper
-  - Feature: Change `always: { always: alwaysLayer }` to `always: alwaysLayer` since `alwaysLayer` is already keyed by `"always"` post-restructure
-  - Files: `src/commands/create/layer-composition/layer-composition-service.ts`
+    - Schema accepts a pnpm entry with `manifests` and `lockfile` and rejects one that still contains `devInstall` or `watchRebuild`
+    - Parsing the updated `package-manager.json` through the schema succeeds without errors
+    - All existing schema tests pass
+
+## Phase 2: Composition Service
+
+- [x] CODE: Derive `devInstall` and `watchRebuild` from `manifests` and `lockfile` at composition time
+  - Feature: In the layer composition service (or Dockerfile data builder), `devInstall` needs to be completed using mainfests and lockfile `COPY ${[...manifests, lockfile].join(' ')} ./\nRUN <package manager specific install>` and `watchRebuild` as `[...manifests, lockfile].map(f => ({ path: './' + f }))` — reading both from the config rather than from stored fields
+  - Files: `src/commands/create/layer-composition/layer-composition-service.ts` (and any related Dockerfile template helpers)
   - Acceptance:
-    - Layer composition service correctly resolves `always` layer files at runtime
-    - All existing layer-composition tests pass
+    - Generated `devInstall` for pnpm matches `"COPY package.json pnpm-lock.yaml ./\nRUN pnpm install"`
+    - Generated `devInstall` for bun matches `"COPY package.json bun.lock ./\nRUN bun install"`
+    - Generated `watchRebuild` for pnpm contains entries for both `./package.json` and `./pnpm-lock.yaml`
+    - Generated `watchRebuild` for bun contains entries for both `./package.json` and `./bun.lock`
+    - All existing layer composition and scaffold generation tests pass
 
-## Phase 4: Layer JSON Restructuring
+## Phase 3: Docker Runner
 
-- [x] TASK: Strip the `files` key from `layers/runtime.json`, `layers/package-manager.json`, `layers/framework.json`, `layers/service.json`, and `layers/database.json`
-- [x] TASK: Restructure `layers/always.json` to `{ "always": {} }` (add top-level `"always"` key, remove any existing `files` content)
-- [x] TASK: Run `node scripts/generate-layer-files.mjs` and verify the output in each JSON matches the file content in the corresponding `/files/` subtree
-
-## Phase 5: Tooling Integration and Validation
-
-- [x] CODE: Wire up Vitest `globalSetup` to run codegen before tests
-  - Feature: Add `scripts/vitest-setup.mjs` that imports and calls `generateLayerFiles()`, then register it under `globalSetup` in `vitest.config.ts` so JSON files are written once in the main process before any test worker imports them
-  - Files: `scripts/vitest-setup.mjs`, `vitest.config.ts`
+- [x] CODE: Implement `runCmdForFiles` and `runCmdForStdout` in `docker-runner.ts`
+  - Feature: Replace the bind-mount `runCmd` with two new functions. `runCmdForFiles` creates a container, copies each input file in via `docker cp`, starts the container and waits, copies each output file out via `docker cp`, then removes the container (always, via `finally`). `runCmdForStdout` does the same but returns the command's stdout instead of copying output files.
+  - Files: `src/commands/create/package-manager/docker-runner.ts`
   - Acceptance:
-    - Running `pnpm test` without pre-running codegen still produces populated layer JSONs before any test runs
-    - No test worker receives stale or empty `files` values
-- [x] TASK: Add `"codegen": "node scripts/generate-layer-files.mjs"` to `package.json` scripts
-- [x] TASK: Run `pnpm test`; confirm all tests pass with no failures
+    - `runCmdForFiles` copies each file in `inputs` into `/app/<filename>` before the container starts
+    - `runCmdForFiles` copies each file in `outputs` from `/app/<filename>` to `cwd/<filename>` after the container exits
+    - `runCmdForStdout` returns the container's stdout as a string
+    - The container is removed in all cases, including on error
+    - No `-v` bind-mount flag appears in any docker invocation
+    - `runCmd` is removed
+
+## Phase 4: Package Manager Classes
+
+- [x] CODE: Update `pnpm-package-manager.ts` to use the new docker runner API
+  - Feature: Replace `runCmd` calls with `runCmdForFiles` (inputs: `["package.json"]`, outputs: `["pnpm-lock.yaml"]`) for `installLockfileOnly`, and `runCmdForStdout` (inputs: `["package.json", "pnpm-lock.yaml"]`) for `list`. Source `lockfileName` in `createPackageSpecifier` from the config `lockfile` field rather than hardcoding it.
+  - Files: `src/commands/create/package-manager/pnpm-package-manager.ts`
+  - Acceptance:
+    - `installLockfileOnly` writes `pnpm-lock.yaml` to `cwd` without bind-mounting the directory
+    - `list` returns the JSON output of `pnpm list`
+    - `lockfileName` passed to `createPackageSpecifier` matches the `lockfile` value in `package-manager.json`
+    - `PnpmRunner` interface signatures are unchanged
+    - All existing pnpm package manager tests pass
+
+- [x] CODE: Update `bun-package-manager.ts` to use the new docker runner API
+  - Feature: Replace `runCmd` calls with `runCmdForFiles` (inputs: `["package.json"]`, outputs: `["bun.lock"]`) for `installLockfileOnly`, and `runCmdForStdout` (inputs: `["package.json", "bun.lock"]`) for `list`. Source `lockfileName` in `createPackageSpecifier` from the config `lockfile` field rather than hardcoding it.
+  - Files: `src/commands/create/package-manager/bun-package-manager.ts`
+  - Acceptance:
+    - `installLockfileOnly` writes `bun.lock` to `cwd` without bind-mounting the directory
+    - `list` returns the output of `bun list`
+    - `lockfileName` passed to `createPackageSpecifier` matches the `lockfile` value in `package-manager.json`
+    - `BunRunner` interface signatures are unchanged
+    - All existing bun package manager tests pass
+
+---
+
+## Traceability Matrix
+
+| Requirement ID                                                     | TODO Item                                                        | Status |
+| ------------------------------------------------------------------ | ---------------------------------------------------------------- | ------ |
+| REQ-1: `manifests`/`lockfile` fields in config                     | Phase 1 / TASK: Update `package-manager.json`                    | mapped |
+| REQ-1: `manifests`/`lockfile` fields in config                     | Phase 1 / CODE: Update TypeScript schema                         | mapped |
+| REQ-2: `devInstall` and `watchRebuild` derived at composition time | Phase 2 / CODE: Derive `devInstall` and `watchRebuild`           | mapped |
+| REQ-3: `lockfileName` sourced from config                          | Phase 4 / CODE: Update `pnpm-package-manager.ts`                 | mapped |
+| REQ-3: `lockfileName` sourced from config                          | Phase 4 / CODE: Update `bun-package-manager.ts`                  | mapped |
+| REQ-4: `runCmdForFiles` implementation                             | Phase 3 / CODE: Implement `runCmdForFiles` and `runCmdForStdout` | mapped |
+| REQ-5: `runCmdForStdout` implementation                            | Phase 3 / CODE: Implement `runCmdForFiles` and `runCmdForStdout` | mapped |
+| REQ-6: Remove `runCmd`                                             | Phase 3 / CODE: Implement `runCmdForFiles` and `runCmdForStdout` | mapped |
+| REQ-7: pnpm `installLockfileOnly` uses `runCmdForFiles`            | Phase 4 / CODE: Update `pnpm-package-manager.ts`                 | mapped |
+| REQ-8: pnpm `list` uses `runCmdForStdout`                          | Phase 4 / CODE: Update `pnpm-package-manager.ts`                 | mapped |
+| REQ-9: bun `installLockfileOnly` uses `runCmdForFiles`             | Phase 4 / CODE: Update `bun-package-manager.ts`                  | mapped |
+| REQ-10: bun `list` uses `runCmdForStdout`                          | Phase 4 / CODE: Update `bun-package-manager.ts`                  | mapped |
+| NFR-1: No bind mounts                                              | Phase 3 / CODE: Implement `runCmdForFiles` and `runCmdForStdout` | mapped |
+| NFR-2: Explicit over implicit                                      | Phase 1 / TASK + Phase 3 / CODE                                  | mapped |
+| NFR-3: Config as single source of truth                            | Phase 1 / CODE + Phase 2 / CODE                                  | mapped |

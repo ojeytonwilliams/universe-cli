@@ -37,11 +37,11 @@ const PackageManagerSchema = z.record(
   PackageManagerOptionSchema,
   z.strictObject({
     devCmd: z.array(z.string()),
-    devInstall: z.string(),
     files: z.record(z.string(), z.string()),
+    lockfile: z.string(),
+    manifests: z.array(z.string()),
     pmInstall: z.string(),
     preinstall: z.string().optional(),
-    watchRebuild: z.array(z.strictObject({ path: z.string() })),
   }),
 );
 type PackageManager = z.infer<typeof PackageManagerSchema>;

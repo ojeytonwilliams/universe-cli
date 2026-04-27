@@ -45,13 +45,18 @@ const buildDockerfileData = (
   runtime: RuntimeLayerData,
   framework: FrameworkLayerData,
   packageManager: PackageManagerLayerData,
-): DockerfileData => ({
-  baseImage: runtime.baseImage,
-  devCmd: packageManager.devCmd,
-  devCopySource: framework.devCopySource,
-  devInstall: packageManager.devInstall,
-  pmInstall: packageManager.pmInstall,
-});
+): DockerfileData => {
+  const copyFiles = [...packageManager.manifests, packageManager.lockfile].join(" ");
+  const devInstall = `COPY ${copyFiles} ./\nRUN ${packageManager.devCmd[0]} install`;
+
+  return {
+    baseImage: runtime.baseImage,
+    devCmd: packageManager.devCmd,
+    devCopySource: framework.devCopySource,
+    devInstall,
+    pmInstall: packageManager.pmInstall,
+  };
+};
 
 const renderDockerfile = (data: DockerfileData): string =>
   `FROM ${data.baseImage} AS base\n` +

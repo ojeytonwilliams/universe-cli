@@ -17,16 +17,68 @@ const ensureImageBuilt = async (cwd: string): Promise<void> => {
   );
 };
 
-export const runCmd = async (cwd: string, cmd: string[]): Promise<string> => {
-  // Fallback for non-POSIX platforms, where getuid/getgid may not be available
-  const user = `${process.getuid?.() ?? 0}:${process.getgid?.() ?? 0}`;
-
+const runCmdForFiles = async (
+  cwd: string,
+  cmd: string[],
+  inputs: string[],
+  outputs: string[],
+): Promise<void> => {
   await ensureImageBuilt(cwd);
 
-  const { stdout } = await execFileAsync(
+  const { stdout: idRaw } = await execFileAsync(
     "docker",
-    ["run", "--rm", "--user", user, "-v", `${cwd}:/app`, "-w", "/app", IMAGE_TAG, ...cmd],
+    ["create", "-w", "/app", IMAGE_TAG, ...cmd],
     { encoding: "utf8" },
   );
-  return stdout;
+  const id = idRaw.trim();
+
+  try {
+    await Promise.all(
+      inputs.map((file) =>
+        execFileAsync("docker", ["cp", `${cwd}/${file}`, `${id}:/app/${file}`], {
+          encoding: "utf8",
+        }),
+      ),
+    );
+
+    await execFileAsync("docker", ["start", "-a", id], { encoding: "utf8" });
+
+    await Promise.all(
+      outputs.map((file) =>
+        execFileAsync("docker", ["cp", `${id}:/app/${file}`, `${cwd}/${file}`], {
+          encoding: "utf8",
+        }),
+      ),
+    );
+  } finally {
+    await execFileAsync("docker", ["rm", id], { encoding: "utf8" });
+  }
 };
+
+const runCmdForStdout = async (cwd: string, cmd: string[], inputs: string[]): Promise<string> => {
+  await ensureImageBuilt(cwd);
+
+  const { stdout: idRaw } = await execFileAsync(
+    "docker",
+    ["create", "-w", "/app", IMAGE_TAG, ...cmd],
+    { encoding: "utf8" },
+  );
+  const id = idRaw.trim();
+
+  try {
+    await Promise.all(
+      inputs.map((file) =>
+        execFileAsync("docker", ["cp", `${cwd}/${file}`, `${id}:/app/${file}`], {
+          encoding: "utf8",
+        }),
+      ),
+    );
+
+    const { stdout } = await execFileAsync("docker", ["start", "-a", id], { encoding: "utf8" });
+    return stdout;
+  } finally {
+    await execFileAsync("docker", ["rm", id], { encoding: "utf8" });
+  }
+};
+
+export { runCmdForFiles, runCmdForStdout };
