@@ -1,6 +1,6 @@
 {
   "name": "@freecodecamp/universe-cli",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Staff-facing CLI for deploying and managing projects on the freeCodeCamp Universe platform",
   "keywords": [
     "cli",
@@ -8,32 +8,29 @@
     "freecodecamp",
     "universe"
   ],
+  "homepage": "https://github.com/freeCodeCamp-Universe/universe-cli#readme",
+  "bugs": {
+    "url": "https://github.com/freeCodeCamp-Universe/universe-cli/issues"
+  },
   "license": "BSD-3-Clause",
   "author": "",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/freeCodeCamp-Universe/universe-cli.git"
   },
-  "homepage": "https://github.com/freeCodeCamp-Universe/universe-cli#readme",
-  "bugs": {
-    "url": "https://github.com/freeCodeCamp-Universe/universe-cli/issues"
-  },
-  "publishConfig": {
-    "access": "public"
+  "bin": {
+    "universe": "dist/bin.js"
   },
   "files": [
     "dist/",
     "README.md",
     "LICENSE"
   ],
-  "engines": {
-    "node": ">=22.11.0"
-  },
-  "bin": {
-    "universe": "dist/bin.js"
-  },
   "type": "module",
   "main": "index.js",
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "build:bundle": "tsdown",
@@ -69,6 +66,9 @@
     "tsdown": "0.21.10",
     "typescript": "5.9.3",
     "vitest": "3.1.1"
+  },
+  "engines": {
+    "node": ">=22.11.0"
   },
   "packageManager": "pnpm@10.32.1"
 }

@@ -76,7 +76,7 @@
 
 ## Phase 2: Auth infrastructure
 
-- [ ] CODE: Create `src/auth/token-store.port.ts` — port interface
+- [x] CODE: Create `src/auth/token-store.port.ts` — port interface
   - Feature: Define and export a `TokenStore` interface with three methods:
     `saveToken(token: string): Promise<void>`,
     `loadToken(): Promise<string | null>`,
@@ -86,7 +86,7 @@
     - Interface compiles and is importable
     - Method signatures match the functions in `other/src/lib/token-store.ts`
 
-- [ ] CODE: Create `src/auth/file-token-store.ts` + `.test.ts`
+- [x] CODE: Create `src/auth/file-token-store.ts` + `.test.ts`
   - Feature: Port `other/src/lib/token-store.ts` as a class
     `FileTokenStore implements TokenStore`. Move `tokenPath`,
     `configBase` as private methods. Keep `saveToken`, `loadToken`,
@@ -103,7 +103,7 @@
     - `deleteToken` removes the file; does not throw if the file is absent
     - Refusing to save an empty or whitespace-only token throws
 
-- [ ] CODE: Create `src/auth/stub-token-store.ts`
+- [x] CODE: Create `src/auth/stub-token-store.ts`
   - Feature: An in-memory `StubTokenStore implements TokenStore`. Stores the
     last saved token; `loadToken` returns it or `null`; `deleteToken` clears
     it.
@@ -113,7 +113,7 @@
     - `deleteToken` then `loadToken` returns `null`
     - Saving an empty string throws (matches `FileTokenStore` guard)
 
-- [ ] CODE: Create `src/auth/device-flow.port.ts` — port interface
+- [x] CODE: Create `src/auth/device-flow.port.ts` — port interface
   - Feature: Define and export `DeviceFlowOptions` (clientId, scope,
     onPrompt callback with `userCode`, `verificationUri`, `expiresIn`) and
     a `DeviceFlow` interface with
@@ -123,7 +123,7 @@
   - Acceptance:
     - Types compile and are importable
 
-- [ ] CODE: Create `src/auth/github-device-flow.ts` + `.test.ts`
+- [x] CODE: Create `src/auth/github-device-flow.ts` + `.test.ts`
   - Feature: Port `other/src/lib/device-flow.ts` as a class
     `GithubDeviceFlow implements DeviceFlow`. Keep the HTTP fetch logic
     identical. Accept an optional `fetch` override in the constructor for
@@ -140,7 +140,7 @@
       messages
     - Tests use an injected `fetch` stub; no real network calls
 
-- [ ] CODE: Create `src/auth/stub-device-flow.ts`
+- [x] CODE: Create `src/auth/stub-device-flow.ts`
   - Feature: A `StubDeviceFlow implements DeviceFlow` that immediately
     resolves with a configurable token string (default `"stub-token"`).
     Accepts a `token` constructor parameter.
@@ -149,7 +149,7 @@
     - `run()` resolves with the configured token
     - Calls `onPrompt` with dummy values before resolving
 
-- [ ] CODE: Create `src/auth/identity-resolver.port.ts` — port interface
+- [x] CODE: Create `src/auth/identity-resolver.port.ts` — port interface
   - Feature: Define and export `IdentitySource` union type
     (`"env_GITHUB_TOKEN" | "env_GH_TOKEN" | "gh_cli" | "device_flow"`),
     `ResolvedIdentity` (`{ token: string; source: IdentitySource }`), and
@@ -159,7 +159,7 @@
   - Acceptance:
     - Types compile and are importable
 
-- [ ] CODE: Create `src/auth/github-identity-resolver.ts` + `.test.ts`
+- [x] CODE: Create `src/auth/github-identity-resolver.ts` + `.test.ts`
   - Feature: Port `other/src/lib/identity.ts` as a class
     `GithubIdentityResolver implements IdentityResolver`. The 3-slot priority
     chain (env vars → `gh auth token` shell-out → stored token) becomes the
@@ -176,7 +176,7 @@
     - Returns `null` when all three slots yield nothing
     - Tests inject all three overrides; no real shell-outs or file reads
 
-- [ ] CODE: Create `src/auth/stub-identity-resolver.ts`
+- [x] CODE: Create `src/auth/stub-identity-resolver.ts`
   - Feature: A `StubIdentityResolver implements IdentityResolver` that
     returns a configurable `ResolvedIdentity` or `null`.
   - Files: `src/auth/stub-identity-resolver.ts` (new)
@@ -240,13 +240,8 @@
   - Feature: Port `other/src/lib/platform-yaml.schema.ts` verbatim. No import
     changes needed (only `zod` is imported).
   - Files: `src/platform/platform-yaml-v2.schema.ts` (new)
-  - Acceptance:
-    - Valid v2 document `{ site: "my-site", build: { output: "dist" },
-deploy: {} }` parses successfully
-    - Document with a v1 field (e.g., `r2:`) is rejected by Zod's `.strict()`
-    - Site name `"bad name"` (space) is rejected
-    - Site name `""` is rejected
-    - `deploy.ignore` defaults to the `DEFAULT_DEPLOY_IGNORE` list when absent
+  - Acceptance: - Valid v2 document `{ site: "my-site", build: { output: "dist" },
+deploy: {} }` parses successfully - Document with a v1 field (e.g., `r2:`) is rejected by Zod's `.strict()` - Site name `"bad name"` (space) is rejected - Site name `""` is rejected - `deploy.ignore` defaults to the `DEFAULT_DEPLOY_IGNORE` list when absent
 
 - [ ] CODE: Create `src/platform/platform-yaml-v2.ts` + `.test.ts` — parser
   - Feature: Port `other/src/lib/platform-yaml.ts`. Export

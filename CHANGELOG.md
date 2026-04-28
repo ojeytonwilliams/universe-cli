@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.2.0] - 2026-04-28
+
+### feat: Phase 2 auth infrastructure — token store, device flow, identity resolver
+
+- `src/auth/token-store.port.ts` — `TokenStore` interface (`saveToken`, `loadToken`, `deleteToken`).
+- `src/auth/file-token-store.ts` — `FileTokenStore implements TokenStore`; persists to
+  `$XDG_CONFIG_HOME/universe-cli/token` (mode 0600, dir 0700); exports `tokenPath()` for testing.
+- `src/auth/stub-token-store.ts` — in-memory `StubTokenStore` for tests; rejects empty tokens.
+- `src/auth/device-flow.port.ts` — `DeviceFlow` interface and `DeviceFlowOptions`/`DeviceFlowPrompt` types.
+- `src/auth/github-device-flow.ts` — `GithubDeviceFlow implements DeviceFlow`; full GitHub device-flow
+  RFC 8628 implementation with injectable `fetch`/`sleep` for offline tests.
+- `src/auth/stub-device-flow.ts` — `StubDeviceFlow` that resolves immediately with a configurable token.
+- `src/auth/identity-resolver.port.ts` — `IdentityResolver` interface, `ResolvedIdentity`, and
+  `IdentitySource` union (`env_GITHUB_TOKEN | env_GH_TOKEN | gh_cli | device_flow`).
+- `src/auth/github-identity-resolver.ts` — `GithubIdentityResolver implements IdentityResolver`;
+  3-slot priority chain (env → gh CLI → stored token) with injectable overrides for testing.
+- `src/auth/stub-identity-resolver.ts` — `StubIdentityResolver` returning a configurable identity.
+
 ## [1.1.0] - 2026-04-28
 
 ### feat: Phase 1 foundation — unified exit codes, output layer, and shared constants
