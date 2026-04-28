@@ -33,9 +33,6 @@ const createMockApi = (
 };
 
 describe(ClackPrompt, () => {
-  /** Skipping until I reimplement allowed-configuration as a class that can be
-  /* injected.
-  */
   it("prompts in the required order for Node runtime", async () => {
     const events: string[] = [];
     const selectQueue = ["node", "typescript", "pnpm"];
