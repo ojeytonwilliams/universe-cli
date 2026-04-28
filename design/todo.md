@@ -236,14 +236,14 @@
 
 ## Phase 4: Platform YAML v2
 
-- [ ] CODE: Create `src/platform/platform-yaml-v2.schema.ts` — port Zod schema
+- [x] CODE: Create `src/platform/platform-yaml-v2.schema.ts` — port Zod schema
   - Feature: Port `other/src/lib/platform-yaml.schema.ts` verbatim. No import
     changes needed (only `zod` is imported).
   - Files: `src/platform/platform-yaml-v2.schema.ts` (new)
   - Acceptance: - Valid v2 document `{ site: "my-site", build: { output: "dist" },
 deploy: {} }` parses successfully - Document with a v1 field (e.g., `r2:`) is rejected by Zod's `.strict()` - Site name `"bad name"` (space) is rejected - Site name `""` is rejected - `deploy.ignore` defaults to the `DEFAULT_DEPLOY_IGNORE` list when absent
 
-- [ ] CODE: Create `src/platform/platform-yaml-v2.ts` + `.test.ts` — parser
+- [x] CODE: Create `src/platform/platform-yaml-v2.ts` + `.test.ts` — parser
   - Feature: Port `other/src/lib/platform-yaml.ts`. Export
     `parsePlatformYaml(raw: string): { ok: true; value: PlatformYamlV2 } |
 { ok: false; error: string }` and the `PlatformYamlV2` type. Include v1
@@ -261,7 +261,7 @@ deploy: {} }` parses successfully - Document with a v1 field (e.g., `r2:`) is re
 
 ## Phase 5: Deploy utilities
 
-- [ ] CODE: Create `src/commands/deploy/git.ts` + `.test.ts`
+- [x] CODE: Create `src/commands/deploy/git.ts` + `.test.ts`
   - Feature: Port `other/src/deploy/git.ts` verbatim. Export `GitState` type
     and `getGitState()`.
   - Files: `src/commands/deploy/git.ts` (new),
@@ -271,7 +271,7 @@ deploy: {} }` parses successfully - Document with a v1 field (e.g., `r2:`) is re
     - Returns `{ dirty: true, hash: "<sha>" }` when there are uncommitted changes
     - Returns `{ dirty: false, hash: null }` when not in a git repository
 
-- [ ] CODE: Create `src/commands/deploy/walk.ts` + `.test.ts`
+- [x] CODE: Create `src/commands/deploy/walk.ts` + `.test.ts`
   - Feature: Port `other/src/deploy/walk.ts` verbatim. Export `WalkedFile`
     type and `walkFiles(dir: string): WalkedFile[]`.
   - Files: `src/commands/deploy/walk.ts` (new),
@@ -281,7 +281,7 @@ deploy: {} }` parses successfully - Document with a v1 field (e.g., `r2:`) is re
     - Recurses into subdirectories
     - Does not include directory entries, only files
 
-- [ ] CODE: Create `src/commands/deploy/ignore.ts` + `.test.ts`
+- [x] CODE: Create `src/commands/deploy/ignore.ts` + `.test.ts`
   - Feature: Port `other/src/lib/ignore.ts` verbatim. Export
     `createIgnoreFilter(patterns: readonly string[]): (relPath: string) =>
 boolean`.
@@ -293,7 +293,7 @@ boolean`.
     - A path not matching any pattern returns `false` (not ignored)
     - Empty pattern list returns `false` for any path
 
-- [ ] CODE: Create `src/commands/deploy/build.ts` + `.test.ts`
+- [x] CODE: Create `src/commands/deploy/build.ts` + `.test.ts`
   - Feature: Port `other/src/lib/build.ts` verbatim. Export `BuildResult`
     type and `runBuild(opts: BuildOptions): Promise<BuildResult>`. Accept
     an optional `exec` override for testing.
@@ -306,7 +306,7 @@ boolean`.
     - Throws on non-zero exit code with the command's stderr in the message
     - Tests inject an `exec` stub; no real child processes
 
-- [ ] CODE: Create `src/commands/deploy/upload.ts` + `.test.ts`
+- [x] CODE: Create `src/commands/deploy/upload.ts` + `.test.ts`
   - Feature: Port `other/src/lib/upload.ts` verbatim. Export `UploadResult`
     type and `uploadFiles(opts: UploadOptions): Promise<UploadResult>`.
     `UploadOptions` accepts a `ProxyClient` (imported from

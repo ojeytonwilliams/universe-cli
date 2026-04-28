@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.4.0] - 2026-04-28
+
+### feat: Phase 4+5 — platform YAML v2 schema/parser and deploy utilities
+
+- `src/platform/platform-yaml-v2.schema.ts` — Zod v4 schema for `platform.yaml` v2: site
+  name pattern (lowercase, 1–63 chars), optional `build` block with defaulted `output: "dist"`,
+  `deploy` block with `preview` flag and `ignore` glob list; strict unknown-key rejection.
+- `src/platform/platform-yaml-v2.ts` — `parsePlatformYaml` tagged-result parser; v1-marker
+  detection (`r2`, `stack`, `domain`, `static`, `name`) with migration hint.
+- `src/commands/deploy/git.ts` — `getGitState` reads HEAD hash and `--porcelain` status via
+  `execSync`; returns `{ hash, dirty }` or `{ hash: null, error }` for non-git directories.
+- `src/commands/deploy/walk.ts` — async recursive directory walker returning relative-path
+  file entries; throws `StorageError` when the output root is missing.
+- `src/commands/deploy/ignore.ts` — gitignore-style filter (`createIgnoreFilter`) supporting
+  `*`, `**`, `?`, anchored and basename patterns.
+- `src/commands/deploy/build.ts` — `runBuild` orchestrator: runs the build command via
+  injected `exec`, validates the output directory exists, returns `skipped: true` for
+  pre-built deploys.
+- `src/commands/deploy/upload.ts` — `uploadFiles` with fixed-concurrency semaphore, hand-
+  rolled MIME map, per-file error collection, and `onProgress` callback.
+
 ## [1.3.0] - 2026-04-28
 
 ### feat: Phase 3 proxy client — port, HTTP adapter, and stub
