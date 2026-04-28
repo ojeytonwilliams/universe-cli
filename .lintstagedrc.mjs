@@ -5,6 +5,7 @@ export default {
   "*.{js,jsx,ts,tsx,mjs,cjs}": (files) => {
     // Filter out ignored files
     const match = files.filter((f) => picomatch.isMatch(f, "files/**"));
+    if (match.length === 0) return [];
     const matchingFiles = match.join(" ");
 
     return [`oxlint --fix ${matchingFiles}`, `oxfmt ${matchingFiles}`];
@@ -13,6 +14,7 @@ export default {
   "!*.{js,jsx,ts,tsx,mjs,cjs}": (files) => {
     // Filter out ignored files
     const match = files.filter((f) => picomatch.isMatch(f, "files/**"));
+    if (match.length === 0) return [];
     const matchingFiles = match.join(" ");
 
     return [`oxfmt --no-error-on-unmatched-pattern ${matchingFiles}`];

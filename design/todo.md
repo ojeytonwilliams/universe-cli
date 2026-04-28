@@ -2,13 +2,13 @@
 
 ## Phase 1: Foundation
 
-- [ ] TASK: Update `package.json` — rename to `@freecodecamp/universe-cli`; set
+- [x] TASK: Update `package.json` — rename to `@freecodecamp/universe-cli`; set
       `version` to `1.0.0`; add `engines` (`node >= 22.11.0`), `repository`,
       `homepage`, `bugs`, `publishConfig` (`access: public`), `files`
       (`["dist/", "README.md", "LICENSE"]`), `keywords`; keep all existing
       scripts and dependencies; remove spike `description`
 
-- [ ] CODE: Create `src/errors/exit-codes.ts` — single source of truth for all
+- [x] CODE: Create `src/errors/exit-codes.ts` — single source of truth for all
       exit code constants
   - Feature: Export every exit code constant used across both codebases. Keep
     other's stable published codes (10–19) unchanged. Renumber main's colliding
@@ -25,7 +25,7 @@
     - No two constants share the same numeric value
     - A test importing and asserting the numeric value of each constant passes
 
-- [ ] CODE: Update `src/errors/cli-errors.ts` — import exit codes from
+- [x] CODE: Update `src/errors/cli-errors.ts` — import exit codes from
       `exit-codes.ts`; renumber colliding codes; add 6 new error classes
   - Feature: Replace the inline `EXIT_CODES` object with imports from
     `src/errors/exit-codes.ts`. Update every numeric code that changed
@@ -43,7 +43,7 @@
     - All existing `cli-errors` tests pass with updated numeric assertions
     - No inline numeric literals remain in the file (all via imported constants)
 
-- [ ] CODE: Create `src/output/envelope.ts`, `src/output/format.ts`,
+- [x] CODE: Create `src/output/envelope.ts`, `src/output/format.ts`,
       `src/output/redact.ts` — port output utilities from other
   - Feature: Port all three files verbatim from `other/src/output/` except
     replace imports from `../errors.js` with `../errors/cli-errors.js` and
@@ -61,7 +61,7 @@
     - `outputError` redacts the message before writing; writes JSON to stdout
       when `ctx.json` is true; calls `log.error` otherwise
 
-- [ ] CODE: Create `src/constants.ts` — shared runtime constants
+- [x] CODE: Create `src/constants.ts` — shared runtime constants
   - Feature: Export `DEFAULT_GH_CLIENT_ID` (the public OAuth app client id
     `"Iv23liIuGmZRyPd5wUeN"`) and `DEFAULT_PROXY_URL`
     (`"https://uploads.freecode.camp"`). Include the doc comment from

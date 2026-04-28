@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.1.0] - 2026-04-28
+
+### feat: Phase 1 foundation — unified exit codes, output layer, and shared constants
+
+- `src/errors/exit-codes.ts` — single source of truth for all exit code constants.
+  Other's stable published codes (10–19) are preserved exactly; main's colliding
+  codes are renumbered to 21–31 (DEPLOYMENT=21 … REPO_INITIALISATION=31).
+- `src/errors/cli-errors.ts` — replaced inline `EXIT_CODES` object with imports
+  from `exit-codes.ts`; renumbered colliding codes; added six new error classes:
+  `ConfigError`, `CredentialError`, `StorageError`, `GitError`, `ConfirmError`,
+  `PartialUploadError`.
+- `src/output/envelope.ts` — `buildEnvelope` and `buildErrorEnvelope` helpers for
+  the structured JSON output protocol.
+- `src/output/redact.ts` — credential-scrubbing utilities (`redact`, `redactObject`)
+  ported from the `other/` codebase.
+- `src/output/format.ts` — `outputSuccess` / `outputError` façade that selects JSON
+  or human-readable clack output and redacts credentials before emission.
+- `src/constants.ts` — `DEFAULT_GH_CLIENT_ID` and `DEFAULT_PROXY_URL` shared across
+  commands.
+
 ## [3.24.0] - 2026-04-27
 
 ### feat: docker cp-based container execution for package manager operations
