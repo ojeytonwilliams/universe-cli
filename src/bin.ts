@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { fileURLToPath } from "node:url";
 import { existsSync } from "node:fs";
+import { isSea } from "node:sea";
 import { BadArgumentsError } from "./errors/cli-errors.js";
 import type { ObservabilityClient } from "./observability/observability-client.port.js";
 import type { DeployClient } from "./platform/deploy-client.port.js";
@@ -280,7 +281,7 @@ const route = async (
   return result;
 };
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (isSea() || process.argv[1] === fileURLToPath(import.meta.url)) {
   const deps: RouteDeps = {
     deployClient: new StubDeployClient(),
     filesystemWriter: new LocalFilesystemWriter(),
@@ -304,13 +305,15 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   };
   const context: RouteContext = { cwd: process.cwd() };
   const observability = new StubObservabilityClient();
-  const { exitCode, output } = await route(process.argv.slice(2), deps, context, observability);
+  void (async () => {
+    const { exitCode, output } = await route(process.argv.slice(2), deps, context, observability);
 
-  if (output.length > 0) {
-    process.stdout.write(`${output}\n`);
-  }
+    if (output.length > 0) {
+      process.stdout.write(`${output}\n`);
+    }
 
-  process.exitCode = exitCode;
+    process.exitCode = exitCode;
+  })();
 }
 
 export { parseArgs, route };
