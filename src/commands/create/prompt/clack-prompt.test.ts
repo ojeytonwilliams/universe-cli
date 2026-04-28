@@ -1,6 +1,8 @@
 import type { CreateSelections, Prompt } from "./prompt.port.js";
 import { ClackPrompt } from "./clack-prompt.js";
 import type { ClackPromptApi } from "./clack-prompt.js";
+// oxlint-disable-next-line import/no-namespace
+import * as allowedConfig from "../layer-composition/allowed-configuration.js";
 
 const CANCELLED = Symbol("cancelled");
 
@@ -19,7 +21,7 @@ const createMockApi = (
       return value === CANCELLED;
     },
     multiselect() {
-      return Promise.resolve(multiselectQueue.shift() ?? ["None"]);
+      return Promise.resolve(multiselectQueue.shift() ?? []);
     },
     select() {
       return Promise.resolve(selectQueue.shift() ?? "None");
@@ -34,8 +36,7 @@ describe(ClackPrompt, () => {
   /** Skipping until I reimplement allowed-configuration as a class that can be
   /* injected.
   */
-  // oxlint-disable-next-line jest/no-disabled-tests
-  it.skip("prompts in the required order for Node runtime", async () => {
+  it("prompts in the required order for Node runtime", async () => {
     const events: string[] = [];
     const selectQueue = ["node", "typescript", "pnpm"];
     const mockApi: ClackPromptApi = {
@@ -74,11 +75,7 @@ describe(ClackPrompt, () => {
     ]);
   });
 
-  /** Skipping until I reimplement allowed-configuration as a class that can be
-  /* injected.
-  */
-  // oxlint-disable-next-line jest/no-disabled-tests
-  it.skip("prompts for package manager when runtime is static_web (2 package managers)", async () => {
+  it("prompts for package manager when runtime is static_web (2 package managers)", async () => {
     const events: string[] = [];
     const selectQueue = ["static_web", "html-css-js", "pnpm"];
     const mockApi: ClackPromptApi = {
@@ -111,7 +108,6 @@ describe(ClackPrompt, () => {
       "Select runtime",
       "Select framework",
       "Select package manager",
-      "Select databases",
       "Select platform services",
       "confirmation",
     ]);
@@ -132,11 +128,7 @@ describe(ClackPrompt, () => {
     expect(result).toBeNull();
   });
 
-  /** Skipping until I reimplement allowed-configuration as a class that can be
-  /* injected.
-  */
-  // oxlint-disable-next-line jest/no-disabled-tests
-  it.skip("provides actionable validation feedback for invalid names", async () => {
+  it("provides actionable validation feedback for invalid names", async () => {
     let validationMessage = "";
     const mockApi: ClackPromptApi = {
       ...createMockApi(),
@@ -158,11 +150,7 @@ describe(ClackPrompt, () => {
     );
   });
 
-  /** Skipping until I reimplement allowed-configuration as a class that can be
-  /* injected.
-  */
-  // oxlint-disable-next-line jest/no-disabled-tests
-  it.skip("returns selected values including package manager for Node runtime", async () => {
+  it("returns selected values including package manager for Node runtime", async () => {
     const expected: CreateSelections = {
       confirmed: true,
       databases: ["postgresql", "redis"],
@@ -188,11 +176,7 @@ describe(ClackPrompt, () => {
     expect(result).toStrictEqual(expected);
   });
 
-  /** Skipping until I reimplement allowed-configuration as a class that can be
-  /* injected.
-  */
-  // oxlint-disable-next-line jest/no-disabled-tests
-  it.skip("returns selected values with package manager for Static runtime", async () => {
+  it("returns selected values with package manager for Static runtime", async () => {
     const expected: CreateSelections = {
       confirmed: true,
       databases: [],
@@ -203,7 +187,7 @@ describe(ClackPrompt, () => {
       runtime: "static_web",
     };
 
-    const mockApi = createMockApi(["static_web", "html-css-js", "pnpm"], [["none"], ["none"]]);
+    const mockApi = createMockApi(["static_web", "html-css-js", "pnpm"], [[], []]);
 
     const adapter: Prompt = new ClackPrompt(mockApi);
 
@@ -212,46 +196,27 @@ describe(ClackPrompt, () => {
     expect(result).toStrictEqual(expected);
   });
 
-  /** Skipping until I reimplement allowed-configuration as a class that can be
-  /* injected.
-  */
-  // oxlint-disable-next-line jest/no-disabled-tests
-  it.skip("auto-selects the sole package manager without showing the prompt", async () => {
+  it("auto-selects the sole package manager without showing the prompt", async () => {
+    vi.spyOn(allowedConfig, "packageManagerOptions").mockReturnValue(["pnpm"]);
     const events: string[] = [];
-    const selectQueue = ["node", "express"];
+    const selectQueue = ["node", "express", "pnpm"];
     const mockApi: ClackPromptApi = {
-      ...createMockApi(["node", "express"], [["none"], ["none"]]),
-      confirm() {
-        events.push("confirmation");
-        return Promise.resolve(true);
-      },
-      multiselect(options) {
-        events.push(options.message);
-        return Promise.resolve(["none"]);
-      },
+      ...createMockApi(["node", "express", "pnpm"], [[], []]),
       select(options) {
         events.push(options.message);
         const nextSelection = selectQueue.shift() as string;
         return Promise.resolve(nextSelection);
-      },
-      text(options) {
-        events.push(options.message);
-        return Promise.resolve("hello-universe");
       },
     };
 
     const adapter = new ClackPrompt(mockApi);
     const result = await adapter.promptForCreateInputs();
 
-    expect(events).not.toContain("Select package manager");
     expect(result?.packageManager).toBe("pnpm");
+    expect(events).not.toContain("Select package manager");
   });
 
-  /** Skipping until I reimplement allowed-configuration as a class that can be
-  /* injected.
-  */
-  // oxlint-disable-next-line jest/no-disabled-tests
-  it.skip("includes package manager in confirmation message for Node runtime", async () => {
+  it("includes package manager in confirmation message for Node runtime", async () => {
     let confirmMessage = "";
     const mockApi: ClackPromptApi = {
       ...createMockApi(["node", "express", "pnpm"], [["none"], ["none"]]),
