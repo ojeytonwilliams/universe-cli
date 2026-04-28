@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.3.0] - 2026-04-28
+
+### feat: Phase 3 proxy client — port, HTTP adapter, and stub
+
+- `src/platform/proxy-client.port.ts` — `ProxyClient` interface with all seven methods
+  (`whoami`, `deployInit`, `deployUpload`, `deployFinalize`, `siteDeploys`, `sitePromote`,
+  `siteRollback`); all request/response types; `ProxyError extends CliError` with
+  status-to-exit-code mapping; `wrapProxyError` helper for per-command catch paths.
+- `src/platform/http-proxy-client.ts` — `createProxyClient` factory; injectable `fetch` for
+  tests; network errors wrapped as `ProxyError(0, "network_error", ...)`; JSON error
+  envelopes parsed from non-2xx responses.
+- `src/platform/proxy-client.stub.ts` — `StubProxyClient implements ProxyClient` with
+  per-method override map; all seven methods have sensible default responses.
+
 ## [1.2.0] - 2026-04-28
 
 ### feat: Phase 2 auth infrastructure — token store, device flow, identity resolver

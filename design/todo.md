@@ -189,7 +189,7 @@
 
 ## Phase 3: Proxy client
 
-- [ ] CODE: Create `src/platform/proxy-client.port.ts` — interface + error
+- [x] CODE: Create `src/platform/proxy-client.port.ts` — interface + error
   - Feature: Extract the `ProxyClient` interface, all request/response types
     (`WhoAmIResponse`, `DeployInitRequest`, etc.), and `ProxyError` from
     `other/src/lib/proxy-client.ts`. Also export `wrapProxyError`. Replace
@@ -204,7 +204,7 @@
       passes `CliError` message through; falls back to `EXIT_USAGE`
     - TypeScript compiles without error
 
-- [ ] CODE: Create `src/platform/http-proxy-client.ts` + `.test.ts`
+- [x] CODE: Create `src/platform/http-proxy-client.ts` + `.test.ts`
   - Feature: Port the `createProxyClient` factory from
     `other/src/lib/proxy-client.ts` as a standalone function in this file.
     All HTTP logic is identical. Replace error/exit-code imports as above.
@@ -222,7 +222,7 @@
       `code: "network_error"`
     - All requests use an injected `fetch` stub; no real network calls
 
-- [ ] CODE: Create `src/platform/proxy-client.stub.ts`
+- [x] CODE: Create `src/platform/proxy-client.stub.ts`
   - Feature: A `StubProxyClient implements ProxyClient` with configurable
     per-method responses. Each method defaults to resolving with a minimal
     valid response object. Constructor accepts a partial overrides map.
