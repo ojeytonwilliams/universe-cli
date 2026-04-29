@@ -347,7 +347,7 @@ boolean`.
     - With `json: true`, writes a JSON envelope to stdout
     - With `json: false`, calls `log.success` with deploy summary
 
-- [ ] CODE: Replace `src/commands/promote/index.ts` — proxy-based promote
+- [x] CODE: Replace `src/commands/promote/index.ts` — proxy-based promote
   - Feature: Rewrite the stub using other's `commands/promote.ts` adapted to
     main's architecture. Deps: `identityResolver`, `proxyClient`, logging
     overrides. Reads `platform.yaml` to get the site name (or accepts
@@ -361,7 +361,7 @@ boolean`.
     - With `json: true`, writes a JSON envelope with `url` and `deployId`
     - With `json: false`, calls `log.success`
 
-- [ ] CODE: Replace `src/commands/rollback/index.ts` — proxy-based rollback
+- [x] CODE: Replace `src/commands/rollback/index.ts` — proxy-based rollback
   - Feature: Rewrite the stub using other's `commands/rollback.ts`. Deps:
     `identityResolver`, `proxyClient`, logging overrides. Requires `--to
 <deployId>`. Reads `platform.yaml` for site name. Supports `--json`.
@@ -374,7 +374,7 @@ boolean`.
     - With `json: true`, writes a JSON envelope
     - With `json: false`, calls `log.success`
 
-- [ ] CODE: Replace `src/commands/list/index.ts` — proxy-based list
+- [x] CODE: Replace `src/commands/list/index.ts` — proxy-based list
   - Feature: Rewrite the stub using other's `commands/ls.ts`. Deps:
     `identityResolver`, `proxyClient`, logging overrides. Accepts optional
     `--site` override; otherwise reads `platform.yaml`. Supports `--json`.
@@ -386,7 +386,7 @@ boolean`.
     - With `json: true`, writes a JSON array envelope
     - With `json: false`, prints deploy ids one per line via `log.info`
 
-- [ ] CODE: Create `src/commands/login/index.ts` + `.test.ts`
+- [x] CODE: Create `src/commands/login/index.ts` + `.test.ts`
   - Feature: Port other's `commands/login.ts` adapted to main's architecture.
     Handler deps: `tokenStore: TokenStore`, `deviceFlow: DeviceFlow`,
     `identityResolver: IdentityResolver` (for the `--force` existing-check),
@@ -404,7 +404,7 @@ boolean`.
     - With `json: false`, calls `log.info` for the prompt and `log.success`
       after storing
 
-- [ ] CODE: Create `src/commands/logout/index.ts` + `.test.ts`
+- [x] CODE: Create `src/commands/logout/index.ts` + `.test.ts`
   - Feature: Port other's `commands/logout.ts`. Handler deps:
     `tokenStore: TokenStore`, logging overrides. Supports `--json`.
   - Files: `src/commands/logout/index.ts` (new),
@@ -415,7 +415,7 @@ boolean`.
     - With `json: false`, calls `log.success`
     - Does not throw when no token was stored
 
-- [ ] CODE: Create `src/commands/whoami/index.ts` + `.test.ts`
+- [x] CODE: Create `src/commands/whoami/index.ts` + `.test.ts`
   - Feature: Port other's `commands/whoami.ts`. Handler deps:
     `identityResolver: IdentityResolver`, `proxyClient: ProxyClient`, logging
     overrides. Supports `--json`.

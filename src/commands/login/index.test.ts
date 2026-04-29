@@ -1,0 +1,91 @@
+import type { DeviceFlow } from "../../auth/device-flow.port.js";
+import type { IdentityResolver } from "../../auth/identity-resolver.port.js";
+import type { TokenStore } from "../../auth/token-store.port.js";
+import { ConfirmError } from "../../errors/cli-errors.js";
+import { handleLogin } from "./index.js";
+
+const makeDeps = () => {
+  const tokenStore: TokenStore = {
+    deleteToken: vi.fn().mockResolvedValue(undefined),
+    loadToken: vi.fn().mockResolvedValue(null),
+    saveToken: vi.fn().mockResolvedValue(undefined),
+  };
+  const deviceFlow: DeviceFlow = {
+    run: vi.fn().mockImplementation(async ({ onPrompt }: Parameters<DeviceFlow["run"]>[0]) => {
+      await onPrompt({ expiresIn: 900, userCode: "ABCD-1234", verificationUri: "https://gh.io" });
+      return "new-token-xyz";
+    }),
+  };
+  const identityResolver: IdentityResolver = {
+    resolve: vi.fn().mockResolvedValue(null),
+  };
+  return {
+    deviceFlow,
+    identityResolver,
+    log: { info: vi.fn(), success: vi.fn(), warn: vi.fn() },
+    tokenStore,
+    write: vi.fn(),
+  };
+};
+
+describe(handleLogin, () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("throws ConfirmError when token is already stored and force is false", async () => {
+    const deps = makeDeps();
+    vi.spyOn(deps.tokenStore, "loadToken").mockResolvedValue("existing-token");
+    await expect(handleLogin({ force: false, json: false }, deps)).rejects.toThrow(ConfirmError);
+  });
+
+  it("proceeds when token is already stored but force is true", async () => {
+    const deps = makeDeps();
+    vi.spyOn(deps.tokenStore, "loadToken").mockResolvedValue("existing-token");
+    await expect(handleLogin({ force: true, json: false }, deps)).resolves.not.toThrow();
+  });
+
+  it("calls deviceFlow.run with a client id and scope", async () => {
+    const deps = makeDeps();
+    const runSpy = vi.spyOn(deps.deviceFlow, "run");
+    await handleLogin({ force: false, json: false }, deps);
+    const [runCall] = runSpy.mock.lastCall!;
+    expect(runCall.clientId).toBe("Iv23liIuGmZRyPd5wUeN");
+    expect(runCall.scope).toBe("read:user");
+  });
+
+  it("calls tokenStore.saveToken with the token returned by deviceFlow", async () => {
+    const deps = makeDeps();
+    const saveSpy = vi.spyOn(deps.tokenStore, "saveToken");
+    await handleLogin({ force: false, json: false }, deps);
+    expect(saveSpy).toHaveBeenCalledWith("new-token-xyz");
+  });
+
+  it("with json: false calls log.info and log.success", async () => {
+    const deps = makeDeps();
+    await handleLogin({ force: false, json: false }, deps);
+    expect(deps.log.info).toHaveBeenCalledWith(expect.stringContaining("ABCD-1234"));
+    expect(deps.log.success).toHaveBeenCalledOnce();
+  });
+
+  it("with json: true writes two JSON envelopes (prompt then success)", async () => {
+    const deps = makeDeps();
+    vi.spyOn(deps.deviceFlow, "run").mockImplementation(async ({ onPrompt }) => {
+      await onPrompt({ expiresIn: 900, userCode: "ABCD-1234", verificationUri: "https://gh.io" });
+      return "new-token-xyz";
+    });
+    await handleLogin({ force: false, json: true }, deps);
+    expect(deps.write).toHaveBeenCalledTimes(2);
+    const first = JSON.parse(deps.write.mock.calls[0]![0] as string) as {
+      command: string;
+      success: boolean;
+    };
+    const second = JSON.parse(deps.write.mock.calls[1]![0] as string) as {
+      command: string;
+      success: boolean;
+    };
+    expect(first.command).toBe("login");
+    expect(second.command).toBe("login");
+    expect(second.success).toBe(true);
+  });
+});

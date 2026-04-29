@@ -1,5 +1,27 @@
 # Changelog
 
+## [1.6.0] - 2026-04-29
+
+### feat: Phase 6 (2-7/7) — proxy-based promote, rollback, list, login, logout, whoami
+
+- `src/commands/promote/index.ts` — `handlePromote` reads `platform.yaml` for site
+  name, calls `sitePromote`, emits JSON envelope or `log.success`.
+- `src/commands/rollback/index.ts` — `handleRollback` requires `--to <deployId>`;
+  throws `BadArgumentsError` when absent; calls `siteRollback({ site, to })`.
+- `src/commands/list/index.ts` — `handleList` accepts optional `--site` override
+  (skips yaml read when set); calls `siteDeploys`; prints one id per line or JSON array.
+- `src/commands/login/index.ts` — `handleLogin` checks for existing token (throws
+  `ConfirmError` unless `--force`); runs device flow with `DEFAULT_GH_CLIENT_ID`;
+  saves token; emits two JSON envelopes in `--json` mode (prompt + success).
+- `src/commands/logout/index.ts` — `handleLogout` calls `tokenStore.deleteToken()`.
+- `src/commands/whoami/index.ts` — `handleWhoami` calls `proxyClient.whoami()`;
+  surfaces `login`, `authorizedSites`, and `identitySource` in JSON envelope.
+- All six commands: fully-injectable deps; test files with 4–8 unit tests each.
+- `src/bin.ts` — rollback and list binders updated to use stub deps.
+- Removed obsolete `handleList` / `handleRollback` describe blocks from
+  `commands.test.ts`; deleted `integration-tests/promote.test.ts`,
+  `rollback.test.ts`, `list.test.ts`.
+
 ## [1.5.0] - 2026-04-29
 
 ### feat: Phase 6 (1/7) — proxy-based `universe static deploy` handler

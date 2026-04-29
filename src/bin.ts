@@ -211,8 +211,11 @@ const handlerBinders: Record<CommandName, HandlerBinder> = {
       { cwd: context.cwd, json: false },
       { identityResolver: new StubIdentityResolver(), proxyClient: new StubProxyClient() },
     ),
-  list: (options, context, deps) => () =>
-    handleList({ projectDirectory: options.projectDirectory ?? context.cwd }, deps),
+  list: (_options, context, _deps) => () =>
+    handleList(
+      { cwd: context.cwd, json: false },
+      { identityResolver: new StubIdentityResolver(), proxyClient: new StubProxyClient() },
+    ),
   logs: (options, context, deps) => () =>
     handleLogs(
       {
@@ -221,12 +224,18 @@ const handlerBinders: Record<CommandName, HandlerBinder> = {
       },
       deps,
     ),
-  promote: (options, context, deps) => () =>
-    handlePromote({ projectDirectory: options.projectDirectory ?? context.cwd }, deps),
+  promote: (_options, context, _deps) => () =>
+    handlePromote(
+      { cwd: context.cwd, json: false },
+      { identityResolver: new StubIdentityResolver(), proxyClient: new StubProxyClient() },
+    ),
   register: (options, context, deps) => () =>
     handleRegister({ projectDirectory: options.projectDirectory ?? context.cwd }, deps),
-  rollback: (options, context, deps) => () =>
-    handleRollback({ projectDirectory: options.projectDirectory ?? context.cwd }, deps),
+  rollback: (_options, context, _deps) => () =>
+    handleRollback(
+      { cwd: context.cwd, json: false, to: undefined },
+      { identityResolver: new StubIdentityResolver(), proxyClient: new StubProxyClient() },
+    ),
   status: (options, context, deps) => () =>
     handleStatus(
       {
