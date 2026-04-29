@@ -25,7 +25,9 @@ interface DeployLog {
 
 interface DeployOptions {
   cwd: string;
+  dir?: string;
   json: boolean;
+  promote?: boolean;
 }
 
 interface DeployDeps {
@@ -75,7 +77,12 @@ const handleDeploy = async (opts: DeployOptions, deps: DeployDeps): Promise<Hand
   // 3. Verify site authorization
   const me = await deps.proxyClient.whoami();
   if (!me.authorizedSites.includes(config.site)) {
-    throw new CredentialError(`You are not authorized to deploy to site "${config.site}".`);
+    const siteList = me.authorizedSites.length > 0 ? me.authorizedSites.join(", ") : "(none)";
+    throw new CredentialError(
+      `User "${me.login}" is not authorized to deploy to site "${config.site}". ` +
+        `Authorized sites: ${siteList}. ` +
+        `See freeCodeCamp/infra/blob/main/docs/runbooks/01-deploy-new-constellation-site.md`,
+    );
   }
 
   // 4. Check git state
@@ -90,7 +97,7 @@ const handleDeploy = async (opts: DeployOptions, deps: DeployDeps): Promise<Hand
   const buildResult = await build({
     command: config.build.command,
     cwd: opts.cwd,
-    outputDir: config.build.output,
+    outputDir: opts.dir ?? config.build.output,
   });
 
   // 6. Walk and filter files
@@ -99,7 +106,7 @@ const handleDeploy = async (opts: DeployOptions, deps: DeployDeps): Promise<Hand
   const files = allFiles.filter((f) => !shouldIgnore(f.relPath));
 
   // 7. Initialise deploy session
-  const sha = gitState.hash ?? "unknown";
+  const sha = gitState.hash ?? `nogit-${Date.now().toString(36)}`;
   const { deployId, jwt } = await deps.proxyClient.deployInit({
     files: files.map((f) => f.relPath),
     sha,
@@ -120,7 +127,14 @@ const handleDeploy = async (opts: DeployOptions, deps: DeployDeps): Promise<Hand
   }
 
   // 9. Finalise deploy
-  const deployMode: DeployMode = config.deploy.preview ? "preview" : "production";
+  let deployMode: DeployMode;
+  if (opts.promote === true) {
+    deployMode = "production";
+  } else if (config.deploy.preview) {
+    deployMode = "preview";
+  } else {
+    deployMode = "production";
+  }
   const finalizeResult = await deps.proxyClient.deployFinalize({
     deployId,
     files: files.map((f) => f.relPath),

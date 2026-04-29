@@ -16,6 +16,7 @@ interface PromoteLog {
 
 interface PromoteOptions {
   cwd: string;
+  from?: string;
   json: boolean;
 }
 
@@ -56,7 +57,10 @@ const handlePromote = async (opts: PromoteOptions, deps: PromoteDeps): Promise<H
   const config = parseResult.value;
 
   // 3. Promote
-  const aliasResult = await deps.proxyClient.sitePromote({ site: config.site });
+  const aliasResult =
+    opts.from === undefined
+      ? await deps.proxyClient.sitePromote({ site: config.site })
+      : await deps.proxyClient.siteRollback({ site: config.site, to: opts.from });
 
   // 4. Emit output
   const summary = {

@@ -2,6 +2,7 @@
 import { fileURLToPath } from "node:url";
 import { existsSync } from "node:fs";
 import { isSea } from "node:sea";
+import pkg from "../package.json" with { type: "json" };
 import type { DeviceFlow } from "./auth/device-flow.port.js";
 import type { IdentityResolver } from "./auth/identity-resolver.port.js";
 import type { TokenStore } from "./auth/token-store.port.js";
@@ -121,16 +122,19 @@ type CommandName = DirectCommandName | StaticCommandName;
 type Environment = "preview" | "production";
 
 interface ParsedOptions {
+  dir?: string;
   environment?: Environment;
   force?: boolean;
+  from?: string;
   json?: boolean;
   projectDirectory?: string;
+  promote?: boolean;
   site?: string;
   to?: string;
 }
 
 type ParseArgsResult =
-  | { command: "help" | CommandName; error?: never; options: ParsedOptions }
+  | { command: "help" | "version" | CommandName; error?: never; options: ParsedOptions }
   | { command?: never; error: BadArgumentsError; options?: never };
 
 type ArgParser = (args: string[], command: CommandName) => ParseArgsResult;
@@ -159,17 +163,64 @@ const isDirectCommandName = (value: string): value is DirectCommandName =>
   DIRECT_COMMANDS.has(value);
 
 const parseStaticDeploy = (args: string[]): ParseArgsResult => {
-  if (args.length > 0) {
-    return { error: new BadArgumentsError("Usage: universe static deploy") };
+  const options: ParsedOptions = {};
+  let i = 0;
+  while (i < args.length) {
+    const arg = args[i];
+    if (arg === "--promote") {
+      options.promote = true;
+      i++;
+    } else if (arg === "--dir") {
+      const val = args[i + 1];
+      if (val === undefined || val.startsWith("--")) {
+        return {
+          error: new BadArgumentsError(
+            "--dir requires a value. Usage: universe static deploy [--promote] [--dir <dir>]",
+          ),
+        };
+      }
+      options.dir = val;
+      i += 2;
+    } else {
+      return {
+        error: new BadArgumentsError(
+          `Unexpected argument: "${arg}". Usage: universe static deploy [--promote] [--dir <dir>]`,
+        ),
+      };
+    }
   }
-  return { command: "deploy", options: {} };
+  return { command: "deploy", options };
 };
 
 const parseStaticPromote = (args: string[]): ParseArgsResult => {
-  if (args.length > 0) {
-    return { error: new BadArgumentsError("Usage: universe static promote") };
+  if (args.length === 0) {
+    return { command: "promote", options: {} };
   }
-  return { command: "promote", options: {} };
+  const fromIdx = args.indexOf("--from");
+  if (fromIdx === -1) {
+    return {
+      error: new BadArgumentsError(
+        "Unknown argument. Usage: universe static promote [--from <deployId>]",
+      ),
+    };
+  }
+  const from = args[fromIdx + 1];
+  if (from === undefined || from.startsWith("--")) {
+    return {
+      error: new BadArgumentsError(
+        "--from requires a value. Usage: universe static promote [--from <deployId>]",
+      ),
+    };
+  }
+  const remaining = args.filter((_, idx) => idx !== fromIdx && idx !== fromIdx + 1);
+  if (remaining.length > 0) {
+    return {
+      error: new BadArgumentsError(
+        `Unexpected arguments: ${remaining.join(" ")}. Usage: universe static promote [--from <deployId>]`,
+      ),
+    };
+  }
+  return { command: "promote", options: { from } };
 };
 
 const parseStaticRollback = (args: string[]): ParseArgsResult => {
@@ -359,7 +410,12 @@ const handlerBinders: Record<CommandName, HandlerBinder> = {
   create: (_options, context, deps) => () => handleCreate({ cwd: context.cwd }, deps),
   deploy: (options, context, deps) => () =>
     handleDeploy(
-      { cwd: context.cwd, json: options.json ?? false },
+      {
+        cwd: context.cwd,
+        json: options.json ?? false,
+        ...(options.dir !== undefined && { dir: options.dir }),
+        ...(options.promote !== undefined && { promote: options.promote }),
+      },
       { identityResolver: deps.identityResolver, proxyClient: deps.proxyClient },
     ),
   list: (options, context, deps) => () =>
@@ -392,7 +448,11 @@ const handlerBinders: Record<CommandName, HandlerBinder> = {
     ),
   promote: (options, context, deps) => () =>
     handlePromote(
-      { cwd: context.cwd, json: options.json ?? false },
+      {
+        cwd: context.cwd,
+        json: options.json ?? false,
+        ...(options.from !== undefined && { from: options.from }),
+      },
       { identityResolver: deps.identityResolver, proxyClient: deps.proxyClient },
     ),
   register: (options, context, deps) => () =>
@@ -428,6 +488,10 @@ const parseArgs = (argv: string[]): ParseArgsResult => {
 
   if (commandToken === undefined || commandToken === "--help" || commandToken === "-h") {
     return { command: "help", options: {} };
+  }
+
+  if (commandToken === "--version" || commandToken === "-V") {
+    return { command: "version", options: {} };
   }
 
   if (commandToken === "static") {
@@ -483,6 +547,10 @@ const route = async (
   const parseResult = parseArgs(argv);
   if (parseResult.command === "help") {
     return { exitCode: 0, output: HELP_TEXT };
+  }
+
+  if (parseResult.command === "version") {
+    return { exitCode: 0, output: pkg.version };
   }
 
   if (parseResult.error !== undefined) {

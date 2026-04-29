@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.8.0] - 2026-04-29
+
+### feat: Phase 10 — fix testing gaps (deploy, login, promote, whoami, bin flags)
+
+- `src/commands/deploy/index.ts` — added `--promote` flag (forces production mode),
+  `--dir` flag (overrides build output dir), `nogit-` sha fallback, expanded auth-error
+  message with runbook URL, and ProxyError propagation from deployInit/deployFinalize.
+- `src/commands/login/index.ts` — env fallback trims whitespace from `UNIVERSE_GH_CLIENT_ID`;
+  device-flow errors re-thrown as `CredentialError`.
+- `src/commands/promote/index.ts` — added `--from` flag (routes to `siteRollback`).
+- `src/commands/whoami/index.ts` — ProxyError caught and JSON error envelope emitted
+  before rethrowing.
+- `src/bin.ts` — `--version` / `-V` flags return package version; `parseStaticDeploy`
+  accepts `--promote` and `--dir`; `parseStaticPromote` accepts `--from`; handler
+  binders forward all new flags to their respective command handlers.
+- `src/errors/cli-errors.test.ts` — added `error.name` assertions for all 6 Phase-6
+  error classes (`ConfigError`, `CredentialError`, `StorageError`, `GitError`,
+  `ConfirmError`, `PartialUploadError`).
+
 ## [1.7.0] - 2026-04-29
 
 ### feat: Phase 7 — wire-up: static namespace, auth commands, real adapter deps in bin.ts

@@ -1,5 +1,7 @@
 import type { IdentityResolver } from "../../auth/identity-resolver.port.js";
 import { ConfigError, CredentialError } from "../../errors/cli-errors.js";
+import { EXIT_CREDENTIALS, EXIT_STORAGE } from "../../errors/exit-codes.js";
+import { ProxyError } from "../../platform/proxy-client.port.js";
 import type { ProxyClient } from "../../platform/proxy-client.port.js";
 import { handlePromote } from "./index.js";
 
@@ -75,5 +77,37 @@ describe(handlePromote, () => {
     const envelope = JSON.parse(text) as { command: string; success: boolean };
     expect(envelope.command).toBe("static promote");
     expect(envelope.success).toBe(true);
+  });
+
+  it("--from flag routes through siteRollback instead of sitePromote", async () => {
+    const deps = makeDeps();
+    const rollbackSpy = vi.spyOn(deps.proxyClient, "siteRollback").mockResolvedValue({
+      deployId: "old-d1",
+      url: "https://my-site.pages.dev",
+    });
+    const promoteSpy = vi.spyOn(deps.proxyClient, "sitePromote");
+    await handlePromote({ cwd: "/proj", from: "old-d1", json: false }, deps);
+    expect(rollbackSpy).toHaveBeenCalledWith({ site: "my-site", to: "old-d1" });
+    expect(promoteSpy).not.toHaveBeenCalled();
+  });
+
+  it("proxyError 422 from sitePromote propagates with EXIT_STORAGE exitCode", async () => {
+    const deps = makeDeps();
+    vi.spyOn(deps.proxyClient, "sitePromote").mockRejectedValue(
+      new ProxyError(422, "no_preview", "no preview alias"),
+    );
+    const err = await handlePromote({ cwd: "/proj", json: false }, deps).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ProxyError);
+    expect((err as ProxyError).exitCode).toBe(EXIT_STORAGE);
+  });
+
+  it("proxyError 403 from sitePromote propagates with EXIT_CREDENTIALS exitCode", async () => {
+    const deps = makeDeps();
+    vi.spyOn(deps.proxyClient, "sitePromote").mockRejectedValue(
+      new ProxyError(403, "user_unauthorized", "no team"),
+    );
+    const err = await handlePromote({ cwd: "/proj", json: false }, deps).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ProxyError);
+    expect((err as ProxyError).exitCode).toBe(EXIT_CREDENTIALS);
   });
 });

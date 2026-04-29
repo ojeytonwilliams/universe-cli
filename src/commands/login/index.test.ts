@@ -1,7 +1,7 @@
 import type { DeviceFlow } from "../../auth/device-flow.port.js";
 import type { IdentityResolver } from "../../auth/identity-resolver.port.js";
 import type { TokenStore } from "../../auth/token-store.port.js";
-import { ConfirmError } from "../../errors/cli-errors.js";
+import { ConfirmError, CredentialError } from "../../errors/cli-errors.js";
 import { handleLogin } from "./index.js";
 
 const makeDeps = () => {
@@ -87,5 +87,31 @@ describe(handleLogin, () => {
     expect(first.command).toBe("login");
     expect(second.command).toBe("login");
     expect(second.success).toBe(true);
+  });
+
+  it("uses DEFAULT_GH_CLIENT_ID when UNIVERSE_GH_CLIENT_ID is unset", async () => {
+    vi.stubEnv("UNIVERSE_GH_CLIENT_ID", "");
+    const deps = makeDeps();
+    const runSpy = vi.spyOn(deps.deviceFlow, "run");
+    await handleLogin({ force: false, json: false }, deps);
+    expect(runSpy.mock.calls[0]![0].clientId).toBe("Iv23liIuGmZRyPd5wUeN");
+    vi.unstubAllEnvs();
+  });
+
+  it("uses DEFAULT_GH_CLIENT_ID when UNIVERSE_GH_CLIENT_ID is whitespace", async () => {
+    vi.stubEnv("UNIVERSE_GH_CLIENT_ID", "   ");
+    const deps = makeDeps();
+    const runSpy = vi.spyOn(deps.deviceFlow, "run");
+    await handleLogin({ force: false, json: false }, deps);
+    expect(runSpy.mock.calls[0]![0].clientId).toBe("Iv23liIuGmZRyPd5wUeN");
+    vi.unstubAllEnvs();
+  });
+
+  it("propagates device-flow failure as CredentialError", async () => {
+    const deps = makeDeps();
+    vi.spyOn(deps.deviceFlow, "run").mockRejectedValue(new Error("access_denied"));
+    const saveTokenSpy = vi.spyOn(deps.tokenStore, "saveToken");
+    await expect(handleLogin({ force: false, json: false }, deps)).rejects.toThrow(CredentialError);
+    expect(saveTokenSpy).not.toHaveBeenCalled();
   });
 });

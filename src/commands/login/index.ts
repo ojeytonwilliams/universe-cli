@@ -2,7 +2,7 @@ import { log as clackLog } from "@clack/prompts";
 import type { DeviceFlow } from "../../auth/device-flow.port.js";
 import type { IdentityResolver } from "../../auth/identity-resolver.port.js";
 import type { TokenStore } from "../../auth/token-store.port.js";
-import { ConfirmError } from "../../errors/cli-errors.js";
+import { ConfirmError, CredentialError } from "../../errors/cli-errors.js";
 import { DEFAULT_GH_CLIENT_ID } from "../../constants.js";
 import { buildEnvelope } from "../../output/envelope.js";
 import type { HandlerResult } from "../create/index.js";
@@ -43,25 +43,31 @@ const handleLogin = async (opts: LoginOptions, deps: LoginDeps): Promise<Handler
   }
 
   // 2. Run device flow
-  const clientId = process.env["UNIVERSE_GH_CLIENT_ID"] ?? DEFAULT_GH_CLIENT_ID;
-  const token = await deps.deviceFlow.run({
-    clientId,
-    onPrompt: ({ expiresIn, userCode, verificationUri }) => {
-      if (opts.json) {
-        const envelope = buildEnvelope("login", true, {
-          expiresIn,
-          userCode,
-          verificationUri,
-        });
-        writeFn(`${JSON.stringify(envelope)}\n`);
-      } else {
-        logObj.info(
-          `Open ${verificationUri} and enter code: ${userCode} (expires in ${expiresIn}s)`,
-        );
-      }
-    },
-    scope: "read:user",
-  });
+  const raw = process.env["UNIVERSE_GH_CLIENT_ID"];
+  const clientId = raw !== undefined && raw.trim().length > 0 ? raw.trim() : DEFAULT_GH_CLIENT_ID;
+  let token: string;
+  try {
+    token = await deps.deviceFlow.run({
+      clientId,
+      onPrompt: ({ expiresIn, userCode, verificationUri }) => {
+        if (opts.json) {
+          const envelope = buildEnvelope("login", true, {
+            expiresIn,
+            userCode,
+            verificationUri,
+          });
+          writeFn(`${JSON.stringify(envelope)}\n`);
+        } else {
+          logObj.info(
+            `Open ${verificationUri} and enter code: ${userCode} (expires in ${expiresIn}s)`,
+          );
+        }
+      },
+      scope: "read:user",
+    });
+  } catch (err) {
+    throw new CredentialError(err instanceof Error ? err.message : String(err));
+  }
 
   // 3. Persist token
   await deps.tokenStore.saveToken(token);

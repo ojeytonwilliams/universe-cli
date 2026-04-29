@@ -320,3 +320,39 @@ describe(TeardownError, () => {
     expect(error.exitCode).toBeGreaterThan(0);
   });
 });
+
+describe(ConfigError, () => {
+  it("has the correct error name", () => {
+    expect(new ConfigError("msg").name).toBe("ConfigError");
+  });
+});
+
+describe(CredentialError, () => {
+  it("has the correct error name", () => {
+    expect(new CredentialError("msg").name).toBe("CredentialError");
+  });
+});
+
+describe(StorageError, () => {
+  it("has the correct error name", () => {
+    expect(new StorageError("msg").name).toBe("StorageError");
+  });
+});
+
+describe(GitError, () => {
+  it("has the correct error name", () => {
+    expect(new GitError("msg").name).toBe("GitError");
+  });
+});
+
+describe(ConfirmError, () => {
+  it("has the correct error name", () => {
+    expect(new ConfirmError("msg").name).toBe("ConfirmError");
+  });
+});
+
+describe(PartialUploadError, () => {
+  it("has the correct error name", () => {
+    expect(new PartialUploadError("msg").name).toBe("PartialUploadError");
+  });
+});

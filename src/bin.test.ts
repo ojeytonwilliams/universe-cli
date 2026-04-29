@@ -299,6 +299,14 @@ describe(route, () => {
     });
   });
 
+  describe("--version", () => {
+    it("exits with code 0 and outputs the package version", async () => {
+      const result = await route(["--version"], createRouteDeps(), routeContext, client);
+      expect(result.exitCode).toBe(0);
+      expect(result.output).toMatch(/\d+\.\d+\.\d+/);
+    });
+  });
+
   describe("login", () => {
     it("is recognised (not an unknown command error)", async () => {
       const result = await route(["login"], createRouteDeps(), routeContext, client);
@@ -502,5 +510,43 @@ describe(parseArgs, () => {
     const result = parseArgs(["static", "list", "--site", "my-site"]);
     expect(result.command).toBe("list");
     expect(result.options?.site).toBe("my-site");
+  });
+
+  it("returns version command for --version", () => {
+    const result = parseArgs(["--version"]);
+    expect(result.command).toBe("version");
+  });
+
+  it("returns version command for -V", () => {
+    const result = parseArgs(["-V"]);
+    expect(result.command).toBe("version");
+  });
+
+  it("passes --promote flag from static deploy", () => {
+    const result = parseArgs(["static", "deploy", "--promote"]);
+    expect(result.command).toBe("deploy");
+    expect(result.options?.promote).toBe(true);
+  });
+
+  it("passes --dir value from static deploy", () => {
+    const result = parseArgs(["static", "deploy", "--dir", "dist"]);
+    expect(result.command).toBe("deploy");
+    expect(result.options?.dir).toBe("dist");
+  });
+
+  it("passes --from value from static promote", () => {
+    const result = parseArgs(["static", "promote", "--from", "older-deploy"]);
+    expect(result.command).toBe("promote");
+    expect(result.options?.from).toBe("older-deploy");
+  });
+
+  it("returns an error for static deploy --dir without value", () => {
+    const result = parseArgs(["static", "deploy", "--dir"]);
+    expect(result.error).toBeInstanceOf(Error);
+  });
+
+  it("returns an error for static promote --from without value", () => {
+    const result = parseArgs(["static", "promote", "--from"]);
+    expect(result.error).toBeInstanceOf(Error);
   });
 });

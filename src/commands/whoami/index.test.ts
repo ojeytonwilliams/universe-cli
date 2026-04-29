@@ -1,5 +1,7 @@
 import type { IdentityResolver } from "../../auth/identity-resolver.port.js";
 import { CredentialError } from "../../errors/cli-errors.js";
+import { EXIT_CREDENTIALS, EXIT_STORAGE } from "../../errors/exit-codes.js";
+import { ProxyError } from "../../platform/proxy-client.port.js";
 import type { ProxyClient } from "../../platform/proxy-client.port.js";
 import { handleWhoami } from "./index.js";
 
@@ -75,5 +77,30 @@ describe(handleWhoami, () => {
     expect(envelope.login).toBe("staffuser");
     expect(envelope.authorizedSites).toStrictEqual(["site-a", "site-b"]);
     expect(envelope.identitySource).toBe("env_GITHUB_TOKEN");
+  });
+
+  it("proxyError from whoami propagates with correct exitCode", async () => {
+    const deps = makeDeps();
+    vi.spyOn(deps.proxyClient, "whoami").mockRejectedValue(
+      new ProxyError(401, "unauth", "bad token"),
+    );
+    const err = await handleWhoami({ json: false }, deps).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ProxyError);
+    expect((err as ProxyError).exitCode).toBe(EXIT_CREDENTIALS);
+  });
+
+  it("in JSON mode, emits error envelope via write before rethrowing", async () => {
+    const deps = makeDeps();
+    vi.spyOn(deps.proxyClient, "whoami").mockRejectedValue(new ProxyError(503, "upstream", "down"));
+    await expect(handleWhoami({ json: true }, deps)).rejects.toBeInstanceOf(ProxyError);
+    expect(deps.write).toHaveBeenCalledOnce();
+    const text = deps.write.mock.calls[0]![0] as string;
+    const envelope = JSON.parse(text) as {
+      success: boolean;
+      error: { code: number; message: string };
+    };
+    expect(envelope.success).toBe(false);
+    expect(envelope.error.code).toBe(EXIT_STORAGE);
+    expect(envelope.error.message).toContain("down");
   });
 });

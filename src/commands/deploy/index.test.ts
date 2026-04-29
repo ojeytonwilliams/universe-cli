@@ -1,5 +1,7 @@
 import type { IdentityResolver } from "../../auth/identity-resolver.port.js";
 import { ConfigError, CredentialError, PartialUploadError } from "../../errors/cli-errors.js";
+import { EXIT_CREDENTIALS, EXIT_STORAGE } from "../../errors/exit-codes.js";
+import { ProxyError } from "../../platform/proxy-client.port.js";
 import type { ProxyClient } from "../../platform/proxy-client.port.js";
 import { handleDeploy } from "./index.js";
 
@@ -167,5 +169,96 @@ describe(handleDeploy, () => {
     const finalizeSpy = vi.spyOn(deps.proxyClient, "deployFinalize");
     await handleDeploy({ cwd: "/proj", json: false }, deps);
     expect(finalizeSpy).toHaveBeenCalledWith(expect.objectContaining({ mode: "production" }));
+  });
+
+  it("--promote flag forwards mode=production to deployFinalize", async () => {
+    const deps = makeDeps();
+    const finalizeSpy = vi.spyOn(deps.proxyClient, "deployFinalize");
+    await handleDeploy({ cwd: "/proj", json: false, promote: true }, deps);
+    expect(finalizeSpy).toHaveBeenCalledWith(expect.objectContaining({ mode: "production" }));
+  });
+
+  it("--dir flag passes dir as outputDir to runBuild", async () => {
+    const deps = makeDeps();
+    await handleDeploy({ cwd: "/proj", dir: "custom-out", json: false }, deps);
+    expect(deps.runBuild).toHaveBeenCalledWith(
+      expect.objectContaining({ outputDir: "custom-out" }),
+    );
+  });
+
+  it("throws ConfigError for v1 platform.yaml with migration message", async () => {
+    const deps = makeDeps();
+    vi.spyOn(deps, "readFile").mockResolvedValue("name: my-site\nr2:\n  bucket: my-bucket\n");
+    const err = await handleDeploy({ cwd: "/proj", json: false }, deps).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ConfigError);
+    expect((err as ConfigError).message).toMatch(/v1|migration/i);
+  });
+
+  it("throws ConfigError for invalid site name", async () => {
+    const deps = makeDeps();
+    vi.spyOn(deps, "readFile").mockResolvedValue("site: BAD-Name\n");
+    await expect(handleDeploy({ cwd: "/proj", json: false }, deps)).rejects.toThrow(ConfigError);
+  });
+
+  it("not-authorized error message includes runbook URL", async () => {
+    const deps = makeDeps();
+    vi.spyOn(deps.proxyClient, "whoami").mockResolvedValue({
+      authorizedSites: ["other-site"],
+      login: "staffuser",
+    });
+    let thrownErr: unknown;
+    await handleDeploy({ cwd: "/proj", json: false }, deps).catch((e) => {
+      thrownErr = e;
+    });
+    expect(thrownErr).toBeInstanceOf(CredentialError);
+    expect((thrownErr as CredentialError).message).toContain(
+      "freeCodeCamp/infra/blob/main/docs/runbooks/01-deploy-new-constellation-site.md",
+    );
+  });
+
+  it("falls back to nogit- synthetic sha when git hash is null", async () => {
+    const deps = makeDeps();
+    vi.spyOn(deps, "getGitState").mockReturnValue({ dirty: false, hash: null });
+    const initSpy = vi.spyOn(deps.proxyClient, "deployInit");
+    await handleDeploy({ cwd: "/proj", json: false }, deps);
+    expect(initSpy.mock.calls[0]![0].sha).toMatch(/^nogit-/);
+  });
+
+  it("deploy.ignore patterns filter files before deployInit and uploadFiles", async () => {
+    const deps = makeDeps();
+    vi.spyOn(deps, "readFile").mockResolvedValue(
+      "site: my-site\ndeploy:\n  ignore:\n    - '*.map'\n",
+    );
+    vi.spyOn(deps, "walkFiles").mockReturnValue([
+      { absPath: "/tmp/d/index.html", relPath: "index.html" },
+      { absPath: "/tmp/d/main.js.map", relPath: "main.js.map" },
+      { absPath: "/tmp/d/main.js", relPath: "main.js" },
+    ]);
+    const initSpy = vi.spyOn(deps.proxyClient, "deployInit");
+    const uploadSpy = vi.spyOn(deps, "uploadFiles");
+    await handleDeploy({ cwd: "/proj", json: false }, deps);
+    expect(initSpy.mock.calls[0]![0].files).toStrictEqual(["index.html", "main.js"]);
+    const uploadArg = uploadSpy.mock.calls[0]![0] as { files: { relPath: string }[] };
+    expect(uploadArg.files.map((f) => f.relPath)).toStrictEqual(["index.html", "main.js"]);
+  });
+
+  it("proxyError from deployInit propagates with correct exitCode", async () => {
+    const deps = makeDeps();
+    vi.spyOn(deps.proxyClient, "deployInit").mockRejectedValue(
+      new ProxyError(403, "site_unauthorized", "no team"),
+    );
+    const err = await handleDeploy({ cwd: "/proj", json: false }, deps).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ProxyError);
+    expect((err as ProxyError).exitCode).toBe(EXIT_CREDENTIALS);
+  });
+
+  it("proxyError from deployFinalize propagates with correct exitCode", async () => {
+    const deps = makeDeps();
+    vi.spyOn(deps.proxyClient, "deployFinalize").mockRejectedValue(
+      new ProxyError(422, "verify_failed", "missing"),
+    );
+    const err = await handleDeploy({ cwd: "/proj", json: false }, deps).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ProxyError);
+    expect((err as ProxyError).exitCode).toBe(EXIT_STORAGE);
   });
 });

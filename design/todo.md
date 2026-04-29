@@ -465,6 +465,143 @@ IdentityResolver`, `tokenStore: TokenStore`, `deviceFlow: DeviceFlow`,
 
 ---
 
+## Phase 10: Fix testing gaps
+
+Port test coverage from `tmp/other/tests/commands/` that was missed during Phase 6,
+and add the corresponding implementation fixes. Old source files live under
+`tmp/other/src/commands/`; old tests under `tmp/other/tests/commands/`.
+
+- [x] CODE: Fix `src/commands/deploy/index.ts` — add `--promote`, `--dir`,
+      `nogit-` sha, runbook URL in auth error, ignore filter, and ProxyError
+      handling
+  - Implementation changes (see `tmp/other/src/commands/deploy.ts`):
+    - Add `promote?: boolean` and `dir?: string` to `DeployOptions`
+    - When `opts.promote === true`, force `deployMode = "production"` regardless
+      of `config.deploy.preview`
+    - When `opts.dir !== undefined`, pass `opts.dir` as `outputDir` to
+      `runBuild` (overrides `config.build.output`)
+    - Change `sha = gitState.hash ?? "unknown"` to
+      `` sha = gitState.hash ?? `nogit-${Date.now().toString(36)}` ``
+    - Expand the "not authorized" `CredentialError` message to include the
+      user's login, their actual authorized sites list, and a link to
+      `freeCodeCamp/infra/blob/main/docs/runbooks/01-deploy-new-constellation-site.md`
+  - New tests to add (see `tmp/other/tests/commands/deploy.test.ts`):
+    - `--promote flag: forwards mode=production to deployFinalize`
+    - `--dir flag: passes dir as outputDir to runBuild and walkFiles`
+    - `identity/config: v1 platform.yaml fragment (name:/r2: fields) →
+ConfigError with message matching /v1|migration/i`
+    - `identity/config: invalid site name ("BAD-Name") → ConfigError`
+    - `preflight auth: not-authorized error message contains runbook URL`
+    - `git state: falls back to nogit- sha when gitState.hash is null`
+    - `ignore filter: deploy.ignore patterns filter files before deployInit and
+uploadFiles`
+    - `proxy errors: ProxyError from deployInit propagates (403 → exitCode 12)`
+    - `proxy errors: ProxyError from deployFinalize propagates (422 → exitCode
+13)`
+  - Files: `src/commands/deploy/index.ts`,
+    `src/commands/deploy/index.test.ts`
+
+- [x] CODE: Fix `src/commands/login/index.ts` — env fallback for empty/whitespace
+      `UNIVERSE_GH_CLIENT_ID`, device-flow failure propagation
+  - Implementation changes (see `tmp/other/src/commands/login.ts`):
+    - Replace `process.env["UNIVERSE_GH_CLIENT_ID"] ?? DEFAULT_GH_CLIENT_ID`
+      with a trim + empty-check fallback:
+      ```ts
+      const raw = process.env["UNIVERSE_GH_CLIENT_ID"];
+      const clientId =
+        raw !== undefined && raw.trim().length > 0 ? raw.trim() : DEFAULT_GH_CLIENT_ID;
+      ```
+    - Wrap `deps.deviceFlow.run(...)` in a try/catch; rethrow caught errors as
+      `CredentialError` (preserving `err.message`)
+  - New tests to add (see `tmp/other/tests/commands/login.test.ts`); use
+    `vi.stubEnv("UNIVERSE_GH_CLIENT_ID", value)` to control the env:
+    - `falls back to DEFAULT_GH_CLIENT_ID when UNIVERSE_GH_CLIENT_ID is unset`
+    - `falls back to DEFAULT_GH_CLIENT_ID when UNIVERSE_GH_CLIENT_ID is empty
+string`
+    - `falls back to DEFAULT_GH_CLIENT_ID when UNIVERSE_GH_CLIENT_ID is
+whitespace`
+    - `propagates device-flow failure as CredentialError`
+  - Files: `src/commands/login/index.ts`, `src/commands/login/index.test.ts`
+
+- [x] CODE: Fix `src/commands/promote/index.ts` — add `--from` flag (routes to
+      `siteRollback`), allow ProxyError to propagate
+  - Implementation changes (see `tmp/other/src/commands/promote.ts`):
+    - Add `from?: string` to `PromoteOptions`
+    - When `opts.from !== undefined`, call
+      `deps.proxyClient.siteRollback({ site, to: opts.from })` and skip
+      `sitePromote`; use the `AliasResponse` result the same way
+  - Note: `ProxyError` already carries the correct exit code via `mapExitCode`
+    (403 → EXIT_CREDENTIALS=12, 422 → EXIT_STORAGE=13). No try/catch needed
+    in the handler — just let it propagate.
+  - New tests to add (see `tmp/other/tests/commands/promote.test.ts`):
+    - `--from flag routes through siteRollback with { site, to: from }; sitePromote
+is not called`
+    - `ProxyError 422 no_preview propagates with exitCode EXIT_STORAGE (13)`
+    - `ProxyError 403 user_unauthorized propagates with exitCode
+EXIT_CREDENTIALS (12)`
+  - Files: `src/commands/promote/index.ts`,
+    `src/commands/promote/index.test.ts`
+
+- [x] CODE: Fix `src/commands/whoami/index.ts` — catch ProxyError, emit JSON
+      error envelope in JSON mode before rethrowing
+  - Implementation changes (see `tmp/other/src/commands/whoami.ts`):
+    - Wrap `deps.proxyClient.whoami()` in try/catch
+    - In catch: if `opts.json`, write a `buildErrorEnvelope("whoami", err)`
+      JSON line before rethrowing
+    - Rethrow the original error (ProxyError carries the right exitCode)
+  - New tests to add (see `tmp/other/tests/commands/whoami.test.ts`):
+    - `ProxyError from whoami propagates (401 → exitCode EXIT_CREDENTIALS / 12)`
+    - `in JSON mode, emits error envelope to write before rethrowing`
+  - Files: `src/commands/whoami/index.ts`, `src/commands/whoami/index.test.ts`
+
+- [x] CODE: Add `--version` flag to `src/bin.ts`
+  - Implementation changes:
+    - Read `version` from `package.json` at startup (import with {type : "json"})
+    - In `parseArgs`, treat `--version` / `-V` as returning a special
+      `"version"` command (like `"help"`)
+    - In `route`, output the version string when command is `"version"`
+  - Test to add in `src/bin.test.ts`:
+    - `"--version" exits with code 0 and outputs the package version`
+  - Ref: `tmp/other/tests/cli.test.ts` `"--version outputs package version"`
+  - Files: `src/bin.ts`, `src/bin.test.ts`
+
+- [x] CODE: Add `error.name` assertions for Phase-6 error classes in
+      `src/errors/cli-errors.test.ts`
+  - The implementation already sets `this.name` correctly in every class
+    (verified). Tests are simply missing for the ported classes.
+  - Tests to add:
+    - `ConfigError.name === "ConfigError"`
+    - `CredentialError.name === "CredentialError"`
+    - `StorageError.name === "StorageError"`
+    - `GitError.name === "GitError"`
+    - `ConfirmError.name === "ConfirmError"`
+    - `PartialUploadError.name === "PartialUploadError"`
+  - Ref: `tmp/other/tests/errors.test.ts`
+    `"preserves the error name for instanceof-style checks"`
+  - Files: `src/errors/cli-errors.test.ts`
+
+- [x] CODE: Update `src/bin.ts` — wire `--promote`, `--dir` (deploy) and `--from`
+      (promote) flags through the router
+  - Changes needed:
+    - Add `dir?: string`, `from?: string`, `promote?: boolean` to
+      `ParsedOptions`
+    - Update `parseStaticDeploy` to accept `--promote` (boolean) and
+      `--dir <value>` flags; reject unknown flags
+    - Update `parseStaticPromote` to accept `--from <value>` flag; reject
+      unknown flags
+    - Update `handlerBinders.deploy` to pass `dir` and `promote` from options
+    - Update `handlerBinders.promote` to pass `from` from options
+  - New tests to add in `src/bin.test.ts`:
+    - `"static deploy --promote" → handleDeploy called with promote: true`
+    - `"static deploy --dir dist" → handleDeploy called with dir: "dist"`
+    - `"static promote --from older-deploy" → handlePromote called with from:
+"older-deploy"`
+    - `"static deploy --dir" (missing value) → BadArgumentsError`
+    - `"static promote --from" (missing value) → BadArgumentsError`
+  - Files: `src/bin.ts`, `src/bin.test.ts`
+
+---
+
 ## Phase 8: Release pipeline
 
 - [ ] TASK: Port `.github/actions/validate-version/` from `other/` into the
