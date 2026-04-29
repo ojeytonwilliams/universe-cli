@@ -13,7 +13,12 @@ const makeDeps = () => {
     deployFinalize: vi.fn(),
     deployInit: vi.fn(),
     deployUpload: vi.fn(),
-    siteDeploys: vi.fn().mockResolvedValue([{ deployId: "d1" }, { deployId: "d2" }]),
+    siteDeploys: vi
+      .fn()
+      .mockResolvedValue([
+        { deployId: "20260427-141522-abc1234" },
+        { deployId: "20260426-101005-def5678" },
+      ]),
     sitePromote: vi.fn(),
     siteRollback: vi.fn(),
     whoami: vi.fn(),
@@ -67,10 +72,22 @@ describe(handleList, () => {
     expect(deploysSpy).toHaveBeenCalledWith({ site: "my-site" });
   });
 
-  it("with json: false prints deploy ids via log.info", async () => {
+  it("with json: false calls log.success with a formatted table", async () => {
     const deps = makeDeps();
     await handleList({ cwd: "/proj", json: false }, deps);
-    expect(deps.log.info).toHaveBeenCalledTimes(2);
+    expect(deps.log.success).toHaveBeenCalledOnce();
+    const msg = deps.log.success.mock.calls[0]![0] as string;
+    expect(msg).toContain("DEPLOY ID");
+    expect(msg).toContain("TIMESTAMP");
+    expect(msg).toContain("SHA");
+    expect(msg).toContain("20260427-141522-abc1234");
+  });
+
+  it("with json: false calls log.info when there are no deploys", async () => {
+    const deps = makeDeps();
+    vi.spyOn(deps.proxyClient, "siteDeploys").mockResolvedValue([]);
+    await handleList({ cwd: "/proj", json: false }, deps);
+    expect(deps.log.info).toHaveBeenCalledWith(expect.stringContaining("no deploys"));
   });
 
   it("with json: true writes a JSON envelope containing command and success", async () => {
@@ -81,5 +98,30 @@ describe(handleList, () => {
     const envelope = JSON.parse(text) as { command: string; success: boolean };
     expect(envelope.command).toBe("static list");
     expect(envelope.success).toBe(true);
+  });
+
+  it("jSON envelope deploys include parsed timestamp and sha", async () => {
+    const deps = makeDeps();
+    await handleList({ cwd: "/proj", json: true }, deps);
+    const text = deps.write.mock.calls[0]![0] as string;
+    const envelope = JSON.parse(text) as {
+      deploys: { deployId: string; sha: string | null; timestamp: string | null }[];
+    };
+    expect(envelope.deploys[0]).toStrictEqual({
+      deployId: "20260427-141522-abc1234",
+      sha: "abc1234",
+      timestamp: "2026-04-27T14:15:22Z",
+    });
+  });
+
+  it("jSON envelope falls back to null timestamp and sha for unparseable deploy id", async () => {
+    const deps = makeDeps();
+    vi.spyOn(deps.proxyClient, "siteDeploys").mockResolvedValue([{ deployId: "weird-id" }]);
+    await handleList({ cwd: "/proj", json: true }, deps);
+    const text = deps.write.mock.calls[0]![0] as string;
+    const envelope = JSON.parse(text) as {
+      deploys: { deployId: string; sha: null; timestamp: null }[];
+    };
+    expect(envelope.deploys[0]).toStrictEqual({ deployId: "weird-id", sha: null, timestamp: null });
   });
 });

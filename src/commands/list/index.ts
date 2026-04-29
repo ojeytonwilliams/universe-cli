@@ -28,6 +28,39 @@ interface ListDeps {
   write?: (text: string) => void;
 }
 
+interface ParsedDeploy {
+  deployId: string;
+  sha: string | null;
+  timestamp: string | null;
+}
+
+const DEPLOY_ID_RE = /^(\d{8})-(\d{6})-([a-f0-9]+)$/i;
+
+const parseDeployId = (deployId: string): ParsedDeploy => {
+  const m = DEPLOY_ID_RE.exec(deployId);
+  if (!m) {
+    return { deployId, sha: null, timestamp: null };
+  }
+  const [, ymd, hms, sha] = m;
+  if (ymd === undefined || hms === undefined || sha === undefined) {
+    return { deployId, sha: null, timestamp: null };
+  }
+  const iso = `${ymd.slice(0, 4)}-${ymd.slice(4, 6)}-${ymd.slice(6, 8)}T${hms.slice(0, 2)}:${hms.slice(2, 4)}:${hms.slice(4, 6)}Z`;
+  return { deployId, sha, timestamp: iso };
+};
+
+const formatTable = (deploys: ParsedDeploy[]): string => {
+  const header = ["DEPLOY ID", "TIMESTAMP", "SHA"];
+  const rows = deploys.map((d) => [
+    d.deployId,
+    d.timestamp === null ? "—" : d.timestamp.replace("T", " ").replace("Z", ""),
+    d.sha ?? "—",
+  ]);
+  const widths = header.map((h, i) => Math.max(h.length, ...rows.map((r) => (r[i] ?? "").length)));
+  const fmt = (cells: string[]): string => cells.map((c, i) => c.padEnd(widths[i] ?? 0)).join("  ");
+  return [fmt(header), ...rows.map(fmt)].join("\n");
+};
+
 const defaultReadFileFn = (path: string): Promise<string> => nodeReadFile(path, "utf-8");
 
 const handleList = async (opts: ListOptions, deps: ListDeps): Promise<HandlerResult> => {
@@ -61,25 +94,23 @@ const handleList = async (opts: ListOptions, deps: ListDeps): Promise<HandlerRes
     ({ site } = opts);
   }
 
-  // 3. Fetch deploys
-  const deploys: DeploySummary[] = await deps.proxyClient.siteDeploys({ site });
+  // 3. Fetch and parse deploys
+  const raw: DeploySummary[] = await deps.proxyClient.siteDeploys({ site });
+  const deploys = raw.map((d) => parseDeployId(d.deployId));
 
   // 4. Emit output
   if (opts.json) {
-    const envelope = buildEnvelope("static list", true, {
-      deploys,
-      site,
-    });
+    const envelope = buildEnvelope("static list", true, { deploys, site });
     const write =
       deps.write ??
       ((text: string): void => {
         process.stdout.write(text);
       });
     write(`${JSON.stringify(envelope)}\n`);
+  } else if (deploys.length === 0) {
+    logObj.info(`(no deploys for ${site})`);
   } else {
-    for (const d of deploys) {
-      logObj.info(d.deployId);
-    }
+    logObj.success(formatTable(deploys));
   }
 
   return { exitCode: 0, output: "" };
