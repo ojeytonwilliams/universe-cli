@@ -1,0 +1,171 @@
+import type { IdentityResolver } from "../../auth/identity-resolver.port.js";
+import { ConfigError, CredentialError, PartialUploadError } from "../../errors/cli-errors.js";
+import type { ProxyClient } from "../../platform/proxy-client.port.js";
+import { handleDeploy } from "./index.js";
+
+const PLATFORM_YAML = "site: my-site\n";
+const HASH = "abc123def456";
+
+const makeDeps = () => {
+  const identityResolver: IdentityResolver = {
+    resolve: vi.fn().mockResolvedValue({ source: "env_GITHUB_TOKEN", token: "token-abc" }),
+  };
+  const proxyClient: ProxyClient = {
+    deployFinalize: vi.fn().mockResolvedValue({
+      deployId: "d1",
+      mode: "preview",
+      url: "https://preview.my-site.pages.dev",
+    }),
+    deployInit: vi
+      .fn()
+      .mockResolvedValue({ deployId: "d1", expiresAt: "2099-01-01T00:00:00Z", jwt: "jwt-1" }),
+    deployUpload: vi.fn().mockResolvedValue({ key: "my-site/index.html", received: "ok" }),
+    siteDeploys: vi.fn(),
+    sitePromote: vi.fn(),
+    siteRollback: vi.fn(),
+    whoami: vi.fn().mockResolvedValue({ authorizedSites: ["my-site"], login: "staffuser" }),
+  };
+  return {
+    getGitState: vi.fn().mockReturnValue({ dirty: false, hash: HASH }),
+    identityResolver,
+    log: { info: vi.fn(), success: vi.fn(), warn: vi.fn() },
+    proxyClient,
+    readFile: vi.fn().mockResolvedValue(PLATFORM_YAML),
+    runBuild: vi.fn().mockResolvedValue({ outputDir: "/tmp/fake-dist", skipped: true }),
+    uploadFiles: vi
+      .fn()
+      .mockResolvedValue({ errors: [], fileCount: 1, totalSize: 512, uploaded: ["index.html"] }),
+    walkFiles: vi
+      .fn()
+      .mockReturnValue([{ absPath: "/tmp/fake-dist/index.html", relPath: "index.html" }]),
+    write: vi.fn(),
+  };
+};
+
+describe(handleDeploy, () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("throws CredentialError when identity resolves to null", async () => {
+    const deps = makeDeps();
+    vi.spyOn(deps.identityResolver, "resolve").mockResolvedValue(null);
+    await expect(handleDeploy({ cwd: "/proj", json: false }, deps)).rejects.toThrow(
+      CredentialError,
+    );
+  });
+
+  it("throws ConfigError when platform.yaml cannot be read", async () => {
+    const deps = makeDeps();
+    vi.spyOn(deps, "readFile").mockRejectedValue(
+      Object.assign(new Error("ENOENT"), { code: "ENOENT" }),
+    );
+    await expect(handleDeploy({ cwd: "/proj", json: false }, deps)).rejects.toThrow(ConfigError);
+  });
+
+  it("throws ConfigError when platform.yaml is invalid", async () => {
+    const deps = makeDeps();
+    vi.spyOn(deps, "readFile").mockResolvedValue("- not: a mapping");
+    await expect(handleDeploy({ cwd: "/proj", json: false }, deps)).rejects.toThrow(ConfigError);
+  });
+
+  it("throws CredentialError when site is not in authorizedSites", async () => {
+    const deps = makeDeps();
+    vi.spyOn(deps.proxyClient, "whoami").mockResolvedValue({
+      authorizedSites: ["other-site"],
+      login: "staffuser",
+    });
+    await expect(handleDeploy({ cwd: "/proj", json: false }, deps)).rejects.toThrow(
+      CredentialError,
+    );
+  });
+
+  it("warns when working tree is dirty", async () => {
+    const deps = makeDeps();
+    vi.spyOn(deps, "getGitState").mockReturnValue({ dirty: true, hash: HASH });
+    await handleDeploy({ cwd: "/proj", json: false }, deps);
+    expect(deps.log.warn).toHaveBeenCalledOnce();
+  });
+
+  it("calls runBuild with config from platform.yaml", async () => {
+    const deps = makeDeps();
+    vi.spyOn(deps, "readFile").mockResolvedValue(
+      "site: my-site\nbuild:\n  command: npm run build\n  output: out\n",
+    );
+    await handleDeploy({ cwd: "/proj", json: false }, deps);
+    expect(deps.runBuild).toHaveBeenCalledWith(
+      expect.objectContaining({ command: "npm run build", outputDir: "out" }),
+    );
+  });
+
+  it("calls walkFiles with the build output directory", async () => {
+    const deps = makeDeps();
+    await handleDeploy({ cwd: "/proj", json: false }, deps);
+    expect(deps.walkFiles).toHaveBeenCalledWith("/tmp/fake-dist");
+  });
+
+  it("calls deployInit with site, sha, and file list", async () => {
+    const deps = makeDeps();
+    const deployInitSpy = vi.spyOn(deps.proxyClient, "deployInit");
+    await handleDeploy({ cwd: "/proj", json: false }, deps);
+    expect(deployInitSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ files: ["index.html"], sha: HASH, site: "my-site" }),
+    );
+  });
+
+  it("calls uploadFiles before deployFinalize", async () => {
+    const order: string[] = [];
+    const deps = makeDeps();
+    vi.spyOn(deps, "uploadFiles").mockImplementation(() => {
+      order.push("upload");
+      return Promise.resolve({ errors: [], fileCount: 1, totalSize: 1, uploaded: [] });
+    });
+    vi.spyOn(deps.proxyClient, "deployFinalize").mockImplementation(() => {
+      order.push("finalize");
+      return Promise.resolve({
+        deployId: "d1",
+        mode: "preview",
+        url: "https://preview.my-site.pages.dev",
+      });
+    });
+    await handleDeploy({ cwd: "/proj", json: false }, deps);
+    expect(order).toStrictEqual(["upload", "finalize"]);
+  });
+
+  it("throws PartialUploadError when any upload fails", async () => {
+    const deps = makeDeps();
+    vi.spyOn(deps, "uploadFiles").mockResolvedValue({
+      errors: ["index.html: upload failed"],
+      fileCount: 0,
+      totalSize: 0,
+      uploaded: [],
+    });
+    await expect(handleDeploy({ cwd: "/proj", json: false }, deps)).rejects.toThrow(
+      PartialUploadError,
+    );
+  });
+
+  it("with json: false calls log.success", async () => {
+    const deps = makeDeps();
+    await handleDeploy({ cwd: "/proj", json: false }, deps);
+    expect(deps.log.success).toHaveBeenCalledOnce();
+  });
+
+  it("with json: true writes a JSON envelope containing command and success", async () => {
+    const deps = makeDeps();
+    await handleDeploy({ cwd: "/proj", json: true }, deps);
+    expect(deps.write).toHaveBeenCalledOnce();
+    const text = deps.write.mock.calls[0]![0] as string;
+    const envelope = JSON.parse(text) as { command: string; success: boolean };
+    expect(envelope.command).toBe("static deploy");
+    expect(envelope.success).toBe(true);
+  });
+
+  it("uses deploy.preview: false to set mode to production", async () => {
+    const deps = makeDeps();
+    vi.spyOn(deps, "readFile").mockResolvedValue("site: my-site\ndeploy:\n  preview: false\n");
+    const finalizeSpy = vi.spyOn(deps.proxyClient, "deployFinalize");
+    await handleDeploy({ cwd: "/proj", json: false }, deps);
+    expect(finalizeSpy).toHaveBeenCalledWith(expect.objectContaining({ mode: "production" }));
+  });
+});

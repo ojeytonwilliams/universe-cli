@@ -1,6 +1,6 @@
 # CLI Merge Plan
 
-Merge `other/` (v0.4.0 — production static-site deployment CLI) into the
+Merge `tmp/other/` (v0.4.0 — production static-site deployment CLI) into the
 main workspace (v3.24.0 — scaffolding spike), keeping:
 
 - **Main's** architecture (ports/adapters, DI, custom parser, co-located tests,

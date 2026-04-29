@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.5.0] - 2026-04-29
+
+### feat: Phase 6 (1/7) — proxy-based `universe static deploy` handler
+
+- `src/commands/deploy/index.ts` — `handleDeploy` replaces the old stub;
+  orchestrates identity resolution, `platform.yaml` parsing, `whoami`
+  authorization, git-state warning, build, walk+ignore-filter, deploy-init,
+  concurrent upload, finalize, and JSON/human output; all dependencies
+  (identity resolver, proxy client, git, build, walk, upload, read, log,
+  write) are injectable for testing.
+- `src/commands/deploy/index.test.ts` — 13 unit tests covering every
+  acceptance criterion.
+- `src/bin.ts` — deploy binder updated to new signature; uses
+  `StubIdentityResolver` + `StubProxyClient` as placeholders until Phase 7
+  wires up real implementations.
+- `src/commands.test.ts` — removed five obsolete tests that exercised the
+  old stub deploy behavior.
+- `src/integration-tests/deploy.test.ts` — deleted; integration tests for
+  the new proxy-based flow will be added in Phase 7.
+
 ## [1.4.0] - 2026-04-28
 
 ### feat: Phase 4+5 — platform YAML v2 schema/parser and deploy utilities

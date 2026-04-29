@@ -4,7 +4,6 @@ import type {
   PlatformManifest,
 } from "./services/platform-manifest-service.js";
 import {
-  DeploymentError,
   InvalidNameError,
   ListError,
   LogsError,
@@ -24,7 +23,6 @@ import type { TeardownReceipt } from "./platform/teardown-client.port.js";
 import type { ResolvedLayerSet } from "./commands/create/layer-composition/layer-composition-service.js";
 import { handleCreate } from "./commands/create/index.js";
 import { handleRegister } from "./commands/register/index.js";
-import { handleDeploy } from "./commands/deploy/index.js";
 import { handlePromote } from "./commands/promote/index.js";
 import { handleRollback } from "./commands/rollback/index.js";
 import { handleLogs } from "./commands/logs/index.js";
@@ -89,12 +87,6 @@ const resolvedLayerFiles = {
 const successRegistrationClient = {
   register(_manifest: PlatformManifest) {
     return Promise.resolve({ name: "my-app", registrationId: "stub-my-app" });
-  },
-};
-
-const successDeployClient = {
-  deploy(_request: { manifest: PlatformManifest }) {
-    return Promise.resolve({ deploymentId: "stub-my-app-preview-1", name: "my-app" });
   },
 };
 
@@ -877,66 +869,6 @@ describe(handleRegister, () => {
         getDeps({ registrationClient: failingClient }),
       ),
     ).rejects.toThrow(RegistrationError);
-  });
-});
-
-// --- handleDeploy ---
-
-describe(handleDeploy, () => {
-  it("exits 0 on successful deployment", async () => {
-    const result = await handleDeploy(
-      { projectDirectory: "/workspace" },
-      getDeps({ deployClient: successDeployClient }),
-    );
-
-    expect(result.exitCode).toBe(0);
-  });
-
-  it("output contains the project name, environment, and deployment ID", async () => {
-    const { output } = await handleDeploy(
-      { projectDirectory: "/workspace" },
-      getDeps({ deployClient: successDeployClient }),
-    );
-
-    expect(output).toContain("my-app");
-    expect(output).toContain("preview");
-    expect(output).toContain("stub-my-app-preview-1");
-  });
-
-  it("exits when platform.yaml is missing", async () => {
-    const missingReader = {
-      readFile(filePath: string) {
-        return Promise.reject(new ManifestNotFoundError(filePath));
-      },
-    };
-
-    await expect(
-      handleDeploy(
-        { projectDirectory: "/workspace" },
-        getDeps({ deployClient: successDeployClient }, missingReader),
-      ),
-    ).rejects.toThrow(ManifestNotFoundError);
-  });
-
-  it("exits when platform.yaml fails validation", async () => {
-    await expect(
-      handleDeploy(
-        { projectDirectory: "/workspace" },
-        getDeps({ deployClient: successDeployClient }, successReader, failingValidator),
-      ),
-    ).rejects.toThrow(ManifestInvalidError);
-  });
-
-  it("exits when deployment fails", async () => {
-    const failingClient = {
-      deploy(request: { manifest: PlatformManifest }) {
-        return Promise.reject(new DeploymentError(request.manifest.name, "timeout"));
-      },
-    };
-
-    await expect(
-      handleDeploy({ projectDirectory: "/workspace" }, getDeps({ deployClient: failingClient })),
-    ).rejects.toThrow(DeploymentError);
   });
 });
 

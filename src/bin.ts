@@ -38,6 +38,8 @@ import { StubRegistrationClient } from "./platform/registration-client.stub.js";
 import { StubRollbackClient } from "./platform/rollback-client.stub.js";
 import { StubStatusClient } from "./platform/status-client.stub.js";
 import { StubTeardownClient } from "./platform/teardown-client.stub.js";
+import { StubIdentityResolver } from "./auth/stub-identity-resolver.js";
+import { StubProxyClient } from "./platform/proxy-client.stub.js";
 import { PackageManagerService } from "./commands/create/package-manager/package-manager.service.js";
 import { handleCreate } from "./commands/create/index.js";
 import { handleRegister } from "./commands/register/index.js";
@@ -204,8 +206,11 @@ const argParsers: Record<CommandName, ArgParser> = {
 
 const handlerBinders: Record<CommandName, HandlerBinder> = {
   create: (_options, context, deps) => () => handleCreate({ cwd: context.cwd }, deps),
-  deploy: (options, context, deps) => () =>
-    handleDeploy({ projectDirectory: options.projectDirectory ?? context.cwd }, deps),
+  deploy: (_options, context, _deps) => () =>
+    handleDeploy(
+      { cwd: context.cwd, json: false },
+      { identityResolver: new StubIdentityResolver(), proxyClient: new StubProxyClient() },
+    ),
   list: (options, context, deps) => () =>
     handleList({ projectDirectory: options.projectDirectory ?? context.cwd }, deps),
   logs: (options, context, deps) => () =>

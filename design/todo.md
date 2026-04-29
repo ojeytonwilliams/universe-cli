@@ -324,7 +324,7 @@ boolean`.
 
 ## Phase 6: Commands
 
-- [ ] CODE: Replace `src/commands/deploy/index.ts` — proxy-based `universe static deploy`
+- [x] CODE: Replace `src/commands/deploy/index.ts` — proxy-based `universe static deploy`
   - Feature: Rewrite the stub handler using other's `commands/deploy.ts` logic
     adapted to main's architecture. The handler receives a `deps` object
     containing `identityResolver: IdentityResolver`,
