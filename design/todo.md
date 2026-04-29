@@ -433,7 +433,7 @@ boolean`.
 
 ## Phase 7: Wire-up
 
-- [ ] CODE: Update `src/bin.ts` — new deps, commands, router entries
+- [x] CODE: Update `src/bin.ts` — new deps, commands, router entries
   - Feature: (1) Add `json?: boolean` to `ParsedOptions`. (2) Add `login`,
     `logout`, `whoami` to the `CommandName` union. (3) Introduce a `static`
     namespace: when the first positional is `"static"`, strip it and dispatch

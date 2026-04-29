@@ -1,5 +1,29 @@
 # Changelog
 
+## [1.7.0] - 2026-04-29
+
+### feat: Phase 7 — wire-up: static namespace, auth commands, real adapter deps in bin.ts
+
+- `src/bin.ts` — full router redesign:
+  - Added `static` namespace: `universe static deploy|promote|rollback|list`; bare
+    usage of static commands returns a descriptive `BadArgumentsError`.
+  - `--json` extracted globally before command parsing so `universe --json static
+rollback --to abc` works correctly.
+  - Added `login`, `logout`, `whoami` as direct top-level commands; `login` accepts
+    `--force`; unrecognised arguments return `BadArgumentsError`.
+  - `RouteDeps` updated: added `deviceFlow`, `identityResolver`, `proxyClient`,
+    `tokenStore`; removed the four legacy stub clients.
+  - Wiring block now instantiates `FileTokenStore`, `GithubIdentityResolver`,
+    `GithubDeviceFlow`, `createProxyClient` with real adapter instances.
+  - Handler binders for deploy, promote, rollback, list pass injected `identityResolver`
+    and `proxyClient`; binders for login, logout, whoami pass auth deps.
+- `src/integration-tests/adapter-stubs.ts` — replaced `deployClient`, `listClient`,
+  `promoteClient`, `rollbackClient` stubs with `deviceFlow`, `identityResolver`,
+  `proxyClient`, `tokenStore` to match the updated `RouteDeps`.
+- `src/bin.test.ts` — rewrote to cover the new router: static namespace dispatch,
+  bare command rejection, `--json` flag propagation, `login`/`logout`/`whoami`,
+  and full `parseArgs` coverage including `--force` and `--to`.
+
 ## [1.6.0] - 2026-04-29
 
 ### feat: Phase 6 (2-7/7) — proxy-based promote, rollback, list, login, logout, whoami

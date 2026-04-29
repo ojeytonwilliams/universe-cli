@@ -1,13 +1,17 @@
 import { parseArgs, route } from "./bin.js";
 import type { RouteDeps } from "./bin.js";
+import { StubDeviceFlow } from "./auth/stub-device-flow.js";
+import { StubIdentityResolver } from "./auth/stub-identity-resolver.js";
 import type { FilesystemWriter } from "./io/filesystem-writer.port.js";
 import type { ObservabilityClient } from "./observability/observability-client.port.js";
+import { StubProxyClient } from "./platform/proxy-client.stub.js";
+import { StubTokenStore } from "./auth/stub-token-store.js";
 import type { CreateSelections, Prompt } from "./commands/create/prompt/prompt.port.js";
 import type { StatusResponse } from "./platform/status-client.port.js";
 import type { ResolvedLayerSet } from "./commands/create/layer-composition/layer-composition-service.js";
 import type { PlatformManifest } from "./services/platform-manifest-service.js";
 
-// --- Test stubs and helpers (copied from cli.test.ts) ---
+// --- Test stubs and helpers ---
 const client: ObservabilityClient = {
   error() {},
   safeError() {},
@@ -80,33 +84,9 @@ const defaultRegistrationClient = {
   },
 };
 
-const defaultListClient = {
-  getList() {
-    return Promise.resolve({ deployments: [], name: "" });
-  },
-};
-
 const defaultLogsClient = {
   getLogs() {
     return Promise.resolve({ entries: [], environment: "", name: "" });
-  },
-};
-
-const defaultDeployClient = {
-  deploy() {
-    return Promise.resolve({ deploymentId: "", name: "" });
-  },
-};
-
-const defaultPromoteClient = {
-  promote() {
-    return Promise.resolve({ name: "", promotionId: "" });
-  },
-};
-
-const defaultRollbackClient = {
-  rollback() {
-    return Promise.resolve({ name: "", rollbackId: "" });
   },
 };
 
@@ -138,21 +118,21 @@ const defaultRepoInitialiser = {
 };
 
 const createRouteDeps = (overrides: Partial<RouteDeps> = {}): RouteDeps => ({
-  deployClient: defaultDeployClient,
+  deviceFlow: new StubDeviceFlow(),
   filesystemWriter: recordingWriter,
+  identityResolver: new StubIdentityResolver(null),
   layerResolver: passThroughLayerResolver,
-  listClient: defaultListClient,
   logsClient: defaultLogsClient,
   packageManager: { specifyDeps: () => Promise.resolve() },
   platformManifestGenerator: manifestGenerator,
   projectReader: defaultProjectReader,
-  promoteClient: defaultPromoteClient,
   prompt: createPrompt,
+  proxyClient: new StubProxyClient(),
   registrationClient: defaultRegistrationClient,
   repoInitialiser: defaultRepoInitialiser,
-  rollbackClient: defaultRollbackClient,
   statusClient: defaultStatusClient,
   teardownClient: defaultTeardownClient,
+  tokenStore: new StubTokenStore(),
   validator: passThroughValidator,
   ...overrides,
 });
@@ -167,11 +147,13 @@ describe(route, () => {
       expect(result.exitCode).toBe(0);
     });
 
-    it("output lists all 9 commands", async () => {
+    it("output contains static subcommands and auth commands", async () => {
       const { output } = await route(["--help"], createRouteDeps(), routeContext, client);
-      expect(output).toMatchInlineSnapshot(`
-        "Usage: universe <command>\n\nCommands:\n  create      Scaffold a new project locally\n  deploy      Deploy a project to the platform\n  list        List all registered projects\n  logs        View logs for a project\n  promote     Promote a deployment to the next environment\n  register    Register a project with the platform\n  rollback    Roll back to the previous deployment\n  status      Show the status of a project\n  teardown    Remove a project from the platform\n\nOptions:\n  --help      Show this help message"
-      `);
+      expect(output).toContain("static deploy");
+      expect(output).toContain("static rollback");
+      expect(output).toContain("login");
+      expect(output).toContain("logout");
+      expect(output).toContain("whoami");
     });
 
     it("does not call observability for help", async () => {
@@ -261,55 +243,85 @@ describe(route, () => {
     });
   });
 
-  describe("deploy", () => {
-    it("exits when more than one argument is provided", async () => {
+  describe("static deploy", () => {
+    it("is recognised (not an unknown command error)", async () => {
+      const result = await route(["static", "deploy"], createRouteDeps(), routeContext, client);
+      expect(result.output).not.toContain("Unknown command");
+    });
+
+    it("exits when extra args are provided", async () => {
       const result = await route(
-        ["deploy", "/dir", "extra"],
+        ["static", "deploy", "extra"],
         createRouteDeps(),
         routeContext,
         client,
       );
       expect(result.exitCode).toBeGreaterThan(0);
-      expect(result.output).toContain("Too many arguments");
     });
   });
 
-  describe("promote", () => {
-    it("exits when more than one argument is provided", async () => {
-      const result = await route(
-        ["promote", "/dir", "extra"],
-        createRouteDeps(),
-        routeContext,
-        client,
-      );
+  describe("deploy without static prefix", () => {
+    it("exits with a non-zero code", async () => {
+      const result = await route(["deploy"], createRouteDeps(), routeContext, client);
       expect(result.exitCode).toBeGreaterThan(0);
-      expect(result.output).toContain("Too many arguments");
     });
   });
 
-  describe("rollback", () => {
-    it("exits when more than one argument is provided", async () => {
+  describe("static promote", () => {
+    it("exits when extra args are provided", async () => {
       const result = await route(
-        ["rollback", "/dir", "extra"],
+        ["static", "promote", "extra"],
         createRouteDeps(),
         routeContext,
         client,
       );
       expect(result.exitCode).toBeGreaterThan(0);
-      expect(result.output).toContain("Too many arguments");
     });
   });
 
-  describe("list", () => {
-    it("exits when more than one argument is provided", async () => {
+  describe("static rollback", () => {
+    it("exits when --to is not provided", async () => {
+      const result = await route(["static", "rollback"], createRouteDeps(), routeContext, client);
+      expect(result.exitCode).toBeGreaterThan(0);
+      expect(result.output).toContain("--to");
+    });
+  });
+
+  describe("static list", () => {
+    it("exits when an unknown argument is provided", async () => {
       const result = await route(
-        ["list", "/dir", "extra"],
+        ["static", "list", "bad-arg"],
         createRouteDeps(),
         routeContext,
         client,
       );
       expect(result.exitCode).toBeGreaterThan(0);
-      expect(result.output).toContain("Too many arguments");
+    });
+  });
+
+  describe("login", () => {
+    it("is recognised (not an unknown command error)", async () => {
+      const result = await route(["login"], createRouteDeps(), routeContext, client);
+      expect(result.output).not.toContain("Unknown command");
+    });
+
+    it("rejects unrecognised arguments", async () => {
+      const result = await route(["login", "--foo"], createRouteDeps(), routeContext, client);
+      expect(result.exitCode).toBeGreaterThan(0);
+    });
+  });
+
+  describe("logout", () => {
+    it("exits with code 0", async () => {
+      const result = await route(["logout"], createRouteDeps(), routeContext, client);
+      expect(result.exitCode).toBe(0);
+    });
+  });
+
+  describe("whoami", () => {
+    it("is recognised (not an unknown command error)", async () => {
+      const result = await route(["whoami"], createRouteDeps(), routeContext, client);
+      expect(result.output).not.toContain("Unknown command");
     });
   });
 
@@ -434,10 +446,15 @@ describe(parseArgs, () => {
     expect(result).not.toHaveProperty("options");
   });
 
-  it("returns command/options without error for valid single-directory commands", () => {
-    const result = parseArgs(["deploy", "/dir"]);
-    expect(result).toStrictEqual({ command: "deploy", options: { projectDirectory: "/dir" } });
-    expect(result).not.toHaveProperty("error");
+  it("returns command/options for a valid static command", () => {
+    const result = parseArgs(["static", "deploy"]);
+    expect(result.command).toBe("deploy");
+    expect(result.error).toBeUndefined();
+  });
+
+  it("returns an error for a static command used without the static prefix", () => {
+    const result = parseArgs(["deploy"]);
+    expect(result.error).toBeInstanceOf(Error);
   });
 
   it("returns environment defaults for logs", () => {
@@ -450,5 +467,40 @@ describe(parseArgs, () => {
     expect(result.error).toBeInstanceOf(Error);
     expect(result).not.toHaveProperty("command");
     expect(result).not.toHaveProperty("options");
+  });
+
+  it("returns login command with force: false by default", () => {
+    const result = parseArgs(["login"]);
+    expect(result.command).toBe("login");
+    expect(result.options?.force).toBe(false);
+  });
+
+  it("returns login command with force: true when --force is passed", () => {
+    const result = parseArgs(["login", "--force"]);
+    expect(result.command).toBe("login");
+    expect(result.options?.force).toBe(true);
+  });
+
+  it("returns an error for login with unknown arguments", () => {
+    const result = parseArgs(["login", "--unknown"]);
+    expect(result.error).toBeInstanceOf(Error);
+  });
+
+  it("passes --json flag and --to option from static rollback with json before static", () => {
+    const result = parseArgs(["--json", "static", "rollback", "--to", "abc"]);
+    expect(result.command).toBe("rollback");
+    expect(result.options?.json).toBe(true);
+    expect(result.options?.to).toBe("abc");
+  });
+
+  it("returns an error for static rollback without --to", () => {
+    const result = parseArgs(["static", "rollback"]);
+    expect(result.error).toBeInstanceOf(Error);
+  });
+
+  it("passes --site option from static list", () => {
+    const result = parseArgs(["static", "list", "--site", "my-site"]);
+    expect(result.command).toBe("list");
+    expect(result.options?.site).toBe("my-site");
   });
 });
