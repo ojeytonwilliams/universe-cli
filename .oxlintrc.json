@@ -69,6 +69,10 @@
     "vitest/prefer-called-times": "off",
     /* We're more interested in testing behaviour. If a test needs to make an unsafe assertion, that's okay */
     "typescript/no-unsafe-type-assertion": "off",
+    /* Nullable booleans get a pass so that optional flags (e.g. opts.isWhatever) can be used in ternaries */
+    "typescript/strict-boolean-expressions": ["error", { "allowNullableBoolean": true }],
+    /* Generally this is a little neater, but there are lot of false positives.
+    Consider simply disabling if the allowedPrefixes balloons */
     "jest/prefer-lowercase-title": [
       "error",
       {

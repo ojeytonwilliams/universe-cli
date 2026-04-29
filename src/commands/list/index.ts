@@ -70,7 +70,9 @@ const handleList = async (opts: ListOptions, deps: ListDeps): Promise<HandlerRes
   // 1. Resolve identity
   const identity = await deps.identityResolver.resolve();
   if (identity === null) {
-    throw new CredentialError("Not authenticated. Run `universe login` first.");
+    throw new CredentialError(
+      "No GitHub identity available. Run `universe login`, set $GITHUB_TOKEN, or install the gh CLI.",
+    );
   }
 
   // 2. Resolve site name — from --site flag or platform.yaml
@@ -81,7 +83,7 @@ const handleList = async (opts: ListOptions, deps: ListDeps): Promise<HandlerRes
       rawYaml = await read(join(opts.cwd, "platform.yaml"));
     } catch {
       throw new ConfigError(
-        "platform.yaml not found. Run this command from the project root containing platform.yaml.",
+        "No site to list. Run from a directory with `platform.yaml`, or pass `--site <name>`.",
       );
     }
 
@@ -89,9 +91,9 @@ const handleList = async (opts: ListOptions, deps: ListDeps): Promise<HandlerRes
     if (!parseResult.ok) {
       throw new ConfigError(parseResult.error);
     }
-    ({ site } = parseResult.value);
+    site = parseResult.value.site.trim();
   } else {
-    ({ site } = opts);
+    site = opts.site.trim();
   }
 
   // 3. Fetch and parse deploys

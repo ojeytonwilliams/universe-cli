@@ -59,14 +59,16 @@ const handleWhoami = async (opts: WhoamiOptions, deps: WhoamiDeps): Promise<Hand
     });
     writeFn(`${JSON.stringify(envelope)}\n`);
   } else {
-    logObj.info(`Logged in as: ${me.login}`);
-    if (me.authorizedSites.length === 0) {
-      logObj.info("Authorized sites: (none)");
-    } else {
-      for (const s of me.authorizedSites) {
-        logObj.info(`  ${s}`);
-      }
-    }
+    const sites =
+      me.authorizedSites.length > 0 ? me.authorizedSites.join(", ") : "(no sites authorized)";
+
+    logObj.success(
+      [
+        `Logged in as: ${me.login}`,
+        `Authorized sites: ${sites}`,
+        `Identity source: ${identity.source}`,
+      ].join("\n"),
+    );
   }
 
   return { exitCode: 0, output: "" };

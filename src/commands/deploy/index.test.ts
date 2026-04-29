@@ -163,14 +163,6 @@ describe(handleDeploy, () => {
     expect(envelope.success).toBe(true);
   });
 
-  it("uses deploy.preview: false to set mode to production", async () => {
-    const deps = makeDeps();
-    vi.spyOn(deps, "readFile").mockResolvedValue("site: my-site\ndeploy:\n  preview: false\n");
-    const finalizeSpy = vi.spyOn(deps.proxyClient, "deployFinalize");
-    await handleDeploy({ cwd: "/proj", json: false }, deps);
-    expect(finalizeSpy).toHaveBeenCalledWith(expect.objectContaining({ mode: "production" }));
-  });
-
   it("--promote flag forwards mode=production to deployFinalize", async () => {
     const deps = makeDeps();
     const finalizeSpy = vi.spyOn(deps.proxyClient, "deployFinalize");

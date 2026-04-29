@@ -49,8 +49,8 @@ describe(handleWhoami, () => {
   it("with json: false prints login and authorized sites via log.info", async () => {
     const deps = makeDeps();
     await handleWhoami({ json: false }, deps);
-    expect(deps.log.info).toHaveBeenCalledWith(expect.stringContaining("staffuser"));
-    const calls = deps.log.info.mock.calls.map((c: unknown[]) => c[0] as string);
+    expect(deps.log.success).toHaveBeenCalledWith(expect.stringContaining("staffuser"));
+    const calls = deps.log.success.mock.calls.map((c: unknown[]) => c[0] as string);
     expect(calls.some((msg) => msg.includes("staffuser"))).toBe(true);
     expect(calls.some((msg) => msg.includes("site-a"))).toBe(true);
   });

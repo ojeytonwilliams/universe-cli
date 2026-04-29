@@ -2,10 +2,15 @@ import { readFile as nodeReadFile } from "node:fs/promises";
 import { join } from "node:path";
 import { log as clackLog } from "@clack/prompts";
 import type { IdentityResolver } from "../../auth/identity-resolver.port.js";
-import { ConfigError, CredentialError, PartialUploadError } from "../../errors/cli-errors.js";
+import {
+  ConfigError,
+  CredentialError,
+  GitError,
+  PartialUploadError,
+} from "../../errors/cli-errors.js";
 import { buildEnvelope } from "../../output/envelope.js";
 import { parsePlatformYaml } from "../../platform/platform-yaml-v2.js";
-import type { DeployMode, ProxyClient } from "../../platform/proxy-client.port.js";
+import type { ProxyClient } from "../../platform/proxy-client.port.js";
 import type { HandlerResult } from "../create/index.js";
 import type { RunBuildOptions, RunBuildResult } from "./build.js";
 import { runBuild as defaultRunBuild } from "./build.js";
@@ -55,7 +60,9 @@ const handleDeploy = async (opts: DeployOptions, deps: DeployDeps): Promise<Hand
   // 1. Resolve identity
   const identity = await deps.identityResolver.resolve();
   if (identity === null) {
-    throw new CredentialError("Not authenticated. Run `universe login` first.");
+    throw new CredentialError(
+      "No GitHub identity available. Run `universe login`, set $GITHUB_TOKEN, or install the gh CLI.",
+    );
   }
 
   // 2. Read and parse platform.yaml
@@ -64,7 +71,7 @@ const handleDeploy = async (opts: DeployOptions, deps: DeployDeps): Promise<Hand
     rawYaml = await read(join(opts.cwd, "platform.yaml"));
   } catch {
     throw new ConfigError(
-      "platform.yaml not found. Run this command from the project root containing platform.yaml.",
+      `platform.yaml not found in ${process.cwd()}. See docs/platform-yaml.md.`,
     );
   }
 
@@ -77,20 +84,30 @@ const handleDeploy = async (opts: DeployOptions, deps: DeployDeps): Promise<Hand
   // 3. Verify site authorization
   const me = await deps.proxyClient.whoami();
   if (!me.authorizedSites.includes(config.site)) {
-    const siteList = me.authorizedSites.length > 0 ? me.authorizedSites.join(", ") : "(none)";
+    const sitesLine =
+      me.authorizedSites.length > 0 ? me.authorizedSites.join(", ") : "(no sites authorized)";
     throw new CredentialError(
-      `User "${me.login}" is not authorized to deploy to site "${config.site}". ` +
-        `Authorized sites: ${siteList}. ` +
-        `See freeCodeCamp/infra/blob/main/docs/runbooks/01-deploy-new-constellation-site.md`,
+      [
+        `Site '${config.site}' is not registered for your GitHub identity.`,
+        ``,
+        `  You are:           ${me.login}`,
+        `  Authorized sites:  ${sitesLine}`,
+        ``,
+        `Likely causes (most common first):`,
+        `  1. Platform admin has not added '${config.site}' to artemis`,
+        `     'config/sites.yaml' yet (one-time, per site).`,
+        `  2. You are not in any GitHub team listed for '${config.site}'.`,
+        ``,
+        `Runbook:`,
+        `  https://github.com/freeCodeCamp/infra/blob/main/docs/runbooks/01-deploy-new-constellation-site.md`,
+      ].join("\n"),
     );
   }
 
   // 4. Check git state
   const gitState = git();
   if (gitState.dirty) {
-    logObj.warn(
-      "Working tree has uncommitted changes — the deploy may not match your local state.",
-    );
+    logObj.warn("git working tree is dirty — uncommitted changes will not be reflected.");
   }
 
   // 5. Build
@@ -99,11 +116,17 @@ const handleDeploy = async (opts: DeployOptions, deps: DeployDeps): Promise<Hand
     cwd: opts.cwd,
     outputDir: opts.dir ?? config.build.output,
   });
+  if (buildResult.skipped) {
+    logObj.info("build.command not set — using pre-built output.");
+  }
 
   // 6. Walk and filter files
   const allFiles = walk(buildResult.outputDir);
   const shouldIgnore = createIgnoreFilter(config.deploy.ignore);
   const files = allFiles.filter((f) => !shouldIgnore(f.relPath));
+  if (files.length === 0) {
+    throw new GitError(`No files to deploy under ${buildResult.outputDir}.`);
+  }
 
   // 7. Initialise deploy session
   const sha = gitState.hash ?? `nogit-${Date.now().toString(36)}`;
@@ -122,31 +145,28 @@ const handleDeploy = async (opts: DeployOptions, deps: DeployDeps): Promise<Hand
   });
   if (uploadResult.errors.length > 0) {
     throw new PartialUploadError(
-      `${uploadResult.errors.length} file(s) failed to upload:\n${uploadResult.errors.join("\n")}`,
+      `Upload partially failed: ${uploadResult.errors.length} file(s) failed:\n  - ${uploadResult.errors.join("\n  - ")}`,
     );
   }
 
   // 9. Finalise deploy
-  let deployMode: DeployMode;
-  if (opts.promote === true) {
-    deployMode = "production";
-  } else if (config.deploy.preview) {
-    deployMode = "preview";
-  } else {
-    deployMode = "production";
-  }
+  const mode = opts.promote ? "production" : "preview";
+
   const finalizeResult = await deps.proxyClient.deployFinalize({
     deployId,
     files: files.map((f) => f.relPath),
     jwt,
-    mode: deployMode,
+    mode: mode,
   });
 
   // 10. Emit output
   const summary = {
-    deployId,
+    deployId: finalizeResult.deployId,
+    fileCount: uploadResult.fileCount,
+    identitySource: identity.source,
+    mode: finalizeResult.mode,
+    sha,
     site: config.site,
-    totalFiles: files.length,
     totalSize: uploadResult.totalSize,
     url: finalizeResult.url,
   };
@@ -160,8 +180,21 @@ const handleDeploy = async (opts: DeployOptions, deps: DeployDeps): Promise<Hand
       });
     write(`${JSON.stringify(envelope)}\n`);
   } else {
+    const sizeKB = (uploadResult.totalSize / 1024).toFixed(1);
+    const nextLine =
+      mode === "preview" ? "Next: universe static promote" : "Promoted to production.";
     logObj.success(
-      `Deployed "${config.site}" → ${finalizeResult.url} (${files.length} files, ${uploadResult.totalSize} bytes)`,
+      [
+        `Deployed ${finalizeResult.deployId}`,
+        ``,
+        `  Site:     ${config.site}`,
+        `  Files:    ${uploadResult.fileCount}`,
+        `  Size:     ${sizeKB} KB`,
+        `  Mode:     ${mode}`,
+        `  URL:      ${finalizeResult.url}`,
+        ``,
+        nextLine,
+      ].join("\n"),
     );
   }
 
