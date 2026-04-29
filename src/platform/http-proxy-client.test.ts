@@ -48,7 +48,7 @@ describe(createProxyClient, () => {
   });
 
   describe("deployInit", () => {
-    it("pOSTs to /api/deploy/init with correct method and auth headers", async () => {
+    it("POSTs to /api/deploy/init with correct method and auth headers", async () => {
       const fetchMock = vi.fn().mockResolvedValue(
         jsonResponse(200, {
           deployId: "20260427-abc1234",
@@ -65,7 +65,7 @@ describe(createProxyClient, () => {
       expect(init.headers["Content-Type"]).toBe("application/json");
     });
 
-    it("pOSTs correct body to /api/deploy/init and returns deployId and jwt", async () => {
+    it("POSTs correct body to /api/deploy/init and returns deployId and jwt", async () => {
       const fetchMock = vi.fn().mockResolvedValue(
         jsonResponse(200, {
           deployId: "20260427-abc1234",
@@ -97,7 +97,7 @@ describe(createProxyClient, () => {
   });
 
   describe("deployUpload", () => {
-    it("pUTs to correct URL with deploy-JWT auth", async () => {
+    it("PUTs to correct URL with deploy-JWT auth", async () => {
       const fetchMock = vi
         .fn()
         .mockResolvedValue(
@@ -121,7 +121,7 @@ describe(createProxyClient, () => {
       expect(init.headers["Content-Type"]).toBe("text/html");
     });
 
-    it("pUTs raw body and returns received path", async () => {
+    it("PUTs raw body and returns received path", async () => {
       const fetchMock = vi
         .fn()
         .mockResolvedValue(
@@ -141,7 +141,7 @@ describe(createProxyClient, () => {
       expect(r.received).toBe("index.html");
     });
 
-    it("uRL-encodes path query parameter", async () => {
+    it("URL-encodes path query parameter", async () => {
       const fetchMock = vi
         .fn()
         .mockResolvedValue(jsonResponse(200, { key: "x", received: "a b/c.html" }));
@@ -167,7 +167,7 @@ describe(createProxyClient, () => {
   });
 
   describe("deployFinalize", () => {
-    it("pOSTs to correct URL with deploy-JWT and mode+files body", async () => {
+    it("POSTs to correct URL with deploy-JWT and mode+files body", async () => {
       const fetchMock = vi.fn().mockResolvedValue(
         jsonResponse(200, {
           deployId: "abc",
@@ -234,7 +234,7 @@ describe(createProxyClient, () => {
   });
 
   describe("siteDeploys", () => {
-    it("gETs /api/site/{site}/deploys with bearer", async () => {
+    it("GETs /api/site/{site}/deploys with bearer", async () => {
       const fetchMock = vi
         .fn()
         .mockResolvedValue(jsonResponse(200, [{ deployId: "x" }, { deployId: "y" }]));
@@ -247,7 +247,7 @@ describe(createProxyClient, () => {
       expect(r).toStrictEqual([{ deployId: "x" }, { deployId: "y" }]);
     });
 
-    it("uRL-encodes site path segment", async () => {
+    it("URL-encodes site path segment", async () => {
       const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, []));
       const client = createProxyClient({ baseUrl, fetch: fetchMock, getAuthToken });
       await client.siteDeploys({ site: "a b" });
@@ -258,7 +258,7 @@ describe(createProxyClient, () => {
   });
 
   describe("sitePromote", () => {
-    it("pOSTs /api/site/{site}/promote with bearer", async () => {
+    it("POSTs /api/site/{site}/promote with bearer", async () => {
       const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { deployId: "y", url: "x" }));
       const client = createProxyClient({ baseUrl, fetch: fetchMock, getAuthToken });
       const r = await client.sitePromote({ site: "my-site" });
@@ -271,7 +271,7 @@ describe(createProxyClient, () => {
   });
 
   describe("siteRollback", () => {
-    it("pOSTs body { to } with bearer", async () => {
+    it("POSTs body { to } with bearer", async () => {
       const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { deployId: "old", url: "x" }));
       const client = createProxyClient({ baseUrl, fetch: fetchMock, getAuthToken });
       const r = await client.siteRollback({ site: "my-site", to: "old" });
