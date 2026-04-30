@@ -75,7 +75,7 @@ describe(handlePromote, () => {
     expect(deps.write).toHaveBeenCalledOnce();
     const text = deps.write.mock.calls[0]![0] as string;
     const envelope = JSON.parse(text) as { command: string; success: boolean };
-    expect(envelope.command).toBe("static promote");
+    expect(envelope.command).toBe("promote");
     expect(envelope.success).toBe(true);
   });
 

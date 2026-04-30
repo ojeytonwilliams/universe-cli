@@ -51,7 +51,7 @@ describe(handleLogin, () => {
     await handleLogin({ force: false, json: false }, deps);
     const [runCall] = runSpy.mock.lastCall!;
     expect(runCall.clientId).toBe("Iv23liIuGmZRyPd5wUeN");
-    expect(runCall.scope).toBe("read:user");
+    expect(runCall.scope).toBe("read:org user:email");
   });
 
   it("calls tokenStore.saveToken with the token returned by deviceFlow", async () => {

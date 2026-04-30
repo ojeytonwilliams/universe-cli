@@ -52,6 +52,8 @@
     "max-lines-per-function": "off",
     /* each test is a statement */
     "max-statements": "off",
+    /* Starting a comment with a capital letter is generally nicer, but there are common exceptions (e.g. function names: // mkdir needs to be...) */
+    "eslint/capitalized-comments": "off",
     /* magic numbers aren't great, but the blanket rule has too many false
     positives (e.g. 0 in a loop or 2 as a divisor) and I don't want to configure
     it */

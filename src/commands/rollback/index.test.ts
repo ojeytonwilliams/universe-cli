@@ -1,5 +1,5 @@
 import type { IdentityResolver } from "../../auth/identity-resolver.port.js";
-import { BadArgumentsError, ConfigError, CredentialError } from "../../errors/cli-errors.js";
+import { ConfigError, CredentialError, UsageError } from "../../errors/cli-errors.js";
 import type { ProxyClient } from "../../platform/proxy-client.port.js";
 import { handleRollback } from "./index.js";
 
@@ -32,11 +32,11 @@ describe(handleRollback, () => {
     vi.restoreAllMocks();
   });
 
-  it("throws BadArgumentsError when --to is absent", async () => {
+  it("throws UsageError when --to is absent", async () => {
     const deps = makeDeps();
     await expect(
       handleRollback({ cwd: "/proj", json: false, to: undefined }, deps),
-    ).rejects.toThrow(BadArgumentsError);
+    ).rejects.toThrow(UsageError);
   });
 
   it("throws CredentialError when identity resolves to null", async () => {

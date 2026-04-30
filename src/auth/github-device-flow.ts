@@ -84,6 +84,24 @@ const poll = async (intervalSec: number, ctx: PollContext): Promise<string> => {
   throw new Error(`device flow poll failed: HTTP ${pollResp.status}`);
 };
 
+/**
+ * GitHub OAuth device flow per
+ *   https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps#device-flow
+ *
+ * The flow:
+ *   1. POST /login/device/code → device_code, user_code, verification_uri, interval
+ *   2. Display user_code + verification_uri to the user (via onPrompt callback)
+ *   3. Poll POST /login/oauth/access_token at `interval` seconds with the
+ *      `urn:ietf:params:oauth:grant-type:device_code` grant_type until either:
+ *        - {access_token} arrives → success
+ *        - {error: authorization_pending} → keep polling
+ *        - {error: slow_down} → bump interval by 5s, keep polling
+ *        - {error: expired_token | access_denied | <other>} → fail
+ *
+ * Network + GitHub APIs are pluggable via injection so the tests run
+ * fully offline.
+ */
+
 class GithubDeviceFlow implements DeviceFlow {
   private readonly fetchImpl: typeof globalThis.fetch;
   private readonly sleep: (ms: number) => Promise<void>;

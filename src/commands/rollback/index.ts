@@ -2,7 +2,7 @@ import { readFile as nodeReadFile } from "node:fs/promises";
 import { join } from "node:path";
 import { log as clackLog } from "@clack/prompts";
 import type { IdentityResolver } from "../../auth/identity-resolver.port.js";
-import { BadArgumentsError, ConfigError, CredentialError } from "../../errors/cli-errors.js";
+import { ConfigError, CredentialError, UsageError } from "../../errors/cli-errors.js";
 import { buildEnvelope } from "../../output/envelope.js";
 import { parsePlatformYaml } from "../../platform/platform-yaml-v2.js";
 import type { ProxyClient } from "../../platform/proxy-client.port.js";
@@ -36,16 +36,21 @@ const handleRollback = async (
 ): Promise<HandlerResult> => {
   const logObj = deps.log ?? clackLog;
   const read = deps.readFile ?? defaultReadFileFn;
+  const to = opts.to?.trim();
 
   // 1. Validate --to flag
-  if (opts.to === undefined) {
-    throw new BadArgumentsError("--to <deployId> is required for rollback.");
+  if (to === undefined || to === "") {
+    throw new UsageError(
+      "rollback requires --to <deployId>. Run `universe static ls` to list past deploys.",
+    );
   }
 
   // 2. Resolve identity
   const identity = await deps.identityResolver.resolve();
   if (identity === null) {
-    throw new CredentialError("Not authenticated. Run `universe login` first.");
+    throw new CredentialError(
+      "No GitHub identity available. Run `universe login`, set $GITHUB_TOKEN, or install the gh CLI.",
+    );
   }
 
   // 3. Read and parse platform.yaml
@@ -65,18 +70,18 @@ const handleRollback = async (
   const config = parseResult.value;
 
   // 4. Rollback
-  const aliasResult = await deps.proxyClient.siteRollback({ site: config.site, to: opts.to });
+  const result = await deps.proxyClient.siteRollback({ site: config.site, to });
 
   // 5. Emit output
   const summary = {
-    deployId: aliasResult.deployId,
+    deployId: result.deployId,
+    identitySource: identity.source,
     site: config.site,
-    to: opts.to,
-    url: aliasResult.url,
+    url: result.url,
   };
 
   if (opts.json) {
-    const envelope = buildEnvelope("static rollback", true, summary);
+    const envelope = buildEnvelope("rollback", true, summary);
     const write =
       deps.write ??
       ((text: string): void => {
@@ -84,7 +89,15 @@ const handleRollback = async (
       });
     write(`${JSON.stringify(envelope)}\n`);
   } else {
-    logObj.success(`Rolled back "${config.site}" to ${opts.to} → ${aliasResult.url}`);
+    logObj.success(
+      [
+        `Rolled production back to ${result.deployId}`,
+        ``,
+        `  Site:        ${config.site}`,
+        `  Deploy:      ${result.deployId}`,
+        `  Production:  ${result.url}`,
+      ].join("\n"),
+    );
   }
 
   return { exitCode: 0, output: "" };

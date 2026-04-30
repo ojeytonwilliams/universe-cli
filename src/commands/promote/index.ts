@@ -37,7 +37,9 @@ const handlePromote = async (opts: PromoteOptions, deps: PromoteDeps): Promise<H
   // 1. Resolve identity
   const identity = await deps.identityResolver.resolve();
   if (identity === null) {
-    throw new CredentialError("Not authenticated. Run `universe login` first.");
+    throw new CredentialError(
+      "No GitHub identity available. Run `universe login`, set $GITHUB_TOKEN, or install the gh CLI.",
+    );
   }
 
   // 2. Read and parse platform.yaml
@@ -57,20 +59,25 @@ const handlePromote = async (opts: PromoteOptions, deps: PromoteDeps): Promise<H
   const config = parseResult.value;
 
   // 3. Promote
-  const aliasResult =
+  // Per ADR-016: artemis promote endpoint copies preview alias to
+  // production. To promote a *specific* prior deploy id, the alias
+  // must be rewritten directly — the rollback endpoint is the
+  // server-side primitive for that. Same atomic single-PUT.
+  const result =
     opts.from === undefined
       ? await deps.proxyClient.sitePromote({ site: config.site })
       : await deps.proxyClient.siteRollback({ site: config.site, to: opts.from });
 
   // 4. Emit output
   const summary = {
-    deployId: aliasResult.deployId,
+    deployId: result.deployId,
+    identitySource: identity.source,
     site: config.site,
-    url: aliasResult.url,
+    url: result.url,
   };
 
   if (opts.json) {
-    const envelope = buildEnvelope("static promote", true, summary);
+    const envelope = buildEnvelope("promote", true, summary);
     const write =
       deps.write ??
       ((text: string): void => {
@@ -78,7 +85,15 @@ const handlePromote = async (opts: PromoteOptions, deps: PromoteDeps): Promise<H
       });
     write(`${JSON.stringify(envelope)}\n`);
   } else {
-    logObj.success(`Promoted "${config.site}" → ${aliasResult.url}`);
+    logObj.success(
+      [
+        `Promoted ${result.deployId} to production`,
+        ``,
+        `  Site:        ${config.site}`,
+        `  Deploy:      ${result.deployId}`,
+        `  Production:  ${result.url}`,
+      ].join("\n"),
+    );
   }
 
   return { exitCode: 0, output: "" };

@@ -23,6 +23,7 @@ import {
   EXIT_TARGET_EXISTS,
   EXIT_TEARDOWN,
   EXIT_UNSUPPORTED,
+  EXIT_USAGE,
 } from "./exit-codes.js";
 
 class CliError extends Error {
@@ -53,6 +54,13 @@ class BadArgumentsError extends CliError {
   constructor(message: string) {
     super(message, EXIT_BAD_ARGUMENTS);
     this.name = "BadArgumentsError";
+  }
+}
+
+class UsageError extends CliError {
+  constructor(message: string) {
+    super(message, EXIT_USAGE);
+    this.name = "UsageError";
   }
 }
 
@@ -290,4 +298,5 @@ export {
   StorageError,
   TargetDirectoryExistsError,
   TeardownError,
+  UsageError,
 };

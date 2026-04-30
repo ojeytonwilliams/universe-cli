@@ -26,6 +26,8 @@ interface LoginDeps {
   write?: (text: string) => void;
 }
 
+const DEFAULT_SCOPE = "read:org user:email";
+
 const handleLogin = async (opts: LoginOptions, deps: LoginDeps): Promise<HandlerResult> => {
   const logObj = deps.log ?? clackLog;
   const writeFn =
@@ -59,11 +61,15 @@ const handleLogin = async (opts: LoginOptions, deps: LoginDeps): Promise<Handler
           writeFn(`${JSON.stringify(envelope)}\n`);
         } else {
           logObj.info(
-            `Open ${verificationUri} and enter code: ${userCode} (expires in ${expiresIn}s)`,
+            [
+              `Open ${verificationUri} in your browser`,
+              `and enter code: ${userCode}`,
+              `(code expires in ${Math.round(expiresIn / 60)} min)`,
+            ].join("\n"),
           );
         }
       },
-      scope: "read:user",
+      scope: DEFAULT_SCOPE,
     });
   } catch (err) {
     throw new CredentialError(err instanceof Error ? err.message : String(err));
@@ -77,7 +83,7 @@ const handleLogin = async (opts: LoginOptions, deps: LoginDeps): Promise<Handler
     const envelope = buildEnvelope("login", true, { stored: true });
     writeFn(`${JSON.stringify(envelope)}\n`);
   } else {
-    logObj.success("Logged in successfully.");
+    logObj.success("Logged in. Token stored at ~/.config/universe-cli/token.");
   }
 
   return { exitCode: 0, output: "" };

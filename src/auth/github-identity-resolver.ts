@@ -6,6 +6,22 @@ import type {
   ResolvedIdentity,
 } from "./identity-resolver.port.js";
 
+/**
+ * Identity priority chain — ADR-016 Q10 (post-F7).
+ *
+ *   1. $GITHUB_TOKEN / $GH_TOKEN env (CI explicit)
+ *   2. `gh auth token` shell-out (laptop with gh installed)
+ *   3. Device-flow stored token (~/.config/universe-cli/token)
+ *
+ * GHA OIDC and Woodpecker OIDC slots were dropped: artemis validates
+ * bearers via GitHub `GET /user`, which only accepts user-scoped PATs /
+ * OAuth tokens — OIDC ID tokens cannot satisfy that probe. CI users
+ * must explicitly export `$GITHUB_TOKEN`. Re-add these slots only when
+ * artemis grows an OIDC verifier.
+ *
+ * Source labels are stable strings used by `whoami` output and tests.
+ */
+
 const execFileP = promisify(execFile);
 
 const isNonEmpty = (s: string | null | undefined): s is string =>

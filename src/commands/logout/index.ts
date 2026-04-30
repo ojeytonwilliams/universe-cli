@@ -22,18 +22,22 @@ interface LogoutDeps {
 const handleLogout = async (opts: LogoutOptions, deps: LogoutDeps): Promise<HandlerResult> => {
   const logObj = deps.log ?? clackLog;
 
+  const removed = (await deps.tokenStore.loadToken()) !== null;
+
   await deps.tokenStore.deleteToken();
 
   if (opts.json) {
-    const envelope = buildEnvelope("logout", true);
+    const envelope = buildEnvelope("logout", true, { removed });
     const write =
       deps.write ??
       ((text: string): void => {
         process.stdout.write(text);
       });
     write(`${JSON.stringify(envelope)}\n`);
+  } else if (removed) {
+    logObj.success("Logged out. Stored token removed.");
   } else {
-    logObj.success("Logged out successfully.");
+    logObj.info("No token was stored. Nothing to remove.");
   }
 
   return { exitCode: 0, output: "" };

@@ -3,6 +3,20 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import type { TokenStore } from "./token-store.port.js";
 
+/**
+ * Persistent store for the device-flow GitHub token (priority chain
+ * fallback #5 per ADR-016 §Identity priority chain).
+ *
+ * On-disk layout:
+ *
+ *   $XDG_CONFIG_HOME/universe-cli/token       (if XDG_CONFIG_HOME set)
+ *   $HOME/.config/universe-cli/token          (fallback)
+ *
+ * Discipline: file mode 0600, parent dir 0700, plain text (no JSON
+ * envelope). Anything more is over-engineering — the token is the
+ * secret, not the surrounding metadata.
+ */
+
 const APP_DIR = "universe-cli";
 const TOKEN_FILE = "token";
 
@@ -31,8 +45,10 @@ class FileTokenStore implements TokenStore {
     const path = tokenPath();
     const dir = dirname(path);
     await mkdir(dir, { mode: 0o700, recursive: true });
+    // mkdir respects the umask on existing dirs; force 0700 explicitly.
     await chmod(dir, 0o700);
     await writeFile(path, trimmed, { mode: 0o600 });
+    // writeFile honors mode only on create; chmod ensures perms on overwrite.
     await chmod(path, 0o600);
   }
 
