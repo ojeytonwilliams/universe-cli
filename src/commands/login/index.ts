@@ -1,17 +1,11 @@
-import { log as clackLog } from "@clack/prompts";
 import type { DeviceFlow } from "../../auth/device-flow.port.js";
 import type { IdentityResolver } from "../../auth/identity-resolver.port.js";
 import type { TokenStore } from "../../auth/token-store.port.js";
 import { ConfirmError, CredentialError } from "../../errors/cli-errors.js";
 import { DEFAULT_GH_CLIENT_ID } from "../../constants.js";
-import { buildEnvelope } from "../../output/envelope.js";
+import type { Logger } from "../../output/logger.js";
+import { writeJson } from "../../output/write-json.js";
 import type { HandlerResult } from "../create/index.js";
-
-interface LoginLog {
-  info: (msg: string) => void;
-  success: (msg: string) => void;
-  warn: (msg: string) => void;
-}
 
 interface LoginOptions {
   force: boolean;
@@ -21,20 +15,14 @@ interface LoginOptions {
 interface LoginDeps {
   deviceFlow: DeviceFlow;
   identityResolver: IdentityResolver;
-  log?: LoginLog;
+  logger: Logger;
   tokenStore: TokenStore;
-  write?: (text: string) => void;
 }
 
 const DEFAULT_SCOPE = "read:org user:email";
 
 const handleLogin = async (opts: LoginOptions, deps: LoginDeps): Promise<HandlerResult> => {
-  const logObj = deps.log ?? clackLog;
-  const writeFn =
-    deps.write ??
-    ((text: string): void => {
-      process.stdout.write(text);
-    });
+  const { logger } = deps;
 
   // 1. Check for existing token unless --force
   if (!opts.force) {
@@ -53,14 +41,9 @@ const handleLogin = async (opts: LoginOptions, deps: LoginDeps): Promise<Handler
       clientId,
       onPrompt: ({ expiresIn, userCode, verificationUri }) => {
         if (opts.json) {
-          const envelope = buildEnvelope("login", true, {
-            expiresIn,
-            userCode,
-            verificationUri,
-          });
-          writeFn(`${JSON.stringify(envelope)}\n`);
+          writeJson("login", true, { expiresIn, userCode, verificationUri });
         } else {
-          logObj.info(
+          logger.info(
             [
               `Open ${verificationUri} in your browser`,
               `and enter code: ${userCode}`,
@@ -80,13 +63,12 @@ const handleLogin = async (opts: LoginOptions, deps: LoginDeps): Promise<Handler
 
   // 4. Emit success
   if (opts.json) {
-    const envelope = buildEnvelope("login", true, { stored: true });
-    writeFn(`${JSON.stringify(envelope)}\n`);
+    writeJson("login", true, { stored: true });
   } else {
-    logObj.success("Logged in. Token stored at ~/.config/universe-cli/token.");
+    logger.success("Logged in. Token stored at ~/.config/universe-cli/token.");
   }
 
-  return { exitCode: 0, output: "" };
+  return { exitCode: 0 };
 };
 
-export { handleLogin, type LoginDeps, type LoginLog, type LoginOptions };
+export { handleLogin, type LoginDeps, type LoginOptions };

@@ -1,7 +1,10 @@
 import type { IdentityResolver } from "../../auth/identity-resolver.port.js";
 import { ConfigError, CredentialError, UsageError } from "../../errors/cli-errors.js";
+import { writeJson } from "../../output/write-json.js";
 import type { ProxyClient } from "../../platform/proxy-client.port.js";
 import { handleRollback } from "./index.js";
+
+vi.mock(import("../../output/write-json.js"));
 
 const PLATFORM_YAML = "site: my-site\n";
 
@@ -20,16 +23,15 @@ const makeDeps = () => {
   };
   return {
     identityResolver,
-    log: { info: vi.fn(), success: vi.fn(), warn: vi.fn() },
+    logger: { error: vi.fn(), info: vi.fn(), success: vi.fn(), warn: vi.fn() },
     proxyClient,
     readFile: vi.fn().mockResolvedValue(PLATFORM_YAML),
-    write: vi.fn(),
   };
 };
 
 describe(handleRollback, () => {
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
   it("throws UsageError when --to is absent", async () => {
@@ -72,19 +74,19 @@ describe(handleRollback, () => {
     expect(rollbackSpy).toHaveBeenCalledWith({ site: "my-site", to: "d0" });
   });
 
-  it("with json: false calls log.success", async () => {
+  it("with json: false calls logger.success", async () => {
     const deps = makeDeps();
     await handleRollback({ cwd: "/proj", json: false, to: "d0" }, deps);
-    expect(deps.log.success).toHaveBeenCalledOnce();
+    expect(deps.logger.success).toHaveBeenCalledOnce();
   });
 
-  it("with json: true writes a JSON envelope containing command and success", async () => {
+  it("with json: true calls writeJson with command=static rollback and success=true", async () => {
     const deps = makeDeps();
     await handleRollback({ cwd: "/proj", json: true, to: "d0" }, deps);
-    expect(deps.write).toHaveBeenCalledOnce();
-    const text = deps.write.mock.calls[0]![0] as string;
-    const envelope = JSON.parse(text) as { command: string; success: boolean };
-    expect(envelope.command).toBe("static rollback");
-    expect(envelope.success).toBe(true);
+    expect(writeJson).toHaveBeenCalledWith(
+      "static rollback",
+      true,
+      expect.objectContaining({ deployId: "d0", site: "my-site" }),
+    );
   });
 });

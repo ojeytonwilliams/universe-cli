@@ -1,5 +1,8 @@
 import type { TokenStore } from "../../auth/token-store.port.js";
+import { writeJson } from "../../output/write-json.js";
 import { handleLogout } from "./index.js";
+
+vi.mock(import("../../output/write-json.js"));
 
 const makeDeps = () => {
   const tokenStore = {
@@ -8,15 +11,14 @@ const makeDeps = () => {
     saveToken: vi.fn(),
   } satisfies TokenStore;
   return {
-    log: { info: vi.fn(), success: vi.fn(), warn: vi.fn() },
+    logger: { error: vi.fn(), info: vi.fn(), success: vi.fn(), warn: vi.fn() },
     tokenStore,
-    write: vi.fn(),
   };
 };
 
 describe(handleLogout, () => {
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
   it("deletes the existing token", async () => {
@@ -30,25 +32,27 @@ describe(handleLogout, () => {
     const deps = makeDeps();
     deps.tokenStore.loadToken.mockResolvedValue(null);
     await handleLogout({ json: false }, deps);
-    expect(deps.log.info).toHaveBeenCalledExactlyOnceWith(expect.stringMatching(/no token/i));
+    expect(deps.logger.info).toHaveBeenCalledExactlyOnceWith(expect.stringMatching(/no token/i));
   });
 
-  it("with json: true writes a JSON envelope containing command, success and removed", async () => {
+  it("with json: true calls writeJson with removed=true", async () => {
     const deps = makeDeps();
     await handleLogout({ json: true }, deps);
-    const text = deps.write.mock.calls[0]![0] as string;
-    const envelope = JSON.parse(text) as { command: string; success: boolean };
-
-    expect(envelope).toMatchObject({ command: "logout", removed: true, success: true });
+    expect(writeJson).toHaveBeenCalledWith(
+      "logout",
+      true,
+      expect.objectContaining({ removed: true }),
+    );
   });
 
   it("emits removed=false when no token existed (JSON mode)", async () => {
     const deps = makeDeps();
     deps.tokenStore.loadToken.mockResolvedValue(null);
     await handleLogout({ json: true }, deps);
-    const text = deps.write.mock.calls[0]![0] as string;
-    const envelope = JSON.parse(text) as { removed?: boolean };
-
-    expect(envelope.removed).toBe(false);
+    expect(writeJson).toHaveBeenCalledWith(
+      "logout",
+      true,
+      expect.objectContaining({ removed: false }),
+    );
   });
 });

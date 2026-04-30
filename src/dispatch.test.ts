@@ -10,6 +10,7 @@ import type { CreateSelections, Prompt } from "./commands/create/prompt/prompt.p
 import type { StatusResponse } from "./platform/status-client.port.js";
 import type { ResolvedLayerSet } from "./commands/create/layer-composition/layer-composition-service.js";
 import type { PlatformManifest } from "./services/platform-manifest-service.js";
+import type { MockedFunction } from "vitest";
 
 // --- Test stubs and helpers ---
 const client: ObservabilityClient = {
@@ -122,6 +123,7 @@ const createDependencies = (overrides: Partial<Dependencies> = {}): Dependencies
   filesystemWriter: recordingWriter,
   identityResolver: new StubIdentityResolver(null),
   layerResolver: passThroughLayerResolver,
+  logger: { error: vi.fn(), info: vi.fn(), success: vi.fn(), warn: vi.fn() },
   logsClient: defaultLogsClient,
   packageManager: { specifyDeps: () => Promise.resolve() },
   platformManifestGenerator: manifestGenerator,
@@ -140,6 +142,23 @@ const createDependencies = (overrides: Partial<Dependencies> = {}): Dependencies
 const ctx = { cwd: "/workspace" };
 
 describe(dispatch, () => {
+  let stdoutSpy: MockedFunction<typeof process.stdout.write>;
+  let stderrSpy: MockedFunction<typeof process.stderr.write>;
+
+  beforeEach(() => {
+    stdoutSpy = vi.spyOn(process.stdout, "write").mockReturnValue(true) as MockedFunction<
+      typeof process.stdout.write
+    >;
+    stderrSpy = vi.spyOn(process.stderr, "write").mockReturnValue(true) as MockedFunction<
+      typeof process.stderr.write
+    >;
+  });
+
+  afterEach(() => {
+    stdoutSpy.mockRestore();
+    stderrSpy.mockRestore();
+  });
+
   describe("--help", () => {
     it("exits with code 0", async () => {
       const result = await dispatch(["--help"], createDependencies(), ctx, client);
@@ -147,11 +166,13 @@ describe(dispatch, () => {
     });
 
     it("output contains static and auth commands", async () => {
-      const { output } = await dispatch(["--help"], createDependencies(), ctx, client);
-      expect(output).toContain("static");
-      expect(output).toContain("login");
-      expect(output).toContain("logout");
-      expect(output).toContain("whoami");
+      const deps = createDependencies();
+      await dispatch(["--help"], deps, ctx, client);
+      expect(stdoutSpy).toHaveBeenCalledWith(expect.stringContaining("static"));
+      expect(stdoutSpy).toHaveBeenCalledWith(expect.stringContaining("auth"));
+      expect(stdoutSpy).toHaveBeenCalledWith(expect.stringContaining("login"));
+      expect(stdoutSpy).toHaveBeenCalledWith(expect.stringContaining("logout"));
+      expect(stdoutSpy).toHaveBeenCalledWith(expect.stringContaining("whoami"));
     });
 
     it("does not call observability for help", async () => {
@@ -177,10 +198,10 @@ describe(dispatch, () => {
   });
 
   describe("no arguments", () => {
-    it("exits with code 0 and prints help", async () => {
+    it("exits with code 0", async () => {
       const result = await dispatch([], createDependencies(), ctx, client);
       expect(result.exitCode).toBe(0);
-      expect(result.output).toContain("Usage:");
+      expect(stdoutSpy).toHaveBeenCalledWith(expect.stringContaining("Usage:"));
     });
   });
 
@@ -188,7 +209,7 @@ describe(dispatch, () => {
     it("exits with a non-zero code", async () => {
       const result = await dispatch(["unknown-cmd"], createDependencies(), ctx, client);
       expect(result.exitCode).toBeGreaterThan(0);
-      expect(result.output).toContain("unknown command");
+      expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("unknown command"));
     });
 
     it("does not call observability for unknown commands", async () => {
@@ -210,7 +231,7 @@ describe(dispatch, () => {
     it("is interactive-only and rejects extra args", async () => {
       const result = await dispatch(["create", "my-app"], createDependencies(), ctx, client);
       expect(result.exitCode).toBeGreaterThan(0);
-      expect(result.output).toContain("interactive-only");
+      expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("interactive-only"));
     });
 
     it("does not call observability on bad args", async () => {
@@ -237,14 +258,14 @@ describe(dispatch, () => {
         client,
       );
       expect(result.exitCode).toBeGreaterThan(0);
-      expect(result.output).toContain("too many arguments");
+      expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("too many arguments"));
     });
   });
 
   describe("static deploy", () => {
     it("is recognised (not an unknown command error)", async () => {
-      const result = await dispatch(["static", "deploy"], createDependencies(), ctx, client);
-      expect(result.output).not.toContain("unknown command");
+      await dispatch(["static", "deploy"], createDependencies(), ctx, client);
+      expect(stderrSpy).not.toHaveBeenCalledWith(expect.stringContaining("unknown command"));
     });
 
     it("exits when extra args are provided", async () => {
@@ -281,7 +302,7 @@ describe(dispatch, () => {
     it("exits when --to is not provided", async () => {
       const result = await dispatch(["static", "rollback"], createDependencies(), ctx, client);
       expect(result.exitCode).toBeGreaterThan(0);
-      expect(result.output).toContain("--to");
+      expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("--to"));
     });
   });
 
@@ -298,17 +319,17 @@ describe(dispatch, () => {
   });
 
   describe("--version", () => {
-    it("exits with code 0 and outputs the package version", async () => {
+    it("exits with code 0", async () => {
       const result = await dispatch(["--version"], createDependencies(), ctx, client);
       expect(result.exitCode).toBe(0);
-      expect(result.output).toMatch(/\d+\.\d+\.\d+/);
+      expect(stdoutSpy).toHaveBeenCalledWith(expect.stringMatching(/\d+\.\d+\.\d+/));
     });
   });
 
   describe("login", () => {
     it("is recognised (not an unknown command error)", async () => {
-      const result = await dispatch(["login"], createDependencies(), ctx, client);
-      expect(result.output).not.toContain("unknown command");
+      await dispatch(["login"], createDependencies(), ctx, client);
+      expect(stderrSpy).not.toHaveBeenCalledWith(expect.stringContaining("unknown command"));
     });
 
     it("rejects unrecognised arguments", async () => {
@@ -326,8 +347,8 @@ describe(dispatch, () => {
 
   describe("whoami", () => {
     it("is recognised (not an unknown command error)", async () => {
-      const result = await dispatch(["whoami"], createDependencies(), ctx, client);
-      expect(result.output).not.toContain("unknown command");
+      await dispatch(["whoami"], createDependencies(), ctx, client);
+      expect(stderrSpy).not.toHaveBeenCalledWith(expect.stringContaining("unknown command"));
     });
   });
 
@@ -340,13 +361,13 @@ describe(dispatch, () => {
         client,
       );
       expect(result.exitCode).toBeGreaterThan(0);
-      expect(result.output).toContain("too many arguments");
+      expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("too many arguments"));
     });
 
     it("exits when environment is not preview or production", async () => {
       const result = await dispatch(["logs", "/dir", "staging"], createDependencies(), ctx, client);
       expect(result.exitCode).toBeGreaterThan(0);
-      expect(result.output).toContain('"staging"');
+      expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining('"staging"'));
     });
 
     it("defaults to the preview environment when no environment argument is given", async () => {
@@ -375,7 +396,7 @@ describe(dispatch, () => {
         client,
       );
       expect(result.exitCode).toBeGreaterThan(0);
-      expect(result.output).toContain("too many arguments");
+      expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("too many arguments"));
     });
 
     it("exits when environment is not preview or production", async () => {
@@ -386,7 +407,7 @@ describe(dispatch, () => {
         client,
       );
       expect(result.exitCode).toBeGreaterThan(0);
-      expect(result.output).toContain('"staging"');
+      expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining('"staging"'));
     });
 
     it("defaults to the preview environment when no environment argument is given", async () => {
@@ -424,7 +445,7 @@ describe(dispatch, () => {
         client,
       );
       expect(result.exitCode).toBeGreaterThan(0);
-      expect(result.output).toContain("too many arguments");
+      expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("too many arguments"));
     });
   });
 });

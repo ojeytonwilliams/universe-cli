@@ -20,6 +20,7 @@ import { PnpmPackageManager } from "./commands/create/package-manager/pnpm-packa
 import { PlatformManifestService } from "./services/platform-manifest-service.js";
 import { ClackPrompt } from "./commands/create/prompt/clack-prompt.js";
 import { dispatch } from "./dispatch.js";
+import { clackLogger } from "./output/logger.js";
 
 export const run = async (): Promise<void> => {
   const tokenStore = new FileTokenStore();
@@ -39,6 +40,7 @@ export const run = async (): Promise<void> => {
     filesystemWriter: new LocalFilesystemWriter(),
     identityResolver,
     layerResolver: new LayerCompositionService(),
+    logger: clackLogger,
     logsClient: new StubLogsClient(),
     packageManager: new PackageManagerService({
       bun: new BunPackageManager(),
@@ -58,11 +60,7 @@ export const run = async (): Promise<void> => {
   const context = { cwd: process.cwd() };
   const observability = new StubObservabilityClient();
 
-  const { exitCode, output } = await dispatch(process.argv.slice(2), deps, context, observability);
-
-  if (output.length > 0) {
-    process.stdout.write(`${output}\n`);
-  }
+  const { exitCode } = await dispatch(process.argv.slice(2), deps, context, observability);
 
   process.exitCode = exitCode;
 };

@@ -3,8 +3,21 @@ import type { ObservabilityClient } from "./observability/observability-client.p
 
 import { runCli } from "./cli.js";
 import { CliError } from "./errors/cli-errors.js";
+import type { MockedFunction } from "vitest";
 
 describe(runCli, () => {
+  let stderrSpy: MockedFunction<typeof process.stderr.write>;
+
+  beforeEach(() => {
+    stderrSpy = vi.spyOn(process.stderr, "write").mockReturnValue(true) as MockedFunction<
+      typeof process.stdout.write
+    >;
+  });
+
+  afterEach(() => {
+    stderrSpy.mockRestore();
+  });
+
   const makeTracking = () => {
     const trackedEvents: string[] = [];
     const obs: ObservabilityClient = {
@@ -18,7 +31,7 @@ describe(runCli, () => {
     return { obs, trackedEvents };
   };
 
-  const successHandler = (): Promise<HandlerResult> => Promise.resolve({ exitCode: 0, output: "" });
+  const successHandler = (): Promise<HandlerResult> => Promise.resolve({ exitCode: 0 });
   const failureHandler = (): Promise<HandlerResult> => Promise.reject(new Error("Command failed"));
 
   const commands = [

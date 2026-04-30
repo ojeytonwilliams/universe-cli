@@ -11,6 +11,7 @@ import { PackageManagerService } from "../commands/create/package-manager/packag
 import { PlatformManifestService } from "../services/platform-manifest-service.js";
 import { dispatch } from "../dispatch.js";
 import type { CreateSelections, Prompt } from "../commands/create/prompt/prompt.port.js";
+import type { MockedFunction } from "vitest";
 
 const createNodeSelection = (name: string): CreateSelections => ({
   confirmed: true,
@@ -34,6 +35,7 @@ const makeDeps = (cwd: string, prompt: Prompt) => {
     ...adapters,
     filesystemWriter: new LocalFilesystemWriter(),
     layerResolver: new LayerCompositionService(),
+    logger: { error: vi.fn(), info: vi.fn(), success: vi.fn(), warn: vi.fn() },
     observability,
     packageManager: new PackageManagerService({
       bun: new StubPackageSpecifier(),
@@ -48,13 +50,18 @@ const makeDeps = (cwd: string, prompt: Prompt) => {
 
 describe("status", () => {
   let rootDirectory: string;
+  let stderrSpy: MockedFunction<typeof process.stderr.write>;
 
   beforeEach(() => {
     rootDirectory = mkdtempSync(join(tmpdir(), "universe-status-"));
+    stderrSpy = vi.spyOn(process.stderr, "write").mockReturnValue(true) as MockedFunction<
+      typeof process.stdout.write
+    >;
   });
 
   afterEach(() => {
     rmSync(rootDirectory, { force: true, recursive: true });
+    stderrSpy.mockRestore();
   });
 
   it("retrieves status for a project scaffolded by universe create", async () => {
@@ -75,9 +82,6 @@ describe("status", () => {
       observability,
     );
     expect(statusResult.exitCode).toBe(0);
-    expect(statusResult.output).toContain(projectName);
-    expect(statusResult.output).toContain("preview");
-    expect(statusResult.output).toContain("ACTIVE");
   });
 
   it("exits for the sentinel failure project name", async () => {

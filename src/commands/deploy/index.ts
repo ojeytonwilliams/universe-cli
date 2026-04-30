@@ -1,6 +1,5 @@
 import { readFile as nodeReadFile } from "node:fs/promises";
 import { join } from "node:path";
-import { log as clackLog } from "@clack/prompts";
 import type { IdentityResolver } from "../../auth/identity-resolver.port.js";
 import {
   ConfigError,
@@ -8,7 +7,8 @@ import {
   GitError,
   PartialUploadError,
 } from "../../errors/cli-errors.js";
-import { buildEnvelope } from "../../output/envelope.js";
+import type { Logger } from "../../output/logger.js";
+import { writeJson } from "../../output/write-json.js";
 import { parsePlatformYaml } from "../../platform/platform-yaml-v2.js";
 import type { ProxyClient } from "../../platform/proxy-client.port.js";
 import type { HandlerResult } from "../create/index.js";
@@ -22,12 +22,6 @@ import { uploadFiles as defaultUploadFiles } from "./upload.js";
 import type { WalkedFile } from "./walk.js";
 import { walkFiles as defaultWalkFiles } from "./walk.js";
 
-interface DeployLog {
-  info: (msg: string) => void;
-  success: (msg: string) => void;
-  warn: (msg: string) => void;
-}
-
 interface DeployOptions {
   cwd: string;
   dir?: string;
@@ -38,19 +32,18 @@ interface DeployOptions {
 interface DeployDeps {
   getGitState?: () => GitState;
   identityResolver: IdentityResolver;
-  log?: DeployLog;
+  logger: Logger;
   proxyClient: ProxyClient;
   readFile?: (path: string) => Promise<string>;
   runBuild?: (options: RunBuildOptions) => Promise<RunBuildResult>;
   uploadFiles?: (options: UploadFilesOptions) => Promise<UploadFilesResult>;
   walkFiles?: (dir: string) => WalkedFile[];
-  write?: (text: string) => void;
 }
 
 const defaultReadFileFn = (path: string): Promise<string> => nodeReadFile(path, "utf-8");
 
 const handleDeploy = async (opts: DeployOptions, deps: DeployDeps): Promise<HandlerResult> => {
-  const logObj = deps.log ?? clackLog;
+  const { logger } = deps;
   const read = deps.readFile ?? defaultReadFileFn;
   const git = deps.getGitState ?? defaultGetGitState;
   const build = deps.runBuild ?? defaultRunBuild;
@@ -107,7 +100,7 @@ const handleDeploy = async (opts: DeployOptions, deps: DeployDeps): Promise<Hand
   // 4. Check git state
   const gitState = git();
   if (gitState.dirty) {
-    logObj.warn("git working tree is dirty — uncommitted changes will not be reflected.");
+    logger.warn("git working tree is dirty — uncommitted changes will not be reflected.");
   }
 
   // 5. Build
@@ -117,7 +110,7 @@ const handleDeploy = async (opts: DeployOptions, deps: DeployDeps): Promise<Hand
     outputDir: opts.dir ?? config.build.output,
   });
   if (buildResult.skipped) {
-    logObj.info("build.command not set — using pre-built output.");
+    logger.info("build.command not set — using pre-built output.");
   }
 
   // 6. Walk and filter files
@@ -172,18 +165,12 @@ const handleDeploy = async (opts: DeployOptions, deps: DeployDeps): Promise<Hand
   };
 
   if (opts.json) {
-    const envelope = buildEnvelope("static deploy", true, summary);
-    const write =
-      deps.write ??
-      ((text: string): void => {
-        process.stdout.write(text);
-      });
-    write(`${JSON.stringify(envelope)}\n`);
+    writeJson("static deploy", true, summary);
   } else {
     const sizeKB = (uploadResult.totalSize / 1024).toFixed(1);
     const nextLine =
       mode === "preview" ? "Next: universe static promote" : "Promoted to production.";
-    logObj.success(
+    logger.success(
       [
         `Deployed ${finalizeResult.deployId}`,
         ``,
@@ -198,7 +185,7 @@ const handleDeploy = async (opts: DeployOptions, deps: DeployDeps): Promise<Hand
     );
   }
 
-  return { exitCode: 0, output: "" };
+  return { exitCode: 0 };
 };
 
-export { handleDeploy, type DeployDeps, type DeployLog, type DeployOptions };
+export { handleDeploy, type DeployDeps, type DeployOptions };

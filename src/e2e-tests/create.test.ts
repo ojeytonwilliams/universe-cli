@@ -88,6 +88,7 @@ describe("create e2e — docker", () => {
         ...adapterStubs,
         filesystemWriter: new LocalFilesystemWriter(),
         layerResolver: new LayerCompositionService(),
+        logger: { error: () => {}, info: () => {}, success: () => {}, warn: () => {} },
         packageManager: new PackageManagerService({
           bun: new BunPackageManager(),
           pnpm: new PnpmPackageManager(),
@@ -103,7 +104,7 @@ describe("create e2e — docker", () => {
       observability,
     );
 
-    expect(result.exitCode, result.output).toBe(0);
+    expect(result.exitCode).toBe(0);
 
     const projectDirectory = join(rootDirectory, selection.name);
 
@@ -153,6 +154,7 @@ describe("create e2e — docker", () => {
         ...adapterStubs,
         filesystemWriter: new LocalFilesystemWriter(),
         layerResolver: new LayerCompositionService(),
+        logger: { error: () => {}, info: () => {}, success: () => {}, warn: () => {} },
         packageManager: new PackageManagerService({
           bun: new BunPackageManager(),
           pnpm: new PnpmPackageManager(),
@@ -168,7 +170,7 @@ describe("create e2e — docker", () => {
       observability,
     );
 
-    expect(result.exitCode, result.output).toBe(0);
+    expect(result.exitCode).toBe(0);
 
     const projectDirectory = join(rootDirectory, selection.name);
 

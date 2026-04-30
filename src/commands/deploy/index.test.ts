@@ -1,9 +1,12 @@
 import type { IdentityResolver } from "../../auth/identity-resolver.port.js";
 import { ConfigError, CredentialError, PartialUploadError } from "../../errors/cli-errors.js";
 import { EXIT_CREDENTIALS, EXIT_STORAGE } from "../../errors/exit-codes.js";
+import { writeJson } from "../../output/write-json.js";
 import { ProxyError } from "../../platform/proxy-client.port.js";
 import type { ProxyClient } from "../../platform/proxy-client.port.js";
 import { handleDeploy } from "./index.js";
+
+vi.mock(import("../../output/write-json.js"));
 
 const PLATFORM_YAML = "site: my-site\n";
 const HASH = "abc123def456";
@@ -30,7 +33,7 @@ const makeDeps = () => {
   return {
     getGitState: vi.fn().mockReturnValue({ dirty: false, hash: HASH }),
     identityResolver,
-    log: { info: vi.fn(), success: vi.fn(), warn: vi.fn() },
+    logger: { error: vi.fn(), info: vi.fn(), success: vi.fn(), warn: vi.fn() },
     proxyClient,
     readFile: vi.fn().mockResolvedValue(PLATFORM_YAML),
     runBuild: vi.fn().mockResolvedValue({ outputDir: "/tmp/fake-dist", skipped: true }),
@@ -40,13 +43,12 @@ const makeDeps = () => {
     walkFiles: vi
       .fn()
       .mockReturnValue([{ absPath: "/tmp/fake-dist/index.html", relPath: "index.html" }]),
-    write: vi.fn(),
   };
 };
 
 describe(handleDeploy, () => {
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
   it("throws CredentialError when identity resolves to null", async () => {
@@ -86,7 +88,7 @@ describe(handleDeploy, () => {
     const deps = makeDeps();
     vi.spyOn(deps, "getGitState").mockReturnValue({ dirty: true, hash: HASH });
     await handleDeploy({ cwd: "/proj", json: false }, deps);
-    expect(deps.log.warn).toHaveBeenCalledOnce();
+    expect(deps.logger.warn).toHaveBeenCalledOnce();
   });
 
   it("calls runBuild with config from platform.yaml", async () => {
@@ -147,20 +149,20 @@ describe(handleDeploy, () => {
     );
   });
 
-  it("with json: false calls log.success", async () => {
+  it("with json: false calls logger.success", async () => {
     const deps = makeDeps();
     await handleDeploy({ cwd: "/proj", json: false }, deps);
-    expect(deps.log.success).toHaveBeenCalledOnce();
+    expect(deps.logger.success).toHaveBeenCalledOnce();
   });
 
-  it("with json: true writes a JSON envelope containing command and success", async () => {
+  it("with json: true calls writeJson with command=static deploy and success=true", async () => {
     const deps = makeDeps();
     await handleDeploy({ cwd: "/proj", json: true }, deps);
-    expect(deps.write).toHaveBeenCalledOnce();
-    const text = deps.write.mock.calls[0]![0] as string;
-    const envelope = JSON.parse(text) as { command: string; success: boolean };
-    expect(envelope.command).toBe("static deploy");
-    expect(envelope.success).toBe(true);
+    expect(writeJson).toHaveBeenCalledWith(
+      "static deploy",
+      true,
+      expect.objectContaining({ deployId: "d1", site: "my-site" }),
+    );
   });
 
   it("--promote flag forwards mode=production to deployFinalize", async () => {

@@ -6,28 +6,23 @@ const runCli = async (
   command: string,
   handler: () => Promise<HandlerResult>,
   observability: ObservabilityClient,
-): Promise<{ exitCode: number; output: string }> => {
+): Promise<{ exitCode: number }> => {
   observability.safeTrack(`${command}.start`);
   try {
     const result = await handler();
     if (result.exitCode === 0) {
       observability.safeTrack(`${command}.success`, result.meta);
     }
-    return { exitCode: result.exitCode, output: result.output };
+    return { exitCode: result.exitCode };
   } catch (error) {
     if (error instanceof CliError) {
       observability.safeError(error);
       observability.safeTrack(`${command}.failure`);
-      return { exitCode: error.exitCode, output: error.stack ?? error.message };
+      process.stderr.write(`${error.stack ?? error.message}\n`);
+      return { exitCode: error.exitCode };
     }
     throw error;
   }
 };
 
 export { runCli };
-
-export interface CliResult {
-  exitCode: number;
-  output: string;
-}
-// Export type { CliResult };

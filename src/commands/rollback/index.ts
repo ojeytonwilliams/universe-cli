@@ -1,18 +1,12 @@
 import { readFile as nodeReadFile } from "node:fs/promises";
 import { join } from "node:path";
-import { log as clackLog } from "@clack/prompts";
 import type { IdentityResolver } from "../../auth/identity-resolver.port.js";
 import { ConfigError, CredentialError, UsageError } from "../../errors/cli-errors.js";
-import { buildEnvelope } from "../../output/envelope.js";
+import type { Logger } from "../../output/logger.js";
+import { writeJson } from "../../output/write-json.js";
 import { parsePlatformYaml } from "../../platform/platform-yaml-v2.js";
 import type { ProxyClient } from "../../platform/proxy-client.port.js";
 import type { HandlerResult } from "../create/index.js";
-
-interface RollbackLog {
-  info: (msg: string) => void;
-  success: (msg: string) => void;
-  warn: (msg: string) => void;
-}
 
 interface RollbackOptions {
   cwd: string;
@@ -22,10 +16,9 @@ interface RollbackOptions {
 
 interface RollbackDeps {
   identityResolver: IdentityResolver;
-  log?: RollbackLog;
+  logger: Logger;
   proxyClient: ProxyClient;
   readFile?: (path: string) => Promise<string>;
-  write?: (text: string) => void;
 }
 
 const defaultReadFileFn = (path: string): Promise<string> => nodeReadFile(path, "utf-8");
@@ -34,7 +27,7 @@ const handleRollback = async (
   opts: RollbackOptions,
   deps: RollbackDeps,
 ): Promise<HandlerResult> => {
-  const logObj = deps.log ?? clackLog;
+  const { logger } = deps;
   const read = deps.readFile ?? defaultReadFileFn;
   const to = opts.to?.trim();
 
@@ -81,15 +74,9 @@ const handleRollback = async (
   };
 
   if (opts.json) {
-    const envelope = buildEnvelope("static rollback", true, summary);
-    const write =
-      deps.write ??
-      ((text: string): void => {
-        process.stdout.write(text);
-      });
-    write(`${JSON.stringify(envelope)}\n`);
+    writeJson("static rollback", true, summary);
   } else {
-    logObj.success(
+    logger.success(
       [
         `Rolled production back to ${result.deployId}`,
         ``,
@@ -100,7 +87,7 @@ const handleRollback = async (
     );
   }
 
-  return { exitCode: 0, output: "" };
+  return { exitCode: 0 };
 };
 
-export { handleRollback, type RollbackDeps, type RollbackLog, type RollbackOptions };
+export { handleRollback, type RollbackDeps, type RollbackOptions };

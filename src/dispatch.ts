@@ -30,6 +30,7 @@ import type { ProjectReaderPort } from "./io/project-reader.port.js";
 import type { Prompt } from "./commands/create/prompt/prompt.port.js";
 import pkg from "../package.json" with { type: "json" };
 import { runCli } from "./cli.js";
+import type { Logger } from "./output/logger.js";
 
 const VALID_ENVIRONMENTS = new Set(["preview", "production"]);
 type Environment = "preview" | "production";
@@ -40,6 +41,7 @@ interface Dependencies {
   identityResolver: IdentityResolver;
   layerResolver: LayerComposer;
   logsClient: LogsClient;
+  logger: Logger;
   packageManager: PackageManager;
   platformManifestGenerator: PlatformManifestGenerator;
   projectReader: ProjectReaderPort;
@@ -62,25 +64,11 @@ export const dispatch = async (
   deps: Dependencies,
   context: Context,
   observability: ObservabilityClient,
-): Promise<{ exitCode: number; output: string }> => {
-  let capturedOutput = "";
-  let result: { exitCode: number; output: string } | undefined;
-  const onResult = (r: { exitCode: number; output: string }) => {
-    result = r;
-  };
+): Promise<{ exitCode: number }> => {
+  let result: { exitCode: number } | undefined;
 
   const program = new Command("universe");
-  program
-    .exitOverride()
-    .configureOutput({
-      writeErr: (str) => {
-        capturedOutput += str;
-      },
-      writeOut: (str) => {
-        capturedOutput += str;
-      },
-    })
-    .version(pkg.version, "-V, --version", "Show version number");
+  program.exitOverride().version(pkg.version, "-V, --version", "Show version number");
 
   // Auth commands
   program
@@ -89,20 +77,19 @@ export const dispatch = async (
     .option("--force", "Replace any existing stored token", false)
     .option("--json", "Output as JSON", false)
     .action(async (options: { force: boolean; json: boolean }) => {
-      onResult(
-        await runCli(
-          "login",
-          () =>
-            handleLogin(
-              { force: options.force, json: options.json },
-              {
-                deviceFlow: deps.deviceFlow,
-                identityResolver: deps.identityResolver,
-                tokenStore: deps.tokenStore,
-              },
-            ),
-          observability,
-        ),
+      result = await runCli(
+        "login",
+        () =>
+          handleLogin(
+            { force: options.force, json: options.json },
+            {
+              deviceFlow: deps.deviceFlow,
+              identityResolver: deps.identityResolver,
+              logger: deps.logger,
+              tokenStore: deps.tokenStore,
+            },
+          ),
+        observability,
       );
     });
 
@@ -111,12 +98,14 @@ export const dispatch = async (
     .description("Remove the stored GitHub device-flow token")
     .option("--json", "Output as JSON", false)
     .action(async (options: { json: boolean }) => {
-      onResult(
-        await runCli(
-          "logout",
-          () => handleLogout({ json: options.json }, { tokenStore: deps.tokenStore }),
-          observability,
-        ),
+      result = await runCli(
+        "logout",
+        () =>
+          handleLogout(
+            { json: options.json },
+            { logger: deps.logger, tokenStore: deps.tokenStore },
+          ),
+        observability,
       );
     });
 
@@ -125,16 +114,18 @@ export const dispatch = async (
     .description("Show resolved GitHub identity and authorized sites")
     .option("--json", "Output as JSON", false)
     .action(async (options: { json: boolean }) => {
-      onResult(
-        await runCli(
-          "whoami",
-          () =>
-            handleWhoami(
-              { json: options.json },
-              { identityResolver: deps.identityResolver, proxyClient: deps.proxyClient },
-            ),
-          observability,
-        ),
+      result = await runCli(
+        "whoami",
+        () =>
+          handleWhoami(
+            { json: options.json },
+            {
+              identityResolver: deps.identityResolver,
+              logger: deps.logger,
+              proxyClient: deps.proxyClient,
+            },
+          ),
+        observability,
       );
     });
 
@@ -145,15 +136,29 @@ export const dispatch = async (
     .argument("[args...]", "additional arguments")
     .action(async (args: string[]) => {
       if (args.length > 0) {
-        onResult({
-          exitCode: 1,
-          output:
-            'The "create" command is interactive-only in this spike. Run "universe create" with no additional arguments.',
-        });
+        process.stderr.write(
+          'The "create" command is interactive-only in this spike. Run "universe create" with no additional arguments.\n',
+        );
+        result = { exitCode: 1 };
         return;
       }
-      onResult(
-        await runCli("create", () => handleCreate({ cwd: context.cwd }, deps), observability),
+      result = await runCli(
+        "create",
+        () =>
+          handleCreate(
+            { cwd: context.cwd },
+            {
+              filesystemWriter: deps.filesystemWriter,
+              layerResolver: deps.layerResolver,
+              logger: deps.logger,
+              packageManager: deps.packageManager,
+              platformManifestGenerator: deps.platformManifestGenerator,
+              prompt: deps.prompt,
+              repoInitialiser: deps.repoInitialiser,
+              validator: deps.validator,
+            },
+          ),
+        observability,
       );
     });
 
@@ -163,12 +168,19 @@ export const dispatch = async (
     .argument("[directory]", "Project directory")
     .allowExcessArguments(false)
     .action(async (directory: string | undefined) => {
-      onResult(
-        await runCli(
-          "register",
-          () => handleRegister({ projectDirectory: directory ?? context.cwd }, deps),
-          observability,
-        ),
+      result = await runCli(
+        "register",
+        () =>
+          handleRegister(
+            { projectDirectory: directory ?? context.cwd },
+            {
+              logger: deps.logger,
+              platformManifestGenerator: deps.platformManifestGenerator,
+              projectReader: deps.projectReader,
+              registrationClient: deps.registrationClient,
+            },
+          ),
+        observability,
       );
     });
 
@@ -181,22 +193,23 @@ export const dispatch = async (
     .action(async (directory: string | undefined, environment: string | undefined) => {
       const env = environment ?? "preview";
       if (!VALID_ENVIRONMENTS.has(env)) {
-        onResult({
-          exitCode: 1,
-          output: `environment "${env}" — valid values are: preview, production`,
-        });
+        process.stderr.write(`environment "${env}" — valid values are: preview, production\n`);
+        result = { exitCode: 1 };
         return;
       }
-      onResult(
-        await runCli(
-          "logs",
-          () =>
-            handleLogs(
-              { environment: env as Environment, projectDirectory: directory ?? context.cwd },
-              deps,
-            ),
-          observability,
-        ),
+      result = await runCli(
+        "logs",
+        () =>
+          handleLogs(
+            { environment: env as Environment, projectDirectory: directory ?? context.cwd },
+            {
+              logger: deps.logger,
+              logsClient: deps.logsClient,
+              platformManifestGenerator: deps.platformManifestGenerator,
+              projectReader: deps.projectReader,
+            },
+          ),
+        observability,
       );
     });
 
@@ -209,22 +222,23 @@ export const dispatch = async (
     .action(async (directory: string | undefined, environment: string | undefined) => {
       const env = environment ?? "preview";
       if (!VALID_ENVIRONMENTS.has(env)) {
-        onResult({
-          exitCode: 1,
-          output: `environment "${env}" — valid values are: preview, production`,
-        });
+        process.stderr.write(`environment "${env}" — valid values are: preview, production\n`);
+        result = { exitCode: 1 };
         return;
       }
-      onResult(
-        await runCli(
-          "status",
-          () =>
-            handleStatus(
-              { environment: env as Environment, projectDirectory: directory ?? context.cwd },
-              deps,
-            ),
-          observability,
-        ),
+      result = await runCli(
+        "status",
+        () =>
+          handleStatus(
+            { environment: env as Environment, projectDirectory: directory ?? context.cwd },
+            {
+              logger: deps.logger,
+              platformManifestGenerator: deps.platformManifestGenerator,
+              projectReader: deps.projectReader,
+              statusClient: deps.statusClient,
+            },
+          ),
+        observability,
       );
     });
 
@@ -234,12 +248,19 @@ export const dispatch = async (
     .argument("[directory]", "Project directory")
     .allowExcessArguments(false)
     .action(async (directory: string | undefined) => {
-      onResult(
-        await runCli(
-          "teardown",
-          () => handleTeardown({ projectDirectory: directory ?? context.cwd }, deps),
-          observability,
-        ),
+      result = await runCli(
+        "teardown",
+        () =>
+          handleTeardown(
+            { projectDirectory: directory ?? context.cwd },
+            {
+              logger: deps.logger,
+              platformManifestGenerator: deps.platformManifestGenerator,
+              projectReader: deps.projectReader,
+              teardownClient: deps.teardownClient,
+            },
+          ),
+        observability,
       );
     });
 
@@ -256,21 +277,23 @@ export const dispatch = async (
     .option("--json", "Output as JSON", false)
     .allowExcessArguments(false)
     .action(async (options: { dir?: string; promote: boolean; json: boolean }) => {
-      onResult(
-        await runCli(
-          "deploy",
-          () =>
-            handleDeploy(
-              {
-                cwd: context.cwd,
-                json: options.json,
-                ...(options.dir !== undefined && { dir: options.dir }),
-                ...(options.promote && { promote: options.promote }),
-              },
-              { identityResolver: deps.identityResolver, proxyClient: deps.proxyClient },
-            ),
-          observability,
-        ),
+      result = await runCli(
+        "deploy",
+        () =>
+          handleDeploy(
+            {
+              cwd: context.cwd,
+              json: options.json,
+              ...(options.dir !== undefined && { dir: options.dir }),
+              ...(options.promote && { promote: options.promote }),
+            },
+            {
+              identityResolver: deps.identityResolver,
+              logger: deps.logger,
+              proxyClient: deps.proxyClient,
+            },
+          ),
+        observability,
       );
     });
 
@@ -281,20 +304,22 @@ export const dispatch = async (
     .option("--json", "Output as JSON", false)
     .allowExcessArguments(false)
     .action(async (options: { site?: string; json: boolean }) => {
-      onResult(
-        await runCli(
-          "list",
-          () =>
-            handleList(
-              {
-                cwd: context.cwd,
-                json: options.json,
-                ...(options.site !== undefined && { site: options.site }),
-              },
-              { identityResolver: deps.identityResolver, proxyClient: deps.proxyClient },
-            ),
-          observability,
-        ),
+      result = await runCli(
+        "list",
+        () =>
+          handleList(
+            {
+              cwd: context.cwd,
+              json: options.json,
+              ...(options.site !== undefined && { site: options.site }),
+            },
+            {
+              identityResolver: deps.identityResolver,
+              logger: deps.logger,
+              proxyClient: deps.proxyClient,
+            },
+          ),
+        observability,
       );
     });
 
@@ -305,20 +330,22 @@ export const dispatch = async (
     .option("--json", "Output as JSON", false)
     .allowExcessArguments(false)
     .action(async (options: { from?: string; json: boolean }) => {
-      onResult(
-        await runCli(
-          "promote",
-          () =>
-            handlePromote(
-              {
-                cwd: context.cwd,
-                json: options.json,
-                ...(options.from !== undefined && { from: options.from }),
-              },
-              { identityResolver: deps.identityResolver, proxyClient: deps.proxyClient },
-            ),
-          observability,
-        ),
+      result = await runCli(
+        "promote",
+        () =>
+          handlePromote(
+            {
+              cwd: context.cwd,
+              json: options.json,
+              ...(options.from !== undefined && { from: options.from }),
+            },
+            {
+              identityResolver: deps.identityResolver,
+              logger: deps.logger,
+              proxyClient: deps.proxyClient,
+            },
+          ),
+        observability,
       );
     });
 
@@ -330,29 +357,32 @@ export const dispatch = async (
     .allowExcessArguments(false)
     .action(async (options: { to?: string; json: boolean }) => {
       if (options.to === undefined) {
-        onResult({
-          exitCode: 1,
-          output: "--to <deployId> is required. Usage: universe static rollback --to <deployId>",
-        });
+        process.stderr.write(
+          "--to <deployId> is required. Usage: universe static rollback --to <deployId>\n",
+        );
+        result = { exitCode: 1 };
         return;
       }
-      onResult(
-        await runCli(
-          "rollback",
-          () =>
-            handleRollback(
-              { cwd: context.cwd, json: options.json, to: options.to },
-              { identityResolver: deps.identityResolver, proxyClient: deps.proxyClient },
-            ),
-          observability,
-        ),
+      result = await runCli(
+        "rollback",
+        () =>
+          handleRollback(
+            { cwd: context.cwd, json: options.json, to: options.to },
+            {
+              identityResolver: deps.identityResolver,
+              logger: deps.logger,
+              proxyClient: deps.proxyClient,
+            },
+          ),
+        observability,
       );
     });
 
   program.addCommand(staticCmd);
 
   if (argv.length === 0) {
-    return { exitCode: 0, output: program.helpInformation().trim() };
+    program.outputHelp();
+    return { exitCode: 0 };
   }
 
   try {
@@ -360,14 +390,14 @@ export const dispatch = async (
   } catch (err) {
     if (err instanceof CommanderError) {
       if (err.code === "commander.helpDisplayed") {
-        return { exitCode: 0, output: capturedOutput.trim() };
+        return { exitCode: 0 };
       }
-      return { exitCode: err.exitCode, output: err.message };
+      return { exitCode: err.exitCode };
     }
     throw err;
   }
 
-  return result ?? { exitCode: 0, output: program.helpInformation().trim() };
+  return result ?? { exitCode: 0 };
 };
 
 export type { Dependencies };

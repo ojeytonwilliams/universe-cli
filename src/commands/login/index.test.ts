@@ -2,7 +2,10 @@ import type { DeviceFlow } from "../../auth/device-flow.port.js";
 import type { IdentityResolver } from "../../auth/identity-resolver.port.js";
 import type { TokenStore } from "../../auth/token-store.port.js";
 import { ConfirmError, CredentialError } from "../../errors/cli-errors.js";
+import { writeJson } from "../../output/write-json.js";
 import { handleLogin } from "./index.js";
+
+vi.mock(import("../../output/write-json.js"));
 
 const makeDeps = () => {
   const tokenStore: TokenStore = {
@@ -22,15 +25,14 @@ const makeDeps = () => {
   return {
     deviceFlow,
     identityResolver,
-    log: { info: vi.fn(), success: vi.fn(), warn: vi.fn() },
+    logger: { error: vi.fn(), info: vi.fn(), success: vi.fn(), warn: vi.fn() },
     tokenStore,
-    write: vi.fn(),
   };
 };
 
 describe(handleLogin, () => {
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
   it("throws ConfirmError when token is already stored and force is false", async () => {
@@ -61,32 +63,28 @@ describe(handleLogin, () => {
     expect(saveSpy).toHaveBeenCalledWith("new-token-xyz");
   });
 
-  it("with json: false calls log.info and log.success", async () => {
+  it("with json: false calls logger.info and logger.success", async () => {
     const deps = makeDeps();
     await handleLogin({ force: false, json: false }, deps);
-    expect(deps.log.info).toHaveBeenCalledWith(expect.stringContaining("ABCD-1234"));
-    expect(deps.log.success).toHaveBeenCalledOnce();
+    expect(deps.logger.info).toHaveBeenCalledWith(expect.stringContaining("ABCD-1234"));
+    expect(deps.logger.success).toHaveBeenCalledOnce();
   });
 
-  it("with json: true writes two JSON envelopes (prompt then success)", async () => {
+  it("with json: true calls writeJson twice (prompt then success)", async () => {
     const deps = makeDeps();
     vi.spyOn(deps.deviceFlow, "run").mockImplementation(async ({ onPrompt }) => {
       await onPrompt({ expiresIn: 900, userCode: "ABCD-1234", verificationUri: "https://gh.io" });
       return "new-token-xyz";
     });
     await handleLogin({ force: false, json: true }, deps);
-    expect(deps.write).toHaveBeenCalledTimes(2);
-    const first = JSON.parse(deps.write.mock.calls[0]![0] as string) as {
-      command: string;
-      success: boolean;
-    };
-    const second = JSON.parse(deps.write.mock.calls[1]![0] as string) as {
-      command: string;
-      success: boolean;
-    };
-    expect(first.command).toBe("login");
-    expect(second.command).toBe("login");
-    expect(second.success).toBe(true);
+    expect(writeJson).toHaveBeenCalledTimes(2);
+    expect(writeJson).toHaveBeenNthCalledWith(
+      1,
+      "login",
+      true,
+      expect.objectContaining({ userCode: "ABCD-1234" }),
+    );
+    expect(writeJson).toHaveBeenNthCalledWith(2, "login", true, { stored: true });
   });
 
   it("uses DEFAULT_GH_CLIENT_ID when UNIVERSE_GH_CLIENT_ID is unset", async () => {

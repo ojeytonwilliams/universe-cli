@@ -1,16 +1,10 @@
-import { log as clackLog } from "@clack/prompts";
 import type { IdentityResolver } from "../../auth/identity-resolver.port.js";
 import { CredentialError } from "../../errors/cli-errors.js";
-import { buildEnvelope, buildErrorEnvelope } from "../../output/envelope.js";
+import type { Logger } from "../../output/logger.js";
 import { wrapProxyError } from "../../platform/proxy-client.port.js";
 import type { ProxyClient, WhoAmIResponse } from "../../platform/proxy-client.port.js";
+import { writeErrorJson, writeJson } from "../../output/write-json.js";
 import type { HandlerResult } from "../create/index.js";
-
-interface WhoamiLog {
-  info: (msg: string) => void;
-  success: (msg: string) => void;
-  warn: (msg: string) => void;
-}
 
 interface WhoamiOptions {
   json: boolean;
@@ -18,18 +12,12 @@ interface WhoamiOptions {
 
 interface WhoamiDeps {
   identityResolver: IdentityResolver;
-  log?: WhoamiLog;
+  logger: Logger;
   proxyClient: ProxyClient;
-  write?: (text: string) => void;
 }
 
 const handleWhoami = async (opts: WhoamiOptions, deps: WhoamiDeps): Promise<HandlerResult> => {
-  const logObj = deps.log ?? clackLog;
-  const writeFn =
-    deps.write ??
-    ((text: string): void => {
-      process.stdout.write(text);
-    });
+  const { logger } = deps;
 
   // 1. Resolve identity
   const identity = await deps.identityResolver.resolve();
@@ -44,25 +32,23 @@ const handleWhoami = async (opts: WhoamiOptions, deps: WhoamiDeps): Promise<Hand
   } catch (err) {
     if (opts.json) {
       const { code, message } = wrapProxyError("whoami", err);
-      const envelope = buildErrorEnvelope("whoami", code, message);
-      writeFn(`${JSON.stringify(envelope)}\n`);
+      writeErrorJson("whoami", code, message);
     }
     throw err;
   }
 
   // 3. Emit output
   if (opts.json) {
-    const envelope = buildEnvelope("whoami", true, {
+    writeJson("whoami", true, {
       authorizedSites: me.authorizedSites,
       identitySource: identity.source,
       login: me.login,
     });
-    writeFn(`${JSON.stringify(envelope)}\n`);
   } else {
     const sites =
       me.authorizedSites.length > 0 ? me.authorizedSites.join(", ") : "(no sites authorized)";
 
-    logObj.success(
+    logger.success(
       [
         `Logged in as: ${me.login}`,
         `Authorized sites: ${sites}`,
@@ -71,7 +57,7 @@ const handleWhoami = async (opts: WhoamiOptions, deps: WhoamiDeps): Promise<Hand
     );
   }
 
-  return { exitCode: 0, output: "" };
+  return { exitCode: 0 };
 };
 
-export { handleWhoami, type WhoamiDeps, type WhoamiLog, type WhoamiOptions };
+export { handleWhoami, type WhoamiDeps, type WhoamiOptions };

@@ -95,6 +95,7 @@ const makeDeps = (cwd: string, prompt: Prompt, options: MakeDepsOptions = {}) =>
     ...adapters,
     filesystemWriter: new LocalFilesystemWriter(),
     layerResolver: new LayerCompositionService(),
+    logger: { error: vi.fn(), info: vi.fn(), success: vi.fn(), warn: vi.fn() },
     observability,
     packageManager:
       packageManagerService ??

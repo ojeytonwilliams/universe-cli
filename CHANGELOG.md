@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.9.0] - 2026-04-30
+
+### feat: Remove `output` from HandlerResult — injectable side-effecting output
+
+- Added `src/output/logger.ts`: shared `Logger` interface with `clackLogger` default (wraps `@clack/prompts`).
+- Added `src/output/write-json.ts`: `writeJson` and `writeErrorJson` utilities writing JSON envelopes directly to `process.stdout`.
+- Migrated all handlers to use `deps.log` (Logger) for human-readable output and `writeJson` / `writeErrorJson` for JSON output; removed `deps.write` / `DeployLog` and similar per-handler output interfaces.
+- Removed `output: string` from `HandlerResult`; all handlers now return `{ exitCode }` only.
+- Removed output write from `bin.ts`; `dispatch` return type simplified to `{ exitCode: number }`.
+- Tests updated: `writeJson` spy pattern uses `vi.mock` + named import instead of namespace import; log assertions use injected stubs.
+
 ## [1.8.0] - 2026-04-29
 
 ### feat: Phase 10 — fix testing gaps (deploy, login, promote, whoami, bin flags)

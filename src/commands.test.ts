@@ -41,11 +41,20 @@ const successReader = {
 
 const successValidator = (_yaml: string): PlatformManifest => stubManifest;
 
+const makeLogStub = () => ({
+  error: vi.fn<(s: string) => void>(),
+  info: vi.fn<(s: string) => void>(),
+  success: vi.fn<(s: string) => void>(),
+  warn: vi.fn<(s: string) => void>(),
+});
+
 const getDeps = <T extends object>(
   adapters: T,
   reader = successReader,
   validator = successValidator,
+  logger = makeLogStub(),
 ) => ({
+  logger,
   projectReader: reader,
   ...adapters,
   platformManifestGenerator: {
@@ -104,6 +113,7 @@ describe(handleCreate, () => {
           return { files: resolvedLayerFiles, layers: [] };
         },
       },
+      logger: { error: vi.fn(), info: vi.fn(), success: vi.fn(), warn: vi.fn() },
       packageManager: {
         specifyDeps: () => Promise.resolve(),
       },
@@ -130,7 +140,7 @@ describe(handleCreate, () => {
       },
     };
 
-    const { output } = await handleCreate({ cwd: "/workspace" }, deps);
+    await handleCreate({ cwd: "/workspace" }, deps);
 
     expect(writerCalls).toStrictEqual([
       {
@@ -141,7 +151,9 @@ describe(handleCreate, () => {
         targetDirectory: "/workspace/hello-universe",
       },
     ]);
-    expect(output).toContain("Scaffolded project at /workspace/hello-universe");
+    expect(deps.logger.success).toHaveBeenCalledWith(
+      "Scaffolded project at /workspace/hello-universe",
+    );
   });
 
   it("returns non-zero when prompt flow is cancelled", async () => {
@@ -156,6 +168,7 @@ describe(handleCreate, () => {
           throw new Error("layerResolver not used in this test");
         },
       },
+      logger: { error: vi.fn(), info: vi.fn(), success: vi.fn(), warn: vi.fn() },
       packageManager: {
         specifyDeps(): never {
           throw new Error("packageManager not used in this test");
@@ -206,6 +219,7 @@ describe(handleCreate, () => {
               throw new Error("layerResolver not used in this test");
             },
           },
+          logger: { error: vi.fn(), info: vi.fn(), success: vi.fn(), warn: vi.fn() },
           packageManager: {
             specifyDeps(): never {
               throw new Error("packageManager not used in this test");
@@ -256,6 +270,7 @@ describe(handleCreate, () => {
               return { files: resolvedLayerFiles, layers: [] };
             },
           },
+          logger: { error: vi.fn(), info: vi.fn(), success: vi.fn(), warn: vi.fn() },
           packageManager: {
             specifyDeps(): never {
               throw new Error("packageManager not used in this test");
@@ -313,14 +328,15 @@ describe(handleLogs, () => {
   });
 
   it("output contains the project name, environment, and log entries", async () => {
-    const { output } = await handleLogs(
+    const log = makeLogStub();
+    await handleLogs(
       { environment: "preview", projectDirectory: "/workspace" },
-      getDeps({ logsClient: successLogsClient }),
+      getDeps({ logsClient: successLogsClient }, successReader, successValidator, log),
     );
 
-    expect(output).toContain("my-app");
-    expect(output).toContain("preview");
-    expect(output).toContain("Application started");
+    expect(log.success.mock.calls[0]?.[0]).toContain("my-app");
+    expect(log.success.mock.calls[0]?.[0]).toContain("preview");
+    expect(log.success.mock.calls[0]?.[0]).toContain("Application started");
   });
 
   it("reads platform.yaml from the given projectDirectory", async () => {
@@ -441,14 +457,15 @@ describe(handleStatus, () => {
   });
 
   it("output contains the project name, environment, and state", async () => {
-    const { output } = await handleStatus(
+    const log = makeLogStub();
+    await handleStatus(
       { environment: "preview", projectDirectory: "/workspace" },
-      getDeps({ statusClient: successStatusClient }),
+      getDeps({ statusClient: successStatusClient }, successReader, successValidator, log),
     );
 
-    expect(output).toContain("my-app");
-    expect(output).toContain("preview");
-    expect(output).toContain("ACTIVE");
+    expect(log.success.mock.calls[0]?.[0]).toContain("my-app");
+    expect(log.success.mock.calls[0]?.[0]).toContain("preview");
+    expect(log.success.mock.calls[0]?.[0]).toContain("ACTIVE");
   });
 
   it("reads platform.yaml from the given projectDirectory", async () => {
@@ -569,13 +586,14 @@ describe(handleTeardown, () => {
   });
 
   it("output contains the project name and teardown ID", async () => {
-    const { output } = await handleTeardown(
+    const log = makeLogStub();
+    await handleTeardown(
       { projectDirectory: "/workspace" },
-      getDeps({ teardownClient: successTeardownClient }),
+      getDeps({ teardownClient: successTeardownClient }, successReader, successValidator, log),
     );
 
-    expect(output).toContain("my-app");
-    expect(output).toContain("stub-teardown-my-app-1");
+    expect(log.success.mock.calls[0]?.[0]).toContain("my-app");
+    expect(log.success.mock.calls[0]?.[0]).toContain("stub-teardown-my-app-1");
   });
 
   it("reads platform.yaml from the given projectDirectory", async () => {
@@ -665,13 +683,19 @@ describe(handleRegister, () => {
   });
 
   it("output contains the project name and registration ID", async () => {
-    const { output } = await handleRegister(
+    const log = makeLogStub();
+    await handleRegister(
       { projectDirectory: "/workspace" },
-      getDeps({ registrationClient: successRegistrationClient }),
+      getDeps(
+        { registrationClient: successRegistrationClient },
+        successReader,
+        successValidator,
+        log,
+      ),
     );
 
-    expect(output).toContain("my-app");
-    expect(output).toContain("stub-my-app");
+    expect(log.success.mock.calls[0]?.[0]).toContain("my-app");
+    expect(log.success.mock.calls[0]?.[0]).toContain("stub-my-app");
   });
 
   it("reads platform.yaml from the given projectDirectory", async () => {

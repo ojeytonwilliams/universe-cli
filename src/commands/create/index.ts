@@ -5,10 +5,10 @@ import type { PlatformManifestGenerator } from "../../services/platform-manifest
 import type { Prompt } from "./prompt/prompt.port.js";
 import type { RepoInitialiser } from "../../io/repo-initialiser.port.js";
 import type { CreateInputValidator } from "./create-input-validation-service.js";
+import type { Logger } from "../../output/logger.js";
 
 export interface HandlerResult {
   exitCode: number;
-  output: string;
   meta?: Record<string, string>;
 }
 
@@ -17,6 +17,7 @@ export const handleCreate = async (
   deps: {
     filesystemWriter: FilesystemWriter;
     layerResolver: LayerComposer;
+    logger: Logger;
     packageManager: PackageManager;
     platformManifestGenerator: PlatformManifestGenerator;
     prompt: Prompt;
@@ -24,10 +25,12 @@ export const handleCreate = async (
     validator: CreateInputValidator;
   },
 ): Promise<HandlerResult> => {
+  const { logger } = deps;
   const promptResult = await deps.prompt.promptForCreateInputs();
 
   if (promptResult === null || !promptResult.confirmed) {
-    return { exitCode: 1, output: "Create cancelled before writing files." };
+    logger.warn("Create cancelled before writing files.");
+    return { exitCode: 1 };
   }
 
   const validatedInput = deps.validator.validateCreateInput(promptResult);
@@ -51,5 +54,6 @@ export const handleCreate = async (
 
   await deps.repoInitialiser.initialise(targetDirectory);
 
-  return { exitCode: 0, output: `Scaffolded project at ${targetDirectory}` };
+  logger.success(`Scaffolded project at ${targetDirectory}`);
+  return { exitCode: 0 };
 };
