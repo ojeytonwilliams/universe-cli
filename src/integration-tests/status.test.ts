@@ -9,7 +9,7 @@ import { CreateInputValidationService } from "../commands/create/create-input-va
 import { LayerCompositionService } from "../commands/create/layer-composition/layer-composition-service.js";
 import { PackageManagerService } from "../commands/create/package-manager/package-manager.service.js";
 import { PlatformManifestService } from "../services/platform-manifest-service.js";
-import { route } from "../bin.js";
+import { dispatch } from "../dispatch.js";
 import type { CreateSelections, Prompt } from "../commands/create/prompt/prompt.port.js";
 
 const createNodeSelection = (name: string): CreateSelections => ({
@@ -59,18 +59,18 @@ describe("status", () => {
 
   it("retrieves status for a project scaffolded by universe create", async () => {
     const projectName = "status-app";
-    const { observability, ...routeDeps } = makeDeps(
+    const { observability, ...deps } = makeDeps(
       rootDirectory,
       createPromptPort(createNodeSelection(projectName)),
     );
     const projectDir = join(rootDirectory, projectName);
 
-    const createResult = await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
+    const createResult = await dispatch(["create"], deps, { cwd: rootDirectory }, observability);
     expect(createResult.exitCode).toBe(0);
 
-    const statusResult = await route(
+    const statusResult = await dispatch(
       ["status", projectDir],
-      routeDeps,
+      deps,
       { cwd: rootDirectory },
       observability,
     );
@@ -81,17 +81,17 @@ describe("status", () => {
   });
 
   it("exits for the sentinel failure project name", async () => {
-    const { observability, ...routeDeps } = makeDeps(
+    const { observability, ...deps } = makeDeps(
       rootDirectory,
       createPromptPort(createNodeSelection("status-failure")),
     );
     const projectDir = join(rootDirectory, "status-failure");
 
-    await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
+    await dispatch(["create"], deps, { cwd: rootDirectory }, observability);
 
-    const result = await route(
+    const result = await dispatch(
       ["status", projectDir],
-      routeDeps,
+      deps,
       { cwd: rootDirectory },
       observability,
     );

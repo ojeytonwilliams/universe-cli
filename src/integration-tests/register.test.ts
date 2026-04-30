@@ -9,7 +9,7 @@ import { CreateInputValidationService } from "../commands/create/create-input-va
 import { LayerCompositionService } from "../commands/create/layer-composition/layer-composition-service.js";
 import { PackageManagerService } from "../commands/create/package-manager/package-manager.service.js";
 import { PlatformManifestService } from "../services/platform-manifest-service.js";
-import { route } from "../bin.js";
+import { dispatch } from "../dispatch.js";
 import type { CreateSelections, Prompt } from "../commands/create/prompt/prompt.port.js";
 
 const createNodeSelection = (name: string): CreateSelections => ({
@@ -59,18 +59,18 @@ describe("register", () => {
 
   it("registers a project scaffolded by universe create", async () => {
     const projectName = "register-app";
-    const { observability, ...routeDeps } = makeDeps(
+    const { observability, ...deps } = makeDeps(
       rootDirectory,
       createPromptPort(createNodeSelection(projectName)),
     );
     const projectDir = join(rootDirectory, projectName);
 
-    const createResult = await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
+    const createResult = await dispatch(["create"], deps, { cwd: rootDirectory }, observability);
     expect(createResult.exitCode).toBe(0);
 
-    const registerResult = await route(
+    const registerResult = await dispatch(
       ["register", projectDir],
-      routeDeps,
+      deps,
       { cwd: rootDirectory },
       observability,
     );
@@ -81,18 +81,18 @@ describe("register", () => {
 
   it("exits when the same project is registered twice", async () => {
     const projectName = "duplicate-app";
-    const { observability, ...routeDeps } = makeDeps(
+    const { observability, ...deps } = makeDeps(
       rootDirectory,
       createPromptPort(createNodeSelection(projectName)),
     );
     const projectDir = join(rootDirectory, projectName);
 
-    await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
-    await route(["register", projectDir], routeDeps, { cwd: rootDirectory }, observability);
+    await dispatch(["create"], deps, { cwd: rootDirectory }, observability);
+    await dispatch(["register", projectDir], deps, { cwd: rootDirectory }, observability);
 
-    const secondResult = await route(
+    const secondResult = await dispatch(
       ["register", projectDir],
-      routeDeps,
+      deps,
       { cwd: rootDirectory },
       observability,
     );

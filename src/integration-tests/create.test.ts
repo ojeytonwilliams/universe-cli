@@ -13,7 +13,7 @@ import { PlatformManifestService } from "../services/platform-manifest-service.j
 import { CreateInputValidationService } from "../commands/create/create-input-validation-service.js";
 import { LocalFilesystemWriter } from "../io/local-filesystem-writer.js";
 import { LocalProjectReader } from "../io/local-project-reader.js";
-import { route } from "../bin.js";
+import { dispatch } from "../dispatch.js";
 import type { CreateSelections, Prompt } from "../commands/create/prompt/prompt.port.js";
 import type { RepoInitialiser } from "../io/repo-initialiser.port.js";
 
@@ -129,8 +129,8 @@ describe("create", () => {
       platformServices: ["analytics", "auth", "email"],
     });
 
-    const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection));
-    const result = await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
+    const { observability, ...deps } = makeDeps(rootDirectory, createPromptPort(selection));
+    const result = await dispatch(["create"], deps, { cwd: rootDirectory }, observability);
 
     expect(result.exitCode).toBe(0);
     expect(existsSync(join(rootDirectory, selection.name))).toBe(true);
@@ -144,8 +144,8 @@ describe("create", () => {
       platformServices: [],
     });
 
-    const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection));
-    const result = await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
+    const { observability, ...deps } = makeDeps(rootDirectory, createPromptPort(selection));
+    const result = await dispatch(["create"], deps, { cwd: rootDirectory }, observability);
 
     expect(result.exitCode).toBe(0);
     expect(existsSync(join(rootDirectory, selection.name))).toBe(true);
@@ -154,8 +154,8 @@ describe("create", () => {
   it("scaffolds Static", async () => {
     const selection = createStaticSelection("static-smoke");
 
-    const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection));
-    const result = await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
+    const { observability, ...deps } = makeDeps(rootDirectory, createPromptPort(selection));
+    const result = await dispatch(["create"], deps, { cwd: rootDirectory }, observability);
 
     expect(result.exitCode).toBe(0);
     expect(existsSync(join(rootDirectory, selection.name))).toBe(true);
@@ -169,8 +169,8 @@ describe("create", () => {
       platformServices: ["analytics", "auth", "email"],
     });
 
-    const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection));
-    const result = await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
+    const { observability, ...deps } = makeDeps(rootDirectory, createPromptPort(selection));
+    const result = await dispatch(["create"], deps, { cwd: rootDirectory }, observability);
 
     expect(result.exitCode).toBe(0);
 
@@ -190,10 +190,10 @@ describe("create", () => {
 
     const specifyDeps = vi.fn((_opts: RunOptions) => Promise.resolve());
 
-    const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection), {
+    const { observability, ...deps } = makeDeps(rootDirectory, createPromptPort(selection), {
       packageManagerService: { specifyDeps },
     });
-    const result = await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
+    const result = await dispatch(["create"], deps, { cwd: rootDirectory }, observability);
 
     expect(result.exitCode).toBe(0);
     expect(specifyDeps).toHaveBeenCalledWith({
@@ -208,10 +208,10 @@ describe("create", () => {
 
     const specifyDeps = vi.fn((_opts: RunOptions) => Promise.resolve());
 
-    const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection), {
+    const { observability, ...deps } = makeDeps(rootDirectory, createPromptPort(selection), {
       packageManagerService: { specifyDeps },
     });
-    const result = await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
+    const result = await dispatch(["create"], deps, { cwd: rootDirectory }, observability);
 
     expect(result.exitCode).toBe(0);
     expect(specifyDeps).toHaveBeenCalledWith({
@@ -231,10 +231,10 @@ describe("create", () => {
 
     const repoInitialiser = { initialise: vi.fn((_dir: string) => Promise.resolve()) };
 
-    const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection), {
+    const { observability, ...deps } = makeDeps(rootDirectory, createPromptPort(selection), {
       adapterOverrides: { repoInitialiser },
     });
-    const result = await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
+    const result = await dispatch(["create"], deps, { cwd: rootDirectory }, observability);
 
     expect(result.exitCode).toBe(0);
     expect(repoInitialiser.initialise).toHaveBeenCalledWith(join(rootDirectory, name));
@@ -246,10 +246,10 @@ describe("create", () => {
 
     const repoInitialiser = { initialise: vi.fn((_dir: string) => Promise.resolve()) };
 
-    const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection), {
+    const { observability, ...deps } = makeDeps(rootDirectory, createPromptPort(selection), {
       adapterOverrides: { repoInitialiser },
     });
-    const result = await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
+    const result = await dispatch(["create"], deps, { cwd: rootDirectory }, observability);
 
     expect(result.exitCode).toBe(0);
     expect(repoInitialiser.initialise).toHaveBeenCalledWith(join(rootDirectory, name));
@@ -258,8 +258,8 @@ describe("create", () => {
   it("snapshots generated Static scaffold output", async () => {
     const selection = createStaticSelection("snapshot-static-app");
 
-    const { observability, ...routeDeps } = makeDeps(rootDirectory, createPromptPort(selection));
-    const result = await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
+    const { observability, ...deps } = makeDeps(rootDirectory, createPromptPort(selection));
+    const result = await dispatch(["create"], deps, { cwd: rootDirectory }, observability);
 
     expect(result.exitCode).toBe(0);
 

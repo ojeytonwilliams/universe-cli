@@ -1,5 +1,5 @@
-import { route } from "./bin.js";
-import type { RouteDeps } from "./bin.js";
+import { dispatch } from "./dispatch.js";
+import type { Dependencies } from "./dispatch.js";
 import { StubDeviceFlow } from "./auth/stub-device-flow.js";
 import { StubIdentityResolver } from "./auth/stub-identity-resolver.js";
 import type { FilesystemWriter } from "./io/filesystem-writer.port.js";
@@ -117,7 +117,7 @@ const defaultRepoInitialiser = {
   initialise: (_dir: string) => Promise.resolve(),
 };
 
-const createRouteDeps = (overrides: Partial<RouteDeps> = {}): RouteDeps => ({
+const createDependencies = (overrides: Partial<Dependencies> = {}): Dependencies => ({
   deviceFlow: new StubDeviceFlow(),
   filesystemWriter: recordingWriter,
   identityResolver: new StubIdentityResolver(null),
@@ -137,18 +137,17 @@ const createRouteDeps = (overrides: Partial<RouteDeps> = {}): RouteDeps => ({
   ...overrides,
 });
 
-const routeContext = { cwd: "/workspace" };
+const ctx = { cwd: "/workspace" };
 
-// --- route: routing, help, validation ---
-describe(route, () => {
+describe(dispatch, () => {
   describe("--help", () => {
     it("exits with code 0", async () => {
-      const result = await route(["--help"], createRouteDeps(), routeContext, client);
+      const result = await dispatch(["--help"], createDependencies(), ctx, client);
       expect(result.exitCode).toBe(0);
     });
 
     it("output contains static and auth commands", async () => {
-      const { output } = await route(["--help"], createRouteDeps(), routeContext, client);
+      const { output } = await dispatch(["--help"], createDependencies(), ctx, client);
       expect(output).toContain("static");
       expect(output).toContain("login");
       expect(output).toContain("logout");
@@ -165,21 +164,21 @@ describe(route, () => {
         },
         track() {},
       };
-      await route(["--help"], createRouteDeps(), routeContext, trackingObs);
+      await dispatch(["--help"], createDependencies(), ctx, trackingObs);
       expect(tracked).toHaveLength(0);
     });
   });
 
   describe("-h", () => {
     it("exits with code 0", async () => {
-      const result = await route(["-h"], createRouteDeps(), routeContext, client);
+      const result = await dispatch(["-h"], createDependencies(), ctx, client);
       expect(result.exitCode).toBe(0);
     });
   });
 
   describe("no arguments", () => {
     it("exits with code 0 and prints help", async () => {
-      const result = await route([], createRouteDeps(), routeContext, client);
+      const result = await dispatch([], createDependencies(), ctx, client);
       expect(result.exitCode).toBe(0);
       expect(result.output).toContain("Usage:");
     });
@@ -187,7 +186,7 @@ describe(route, () => {
 
   describe("unknown command", () => {
     it("exits with a non-zero code", async () => {
-      const result = await route(["unknown-cmd"], createRouteDeps(), routeContext, client);
+      const result = await dispatch(["unknown-cmd"], createDependencies(), ctx, client);
       expect(result.exitCode).toBeGreaterThan(0);
       expect(result.output).toContain("unknown command");
     });
@@ -202,14 +201,14 @@ describe(route, () => {
         },
         track() {},
       };
-      await route(["unknown-cmd"], createRouteDeps(), routeContext, trackingObs);
+      await dispatch(["unknown-cmd"], createDependencies(), ctx, trackingObs);
       expect(tracked).toHaveLength(0);
     });
   });
 
   describe("create", () => {
     it("is interactive-only and rejects extra args", async () => {
-      const result = await route(["create", "my-app"], createRouteDeps(), routeContext, client);
+      const result = await dispatch(["create", "my-app"], createDependencies(), ctx, client);
       expect(result.exitCode).toBeGreaterThan(0);
       expect(result.output).toContain("interactive-only");
     });
@@ -224,17 +223,17 @@ describe(route, () => {
         },
         track() {},
       };
-      await route(["create", "my-app"], createRouteDeps(), routeContext, trackingObs);
+      await dispatch(["create", "my-app"], createDependencies(), ctx, trackingObs);
       expect(tracked).toHaveLength(0);
     });
   });
 
   describe("register", () => {
     it("exits when more than one argument is provided", async () => {
-      const result = await route(
+      const result = await dispatch(
         ["register", "/dir", "extra"],
-        createRouteDeps(),
-        routeContext,
+        createDependencies(),
+        ctx,
         client,
       );
       expect(result.exitCode).toBeGreaterThan(0);
@@ -244,15 +243,15 @@ describe(route, () => {
 
   describe("static deploy", () => {
     it("is recognised (not an unknown command error)", async () => {
-      const result = await route(["static", "deploy"], createRouteDeps(), routeContext, client);
+      const result = await dispatch(["static", "deploy"], createDependencies(), ctx, client);
       expect(result.output).not.toContain("unknown command");
     });
 
     it("exits when extra args are provided", async () => {
-      const result = await route(
+      const result = await dispatch(
         ["static", "deploy", "extra"],
-        createRouteDeps(),
-        routeContext,
+        createDependencies(),
+        ctx,
         client,
       );
       expect(result.exitCode).toBeGreaterThan(0);
@@ -261,17 +260,17 @@ describe(route, () => {
 
   describe("deploy without static prefix", () => {
     it("exits with a non-zero code", async () => {
-      const result = await route(["deploy"], createRouteDeps(), routeContext, client);
+      const result = await dispatch(["deploy"], createDependencies(), ctx, client);
       expect(result.exitCode).toBeGreaterThan(0);
     });
   });
 
   describe("static promote", () => {
     it("exits when extra args are provided", async () => {
-      const result = await route(
+      const result = await dispatch(
         ["static", "promote", "extra"],
-        createRouteDeps(),
-        routeContext,
+        createDependencies(),
+        ctx,
         client,
       );
       expect(result.exitCode).toBeGreaterThan(0);
@@ -280,7 +279,7 @@ describe(route, () => {
 
   describe("static rollback", () => {
     it("exits when --to is not provided", async () => {
-      const result = await route(["static", "rollback"], createRouteDeps(), routeContext, client);
+      const result = await dispatch(["static", "rollback"], createDependencies(), ctx, client);
       expect(result.exitCode).toBeGreaterThan(0);
       expect(result.output).toContain("--to");
     });
@@ -288,10 +287,10 @@ describe(route, () => {
 
   describe("static list", () => {
     it("exits when an unknown argument is provided", async () => {
-      const result = await route(
+      const result = await dispatch(
         ["static", "list", "bad-arg"],
-        createRouteDeps(),
-        routeContext,
+        createDependencies(),
+        ctx,
         client,
       );
       expect(result.exitCode).toBeGreaterThan(0);
@@ -300,7 +299,7 @@ describe(route, () => {
 
   describe("--version", () => {
     it("exits with code 0 and outputs the package version", async () => {
-      const result = await route(["--version"], createRouteDeps(), routeContext, client);
+      const result = await dispatch(["--version"], createDependencies(), ctx, client);
       expect(result.exitCode).toBe(0);
       expect(result.output).toMatch(/\d+\.\d+\.\d+/);
     });
@@ -308,36 +307,36 @@ describe(route, () => {
 
   describe("login", () => {
     it("is recognised (not an unknown command error)", async () => {
-      const result = await route(["login"], createRouteDeps(), routeContext, client);
+      const result = await dispatch(["login"], createDependencies(), ctx, client);
       expect(result.output).not.toContain("unknown command");
     });
 
     it("rejects unrecognised arguments", async () => {
-      const result = await route(["login", "--foo"], createRouteDeps(), routeContext, client);
+      const result = await dispatch(["login", "--foo"], createDependencies(), ctx, client);
       expect(result.exitCode).toBeGreaterThan(0);
     });
   });
 
   describe("logout", () => {
     it("exits with code 0", async () => {
-      const result = await route(["logout"], createRouteDeps(), routeContext, client);
+      const result = await dispatch(["logout"], createDependencies(), ctx, client);
       expect(result.exitCode).toBe(0);
     });
   });
 
   describe("whoami", () => {
     it("is recognised (not an unknown command error)", async () => {
-      const result = await route(["whoami"], createRouteDeps(), routeContext, client);
+      const result = await dispatch(["whoami"], createDependencies(), ctx, client);
       expect(result.output).not.toContain("unknown command");
     });
   });
 
   describe("logs", () => {
     it("exits when more than two arguments are provided", async () => {
-      const result = await route(
+      const result = await dispatch(
         ["logs", "/dir", "preview", "extra"],
-        createRouteDeps(),
-        routeContext,
+        createDependencies(),
+        ctx,
         client,
       );
       expect(result.exitCode).toBeGreaterThan(0);
@@ -345,12 +344,7 @@ describe(route, () => {
     });
 
     it("exits when environment is not preview or production", async () => {
-      const result = await route(
-        ["logs", "/dir", "staging"],
-        createRouteDeps(),
-        routeContext,
-        client,
-      );
+      const result = await dispatch(["logs", "/dir", "staging"], createDependencies(), ctx, client);
       expect(result.exitCode).toBeGreaterThan(0);
       expect(result.output).toContain('"staging"');
     });
@@ -367,22 +361,17 @@ describe(route, () => {
           });
         },
       };
-      await route(
-        ["logs"],
-        createRouteDeps({ logsClient: trackingLogsClient }),
-        routeContext,
-        client,
-      );
+      await dispatch(["logs"], createDependencies({ logsClient: trackingLogsClient }), ctx, client);
       expect(requests[0]?.environment).toBe("preview");
     });
   });
 
   describe("status", () => {
     it("exits when more than two arguments are provided", async () => {
-      const result = await route(
+      const result = await dispatch(
         ["status", "/dir", "preview", "extra"],
-        createRouteDeps(),
-        routeContext,
+        createDependencies(),
+        ctx,
         client,
       );
       expect(result.exitCode).toBeGreaterThan(0);
@@ -390,10 +379,10 @@ describe(route, () => {
     });
 
     it("exits when environment is not preview or production", async () => {
-      const result = await route(
+      const result = await dispatch(
         ["status", "/dir", "staging"],
-        createRouteDeps(),
-        routeContext,
+        createDependencies(),
+        ctx,
         client,
       );
       expect(result.exitCode).toBeGreaterThan(0);
@@ -416,10 +405,10 @@ describe(route, () => {
           });
         },
       };
-      await route(
+      await dispatch(
         ["status"],
-        createRouteDeps({ statusClient: trackingStatusClient }),
-        routeContext,
+        createDependencies({ statusClient: trackingStatusClient }),
+        ctx,
         client,
       );
       expect(requests[0]?.environment).toBe("preview");
@@ -428,10 +417,10 @@ describe(route, () => {
 
   describe("teardown", () => {
     it("exits when more than one argument is provided", async () => {
-      const result = await route(
+      const result = await dispatch(
         ["teardown", "/dir", "extra"],
-        createRouteDeps(),
-        routeContext,
+        createDependencies(),
+        ctx,
         client,
       );
       expect(result.exitCode).toBeGreaterThan(0);
