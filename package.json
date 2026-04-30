@@ -40,7 +40,7 @@
     "codegen": "node scripts/generate-layer-files.mjs",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
-    "start": "node dist/bin.js",
+    "start": "node dist/index.js",
     "test": "vitest run",
     "watch:unit": "vitest --config vitest.unit.config.ts",
     "test:e2e": "vitest run --config vitest.e2e.config.ts",

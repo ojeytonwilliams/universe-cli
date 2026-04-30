@@ -1,7 +1,4 @@
-#!/usr/bin/env node
-import { fileURLToPath } from "node:url";
 import { existsSync } from "node:fs";
-import { isSea } from "node:sea";
 import { FileTokenStore } from "./auth/file-token-store.js";
 import { GithubDeviceFlow } from "./auth/github-device-flow.js";
 import { GithubIdentityResolver } from "./auth/github-identity-resolver.js";
@@ -24,7 +21,7 @@ import { PlatformManifestService } from "./services/platform-manifest-service.js
 import { ClackPrompt } from "./commands/create/prompt/clack-prompt.js";
 import { dispatch } from "./dispatch.js";
 
-if (isSea() || process.argv[1] === fileURLToPath(import.meta.url)) {
+export const run = async (): Promise<void> => {
   const tokenStore = new FileTokenStore();
   const identityResolver = new GithubIdentityResolver({
     loadStoredToken: () => tokenStore.loadToken(),
@@ -60,18 +57,12 @@ if (isSea() || process.argv[1] === fileURLToPath(import.meta.url)) {
   };
   const context = { cwd: process.cwd() };
   const observability = new StubObservabilityClient();
-  void (async () => {
-    const { exitCode, output } = await dispatch(
-      process.argv.slice(2),
-      deps,
-      context,
-      observability,
-    );
 
-    if (output.length > 0) {
-      process.stdout.write(`${output}\n`);
-    }
+  const { exitCode, output } = await dispatch(process.argv.slice(2), deps, context, observability);
 
-    process.exitCode = exitCode;
-  })();
-}
+  if (output.length > 0) {
+    process.stdout.write(`${output}\n`);
+  }
+
+  process.exitCode = exitCode;
+};

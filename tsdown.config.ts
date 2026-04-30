@@ -6,7 +6,7 @@ export default defineConfig({
     alwaysBundle: [/./],
   },
   dts: false,
-  entry: ["src/bin.ts"],
+  entry: ["src/index.ts"],
   format: "cjs",
   outDir: "dist/sea",
 });
