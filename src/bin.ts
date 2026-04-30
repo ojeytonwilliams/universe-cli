@@ -2,6 +2,7 @@
 import { fileURLToPath } from "node:url";
 import { existsSync } from "node:fs";
 import { isSea } from "node:sea";
+import { Command, CommanderError } from "commander";
 import pkg from "../package.json" with { type: "json" };
 import type { DeviceFlow } from "./auth/device-flow.port.js";
 import type { IdentityResolver } from "./auth/identity-resolver.port.js";
@@ -10,7 +11,6 @@ import { FileTokenStore } from "./auth/file-token-store.js";
 import { GithubDeviceFlow } from "./auth/github-device-flow.js";
 import { GithubIdentityResolver } from "./auth/github-identity-resolver.js";
 import { DEFAULT_PROXY_URL } from "./constants.js";
-import { BadArgumentsError } from "./errors/cli-errors.js";
 import type { FilesystemWriter } from "./io/filesystem-writer.port.js";
 import type { RepoInitialiser } from "./io/repo-initialiser.port.js";
 import { GitRepoInitialiser } from "./io/git-repo-initialiser.js";
@@ -42,7 +42,6 @@ import type { ProjectReaderPort } from "./io/project-reader.port.js";
 import type { Prompt } from "./commands/create/prompt/prompt.port.js";
 import { ClackPrompt } from "./commands/create/prompt/clack-prompt.js";
 import { handleCreate } from "./commands/create/index.js";
-import type { HandlerResult } from "./commands/create/index.js";
 import { handleDeploy } from "./commands/deploy/index.js";
 import { handleList } from "./commands/list/index.js";
 import { handleLogin } from "./commands/login/index.js";
@@ -79,464 +78,8 @@ interface RouteContext {
   cwd: string;
 }
 
-const HELP_TEXT = `
-Usage: universe <command> [options]
-
-Static deploy commands (require "static" prefix):
-  static deploy    Deploy a project to the platform
-  static list      List deployments for a site
-  static promote   Promote a deployment to production
-  static rollback  Roll back to a previous deployment
-
-Auth commands:
-  login       Authenticate with the platform
-  logout      Remove stored credentials
-  whoami      Show the current authenticated user
-
-Project commands:
-  create      Scaffold a new project locally
-  register    Register a project with the platform
-  logs        View logs for a project
-  status      Show the status of a project
-  teardown    Remove a project from the platform
-
-Options:
-  --help      Show this help message
-  --json      Output results as JSON
-`.trim();
-
 const VALID_ENVIRONMENTS = new Set(["preview", "production"]);
-
-type StaticCommandName = "deploy" | "list" | "promote" | "rollback";
-type DirectCommandName =
-  | "create"
-  | "login"
-  | "logout"
-  | "logs"
-  | "register"
-  | "status"
-  | "teardown"
-  | "whoami";
-type CommandName = DirectCommandName | StaticCommandName;
-
 type Environment = "preview" | "production";
-
-interface ParsedOptions {
-  dir?: string;
-  environment?: Environment;
-  force?: boolean;
-  from?: string;
-  json?: boolean;
-  projectDirectory?: string;
-  promote?: boolean;
-  site?: string;
-  to?: string;
-}
-
-type ParseArgsResult =
-  | { command: "help" | "version" | CommandName; error?: never; options: ParsedOptions }
-  | { command?: never; error: BadArgumentsError; options?: never };
-
-type ArgParser = (args: string[], command: CommandName) => ParseArgsResult;
-type HandlerThunk = () => Promise<HandlerResult>;
-type HandlerBinder = (
-  options: ParsedOptions,
-  context: RouteContext,
-  deps: RouteDeps,
-) => HandlerThunk;
-
-const STATIC_COMMANDS = new Set<string>(["deploy", "list", "promote", "rollback"]);
-const isStaticCommandName = (value: string): value is StaticCommandName =>
-  STATIC_COMMANDS.has(value);
-
-const DIRECT_COMMANDS = new Set<string>([
-  "create",
-  "login",
-  "logout",
-  "logs",
-  "register",
-  "status",
-  "teardown",
-  "whoami",
-]);
-const isDirectCommandName = (value: string): value is DirectCommandName =>
-  DIRECT_COMMANDS.has(value);
-
-const parseStaticDeploy = (args: string[]): ParseArgsResult => {
-  const options: ParsedOptions = {};
-  let i = 0;
-  while (i < args.length) {
-    const arg = args[i];
-    if (arg === "--promote") {
-      options.promote = true;
-      i++;
-    } else if (arg === "--dir") {
-      const val = args[i + 1];
-      if (val === undefined || val.startsWith("--")) {
-        return {
-          error: new BadArgumentsError(
-            "--dir requires a value. Usage: universe static deploy [--promote] [--dir <dir>]",
-          ),
-        };
-      }
-      options.dir = val;
-      i += 2;
-    } else {
-      return {
-        error: new BadArgumentsError(
-          `Unexpected argument: "${arg}". Usage: universe static deploy [--promote] [--dir <dir>]`,
-        ),
-      };
-    }
-  }
-  return { command: "deploy", options };
-};
-
-const parseStaticPromote = (args: string[]): ParseArgsResult => {
-  if (args.length === 0) {
-    return { command: "promote", options: {} };
-  }
-  const fromIdx = args.indexOf("--from");
-  if (fromIdx === -1) {
-    return {
-      error: new BadArgumentsError(
-        "Unknown argument. Usage: universe static promote [--from <deployId>]",
-      ),
-    };
-  }
-  const from = args[fromIdx + 1];
-  if (from === undefined || from.startsWith("--")) {
-    return {
-      error: new BadArgumentsError(
-        "--from requires a value. Usage: universe static promote [--from <deployId>]",
-      ),
-    };
-  }
-  const remaining = args.filter((_, idx) => idx !== fromIdx && idx !== fromIdx + 1);
-  if (remaining.length > 0) {
-    return {
-      error: new BadArgumentsError(
-        `Unexpected arguments: ${remaining.join(" ")}. Usage: universe static promote [--from <deployId>]`,
-      ),
-    };
-  }
-  return { command: "promote", options: { from } };
-};
-
-const parseStaticRollback = (args: string[]): ParseArgsResult => {
-  const toIdx = args.indexOf("--to");
-  if (toIdx === -1) {
-    return {
-      error: new BadArgumentsError(
-        "--to <deployId> is required. Usage: universe static rollback --to <deployId>",
-      ),
-    };
-  }
-  const to = args[toIdx + 1];
-  if (to === undefined || to.startsWith("--")) {
-    return {
-      error: new BadArgumentsError(
-        "--to requires a value. Usage: universe static rollback --to <deployId>",
-      ),
-    };
-  }
-  const remaining = args.filter((_, i) => i !== toIdx && i !== toIdx + 1);
-  if (remaining.length > 0) {
-    return {
-      error: new BadArgumentsError(
-        `Unexpected arguments: ${remaining.join(" ")}. Usage: universe static rollback --to <deployId>`,
-      ),
-    };
-  }
-  return { command: "rollback", options: { to } };
-};
-
-const parseStaticList = (args: string[]): ParseArgsResult => {
-  if (args.length === 0) {
-    return { command: "list", options: {} };
-  }
-  const siteIdx = args.indexOf("--site");
-  if (siteIdx === -1) {
-    return {
-      error: new BadArgumentsError("Unknown argument. Usage: universe static list [--site <site>]"),
-    };
-  }
-  const site = args[siteIdx + 1];
-  if (site === undefined || site.startsWith("--")) {
-    return {
-      error: new BadArgumentsError(
-        "--site requires a value. Usage: universe static list [--site <site>]",
-      ),
-    };
-  }
-  const remaining = args.filter((_, i) => i !== siteIdx && i !== siteIdx + 1);
-  if (remaining.length > 0) {
-    return {
-      error: new BadArgumentsError(`Unexpected arguments: ${remaining.join(" ")}`),
-    };
-  }
-  return { command: "list", options: { site } };
-};
-
-const staticParsers: Record<StaticCommandName, (args: string[]) => ParseArgsResult> = {
-  deploy: parseStaticDeploy,
-  list: parseStaticList,
-  promote: parseStaticPromote,
-  rollback: parseStaticRollback,
-};
-
-const parseStaticNamespace = (args: string[]): ParseArgsResult => {
-  const [subCommand, ...rest] = args;
-  if (subCommand === undefined) {
-    return {
-      error: new BadArgumentsError(
-        "Usage: universe static <command>  Commands: deploy, list, promote, rollback",
-      ),
-    };
-  }
-  if (!isStaticCommandName(subCommand)) {
-    return {
-      error: new BadArgumentsError(
-        `Unknown static command: "${subCommand}". Commands: deploy, list, promote, rollback`,
-      ),
-    };
-  }
-  return staticParsers[subCommand](rest);
-};
-
-const parseLoginArgs: ArgParser = (args) => {
-  let force = false;
-  for (const arg of args) {
-    if (arg === "--force") {
-      force = true;
-    } else {
-      return {
-        error: new BadArgumentsError(`Unknown argument: "${arg}". Usage: universe login [--force]`),
-      };
-    }
-  }
-  return { command: "login", options: { force } };
-};
-
-const parseLogoutArgs: ArgParser = (args) => {
-  if (args.length > 0) {
-    return { error: new BadArgumentsError("Usage: universe logout") };
-  }
-  return { command: "logout", options: {} };
-};
-
-const parseWhoamiArgs: ArgParser = (args) => {
-  if (args.length > 0) {
-    return { error: new BadArgumentsError("Usage: universe whoami") };
-  }
-  return { command: "whoami", options: {} };
-};
-
-const parseSingleDirectoryArg: ArgParser = (args, command) => {
-  if (args.length > 1) {
-    return {
-      error: new BadArgumentsError(`Too many arguments. Usage: universe ${command} [directory]`),
-    };
-  }
-
-  const options: ParsedOptions = {};
-  const [projectDirectory] = args;
-  if (projectDirectory !== undefined) {
-    options.projectDirectory = projectDirectory;
-  }
-
-  return { command, options };
-};
-
-const parseCreateArgs: ArgParser = (args, command) => {
-  if (args.length > 0) {
-    return {
-      error: new BadArgumentsError(
-        'The "create" command is interactive-only in this spike. Run "universe create" with no additional arguments.',
-      ),
-    };
-  }
-
-  return { command, options: {} };
-};
-
-const parseEnvironmentArgs: ArgParser = (args, command) => {
-  if (command !== "logs" && command !== "status") {
-    return {
-      error: new BadArgumentsError(
-        `Internal parser configuration error. Usage: universe ${command} [directory]`,
-      ),
-    };
-  }
-
-  if (args.length > 2) {
-    return {
-      error: new BadArgumentsError(
-        `Too many arguments. Usage: universe ${command} [directory] [environment]`,
-      ),
-    };
-  }
-
-  const environment = args[1] ?? "preview";
-  if (!VALID_ENVIRONMENTS.has(environment)) {
-    return {
-      error: new BadArgumentsError(
-        `environment "${environment}" — valid values are: preview, production`,
-      ),
-    };
-  }
-
-  return {
-    command,
-    options:
-      args[0] === undefined
-        ? { environment: environment as Environment }
-        : { environment: environment as Environment, projectDirectory: args[0] },
-  };
-};
-
-const directArgParsers: Record<DirectCommandName, ArgParser> = {
-  create: parseCreateArgs,
-  login: parseLoginArgs,
-  logout: parseLogoutArgs,
-  logs: parseEnvironmentArgs,
-  register: parseSingleDirectoryArg,
-  status: parseEnvironmentArgs,
-  teardown: parseSingleDirectoryArg,
-  whoami: parseWhoamiArgs,
-};
-
-const handlerBinders: Record<CommandName, HandlerBinder> = {
-  create: (_options, context, deps) => () => handleCreate({ cwd: context.cwd }, deps),
-  deploy: (options, context, deps) => () =>
-    handleDeploy(
-      {
-        cwd: context.cwd,
-        json: options.json ?? false,
-        ...(options.dir !== undefined && { dir: options.dir }),
-        ...(options.promote !== undefined && { promote: options.promote }),
-      },
-      { identityResolver: deps.identityResolver, proxyClient: deps.proxyClient },
-    ),
-  list: (options, context, deps) => () =>
-    handleList(
-      {
-        cwd: context.cwd,
-        json: options.json ?? false,
-        ...(options.site !== undefined && { site: options.site }),
-      },
-      { identityResolver: deps.identityResolver, proxyClient: deps.proxyClient },
-    ),
-  login: (options, _context, deps) => () =>
-    handleLogin(
-      { force: options.force ?? false, json: options.json ?? false },
-      {
-        deviceFlow: deps.deviceFlow,
-        identityResolver: deps.identityResolver,
-        tokenStore: deps.tokenStore,
-      },
-    ),
-  logout: (options, _context, deps) => () =>
-    handleLogout({ json: options.json ?? false }, { tokenStore: deps.tokenStore }),
-  logs: (options, context, deps) => () =>
-    handleLogs(
-      {
-        environment: options.environment ?? "preview",
-        projectDirectory: options.projectDirectory ?? context.cwd,
-      },
-      deps,
-    ),
-  promote: (options, context, deps) => () =>
-    handlePromote(
-      {
-        cwd: context.cwd,
-        json: options.json ?? false,
-        ...(options.from !== undefined && { from: options.from }),
-      },
-      { identityResolver: deps.identityResolver, proxyClient: deps.proxyClient },
-    ),
-  register: (options, context, deps) => () =>
-    handleRegister({ projectDirectory: options.projectDirectory ?? context.cwd }, deps),
-  rollback: (options, context, deps) => () =>
-    handleRollback(
-      { cwd: context.cwd, json: options.json ?? false, to: options.to },
-      { identityResolver: deps.identityResolver, proxyClient: deps.proxyClient },
-    ),
-  status: (options, context, deps) => () =>
-    handleStatus(
-      {
-        environment: options.environment ?? "preview",
-        projectDirectory: options.projectDirectory ?? context.cwd,
-      },
-      deps,
-    ),
-  teardown: (options, context, deps) => () =>
-    handleTeardown({ projectDirectory: options.projectDirectory ?? context.cwd }, deps),
-  whoami: (options, _context, deps) => () =>
-    handleWhoami(
-      { json: options.json ?? false },
-      { identityResolver: deps.identityResolver, proxyClient: deps.proxyClient },
-    ),
-};
-
-const parseArgs = (argv: string[]): ParseArgsResult => {
-  // Extract --json globally — it may appear before the command token
-  const withoutJson = argv.filter((a) => a !== "--json");
-  const json = withoutJson.length !== argv.length;
-
-  const [commandToken, ...args] = withoutJson;
-
-  if (commandToken === undefined || commandToken === "--help" || commandToken === "-h") {
-    return { command: "help", options: {} };
-  }
-
-  if (commandToken === "--version" || commandToken === "-V") {
-    return { command: "version", options: {} };
-  }
-
-  if (commandToken === "static") {
-    const result = parseStaticNamespace(args);
-    if (result.error !== undefined) {
-      return result;
-    }
-    return {
-      command: result.command,
-      options: json ? { ...result.options, json } : result.options,
-    };
-  }
-
-  if (isStaticCommandName(commandToken)) {
-    return {
-      error: new BadArgumentsError(
-        `"${commandToken}" is a static subcommand. Use: universe static ${commandToken}`,
-      ),
-    };
-  }
-
-  if (!isDirectCommandName(commandToken)) {
-    return {
-      error: new BadArgumentsError(
-        `Unknown command: "${commandToken}". Run "universe --help" for usage.`,
-      ),
-    };
-  }
-
-  const result = directArgParsers[commandToken](args, commandToken);
-  if (result.error !== undefined) {
-    return result;
-  }
-  return {
-    command: result.command,
-    options: json ? { ...result.options, json } : result.options,
-  };
-};
-
-const bindHandler = (
-  command: CommandName,
-  options: ParsedOptions,
-  context: RouteContext,
-  deps: RouteDeps,
-): HandlerThunk => handlerBinders[command](options, context, deps);
 
 const route = async (
   argv: string[],
@@ -544,22 +87,309 @@ const route = async (
   context: RouteContext,
   observability: ObservabilityClient,
 ): Promise<{ exitCode: number; output: string }> => {
-  const parseResult = parseArgs(argv);
-  if (parseResult.command === "help") {
-    return { exitCode: 0, output: HELP_TEXT };
+  let capturedOutput = "";
+  let result: { exitCode: number; output: string } | undefined;
+  const onResult = (r: { exitCode: number; output: string }) => {
+    result = r;
+  };
+
+  const program = new Command("universe");
+  program
+    .exitOverride()
+    .configureOutput({
+      writeErr: (str) => {
+        capturedOutput += str;
+      },
+      writeOut: (str) => {
+        capturedOutput += str;
+      },
+    })
+    .version(pkg.version, "-V, --version", "Show version number");
+
+  // Auth commands
+  program
+    .command("login")
+    .description("Authenticate with the platform")
+    .option("--force", "Force re-authentication", false)
+    .option("--json", "Output as JSON", false)
+    .action(async (options: { force: boolean; json: boolean }) => {
+      onResult(
+        await runCli(
+          "login",
+          () =>
+            handleLogin(
+              { force: options.force, json: options.json },
+              {
+                deviceFlow: deps.deviceFlow,
+                identityResolver: deps.identityResolver,
+                tokenStore: deps.tokenStore,
+              },
+            ),
+          observability,
+        ),
+      );
+    });
+
+  program
+    .command("logout")
+    .description("Remove stored credentials")
+    .option("--json", "Output as JSON", false)
+    .action(async (options: { json: boolean }) => {
+      onResult(
+        await runCli(
+          "logout",
+          () => handleLogout({ json: options.json }, { tokenStore: deps.tokenStore }),
+          observability,
+        ),
+      );
+    });
+
+  program
+    .command("whoami")
+    .description("Show the current authenticated user")
+    .option("--json", "Output as JSON", false)
+    .action(async (options: { json: boolean }) => {
+      onResult(
+        await runCli(
+          "whoami",
+          () =>
+            handleWhoami(
+              { json: options.json },
+              { identityResolver: deps.identityResolver, proxyClient: deps.proxyClient },
+            ),
+          observability,
+        ),
+      );
+    });
+
+  // Project commands
+  program
+    .command("create")
+    .description("Scaffold a new project locally")
+    .argument("[args...]", "additional arguments")
+    .action(async (args: string[]) => {
+      if (args.length > 0) {
+        onResult({
+          exitCode: 1,
+          output:
+            'The "create" command is interactive-only in this spike. Run "universe create" with no additional arguments.',
+        });
+        return;
+      }
+      onResult(
+        await runCli("create", () => handleCreate({ cwd: context.cwd }, deps), observability),
+      );
+    });
+
+  program
+    .command("register")
+    .description("Register a project with the platform")
+    .argument("[directory]", "Project directory")
+    .allowExcessArguments(false)
+    .action(async (directory: string | undefined) => {
+      onResult(
+        await runCli(
+          "register",
+          () => handleRegister({ projectDirectory: directory ?? context.cwd }, deps),
+          observability,
+        ),
+      );
+    });
+
+  program
+    .command("logs")
+    .description("View logs for a project")
+    .argument("[directory]", "Project directory")
+    .argument("[environment]", "Environment (preview|production)")
+    .allowExcessArguments(false)
+    .action(async (directory: string | undefined, environment: string | undefined) => {
+      const env = environment ?? "preview";
+      if (!VALID_ENVIRONMENTS.has(env)) {
+        onResult({
+          exitCode: 1,
+          output: `environment "${env}" — valid values are: preview, production`,
+        });
+        return;
+      }
+      onResult(
+        await runCli(
+          "logs",
+          () =>
+            handleLogs(
+              { environment: env as Environment, projectDirectory: directory ?? context.cwd },
+              deps,
+            ),
+          observability,
+        ),
+      );
+    });
+
+  program
+    .command("status")
+    .description("Show the status of a project")
+    .argument("[directory]", "Project directory")
+    .argument("[environment]", "Environment (preview|production)")
+    .allowExcessArguments(false)
+    .action(async (directory: string | undefined, environment: string | undefined) => {
+      const env = environment ?? "preview";
+      if (!VALID_ENVIRONMENTS.has(env)) {
+        onResult({
+          exitCode: 1,
+          output: `environment "${env}" — valid values are: preview, production`,
+        });
+        return;
+      }
+      onResult(
+        await runCli(
+          "status",
+          () =>
+            handleStatus(
+              { environment: env as Environment, projectDirectory: directory ?? context.cwd },
+              deps,
+            ),
+          observability,
+        ),
+      );
+    });
+
+  program
+    .command("teardown")
+    .description("Remove a project from the platform")
+    .argument("[directory]", "Project directory")
+    .allowExcessArguments(false)
+    .action(async (directory: string | undefined) => {
+      onResult(
+        await runCli(
+          "teardown",
+          () => handleTeardown({ projectDirectory: directory ?? context.cwd }, deps),
+          observability,
+        ),
+      );
+    });
+
+  // Static commands
+  const staticCmd = new Command("static").description("Static deploy commands").exitOverride();
+
+  staticCmd
+    .command("deploy")
+    .description("Deploy a project to the platform")
+    .option("--dir <dir>", "Directory to deploy")
+    .option("--promote", "Promote after deploy", false)
+    .option("--json", "Output as JSON", false)
+    .allowExcessArguments(false)
+    .action(async (options: { dir?: string; promote: boolean; json: boolean }) => {
+      onResult(
+        await runCli(
+          "deploy",
+          () =>
+            handleDeploy(
+              {
+                cwd: context.cwd,
+                json: options.json,
+                ...(options.dir !== undefined && { dir: options.dir }),
+                ...(options.promote && { promote: options.promote }),
+              },
+              { identityResolver: deps.identityResolver, proxyClient: deps.proxyClient },
+            ),
+          observability,
+        ),
+      );
+    });
+
+  staticCmd
+    .command("list")
+    .description("List deployments for a site")
+    .option("--site <site>", "Site name")
+    .option("--json", "Output as JSON", false)
+    .allowExcessArguments(false)
+    .action(async (options: { site?: string; json: boolean }) => {
+      onResult(
+        await runCli(
+          "list",
+          () =>
+            handleList(
+              {
+                cwd: context.cwd,
+                json: options.json,
+                ...(options.site !== undefined && { site: options.site }),
+              },
+              { identityResolver: deps.identityResolver, proxyClient: deps.proxyClient },
+            ),
+          observability,
+        ),
+      );
+    });
+
+  staticCmd
+    .command("promote")
+    .description("Promote a deployment to production")
+    .option("--from <deployId>", "Deployment ID to promote from")
+    .option("--json", "Output as JSON", false)
+    .allowExcessArguments(false)
+    .action(async (options: { from?: string; json: boolean }) => {
+      onResult(
+        await runCli(
+          "promote",
+          () =>
+            handlePromote(
+              {
+                cwd: context.cwd,
+                json: options.json,
+                ...(options.from !== undefined && { from: options.from }),
+              },
+              { identityResolver: deps.identityResolver, proxyClient: deps.proxyClient },
+            ),
+          observability,
+        ),
+      );
+    });
+
+  staticCmd
+    .command("rollback")
+    .description("Roll back to a previous deployment")
+    .option("--to <deployId>", "Deployment ID to roll back to")
+    .option("--json", "Output as JSON", false)
+    .allowExcessArguments(false)
+    .action(async (options: { to?: string; json: boolean }) => {
+      if (options.to === undefined) {
+        onResult({
+          exitCode: 1,
+          output: "--to <deployId> is required. Usage: universe static rollback --to <deployId>",
+        });
+        return;
+      }
+      onResult(
+        await runCli(
+          "rollback",
+          () =>
+            handleRollback(
+              { cwd: context.cwd, json: options.json, to: options.to },
+              { identityResolver: deps.identityResolver, proxyClient: deps.proxyClient },
+            ),
+          observability,
+        ),
+      );
+    });
+
+  program.addCommand(staticCmd);
+
+  if (argv.length === 0) {
+    return { exitCode: 0, output: program.helpInformation().trim() };
   }
 
-  if (parseResult.command === "version") {
-    return { exitCode: 0, output: pkg.version };
+  try {
+    await program.parseAsync(["node", "universe", ...argv]);
+  } catch (err) {
+    if (err instanceof CommanderError) {
+      if (err.code === "commander.helpDisplayed") {
+        return { exitCode: 0, output: capturedOutput.trim() };
+      }
+      return { exitCode: err.exitCode, output: err.message };
+    }
+    throw err;
   }
 
-  if (parseResult.error !== undefined) {
-    return { exitCode: parseResult.error.exitCode, output: parseResult.error.message };
-  }
-
-  const thunk = bindHandler(parseResult.command, parseResult.options, context, deps);
-  const result = await runCli(parseResult.command, thunk, observability);
-  return result;
+  return result ?? { exitCode: 0, output: program.helpInformation().trim() };
 };
 
 if (isSea() || process.argv[1] === fileURLToPath(import.meta.url)) {
@@ -609,5 +439,5 @@ if (isSea() || process.argv[1] === fileURLToPath(import.meta.url)) {
   })();
 }
 
-export { parseArgs, route };
+export { route };
 export type { RouteDeps };

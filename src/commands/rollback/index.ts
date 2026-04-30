@@ -81,7 +81,7 @@ const handleRollback = async (
   };
 
   if (opts.json) {
-    const envelope = buildEnvelope("rollback", true, summary);
+    const envelope = buildEnvelope("static rollback", true, summary);
     const write =
       deps.write ??
       ((text: string): void => {

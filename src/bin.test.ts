@@ -1,4 +1,4 @@
-import { parseArgs, route } from "./bin.js";
+import { route } from "./bin.js";
 import type { RouteDeps } from "./bin.js";
 import { StubDeviceFlow } from "./auth/stub-device-flow.js";
 import { StubIdentityResolver } from "./auth/stub-identity-resolver.js";
@@ -147,10 +147,9 @@ describe(route, () => {
       expect(result.exitCode).toBe(0);
     });
 
-    it("output contains static subcommands and auth commands", async () => {
+    it("output contains static and auth commands", async () => {
       const { output } = await route(["--help"], createRouteDeps(), routeContext, client);
-      expect(output).toContain("static deploy");
-      expect(output).toContain("static rollback");
+      expect(output).toContain("static");
       expect(output).toContain("login");
       expect(output).toContain("logout");
       expect(output).toContain("whoami");
@@ -190,7 +189,7 @@ describe(route, () => {
     it("exits with a non-zero code", async () => {
       const result = await route(["unknown-cmd"], createRouteDeps(), routeContext, client);
       expect(result.exitCode).toBeGreaterThan(0);
-      expect(result.output).toContain("Unknown command");
+      expect(result.output).toContain("unknown command");
     });
 
     it("does not call observability for unknown commands", async () => {
@@ -239,14 +238,14 @@ describe(route, () => {
         client,
       );
       expect(result.exitCode).toBeGreaterThan(0);
-      expect(result.output).toContain("Too many arguments");
+      expect(result.output).toContain("too many arguments");
     });
   });
 
   describe("static deploy", () => {
     it("is recognised (not an unknown command error)", async () => {
       const result = await route(["static", "deploy"], createRouteDeps(), routeContext, client);
-      expect(result.output).not.toContain("Unknown command");
+      expect(result.output).not.toContain("unknown command");
     });
 
     it("exits when extra args are provided", async () => {
@@ -310,7 +309,7 @@ describe(route, () => {
   describe("login", () => {
     it("is recognised (not an unknown command error)", async () => {
       const result = await route(["login"], createRouteDeps(), routeContext, client);
-      expect(result.output).not.toContain("Unknown command");
+      expect(result.output).not.toContain("unknown command");
     });
 
     it("rejects unrecognised arguments", async () => {
@@ -329,7 +328,7 @@ describe(route, () => {
   describe("whoami", () => {
     it("is recognised (not an unknown command error)", async () => {
       const result = await route(["whoami"], createRouteDeps(), routeContext, client);
-      expect(result.output).not.toContain("Unknown command");
+      expect(result.output).not.toContain("unknown command");
     });
   });
 
@@ -342,7 +341,7 @@ describe(route, () => {
         client,
       );
       expect(result.exitCode).toBeGreaterThan(0);
-      expect(result.output).toContain("Too many arguments");
+      expect(result.output).toContain("too many arguments");
     });
 
     it("exits when environment is not preview or production", async () => {
@@ -387,7 +386,7 @@ describe(route, () => {
         client,
       );
       expect(result.exitCode).toBeGreaterThan(0);
-      expect(result.output).toContain("Too many arguments");
+      expect(result.output).toContain("too many arguments");
     });
 
     it("exits when environment is not preview or production", async () => {
@@ -436,117 +435,7 @@ describe(route, () => {
         client,
       );
       expect(result.exitCode).toBeGreaterThan(0);
-      expect(result.output).toContain("Too many arguments");
+      expect(result.output).toContain("too many arguments");
     });
-  });
-});
-
-describe(parseArgs, () => {
-  it("returns a help command when no arguments are provided", () => {
-    const result = parseArgs([]);
-    expect(result).toStrictEqual({ command: "help", options: {} });
-  });
-
-  it("returns an error without command/options for an unknown command", () => {
-    const result = parseArgs(["unknown-cmd"]);
-    expect(result.error).toBeInstanceOf(Error);
-    expect(result).not.toHaveProperty("command");
-    expect(result).not.toHaveProperty("options");
-  });
-
-  it("returns command/options for a valid static command", () => {
-    const result = parseArgs(["static", "deploy"]);
-    expect(result.command).toBe("deploy");
-    expect(result.error).toBeUndefined();
-  });
-
-  it("returns an error for a static command used without the static prefix", () => {
-    const result = parseArgs(["deploy"]);
-    expect(result.error).toBeInstanceOf(Error);
-  });
-
-  it("returns environment defaults for logs", () => {
-    const result = parseArgs(["logs"]);
-    expect(result).toStrictEqual({ command: "logs", options: { environment: "preview" } });
-  });
-
-  it("returns an error without command/options for invalid status environment", () => {
-    const result = parseArgs(["status", "/dir", "staging"]);
-    expect(result.error).toBeInstanceOf(Error);
-    expect(result).not.toHaveProperty("command");
-    expect(result).not.toHaveProperty("options");
-  });
-
-  it("returns login command with force: false by default", () => {
-    const result = parseArgs(["login"]);
-    expect(result.command).toBe("login");
-    expect(result.options?.force).toBe(false);
-  });
-
-  it("returns login command with force: true when --force is passed", () => {
-    const result = parseArgs(["login", "--force"]);
-    expect(result.command).toBe("login");
-    expect(result.options?.force).toBe(true);
-  });
-
-  it("returns an error for login with unknown arguments", () => {
-    const result = parseArgs(["login", "--unknown"]);
-    expect(result.error).toBeInstanceOf(Error);
-  });
-
-  it("passes --json flag and --to option from static rollback with json before static", () => {
-    const result = parseArgs(["--json", "static", "rollback", "--to", "abc"]);
-    expect(result.command).toBe("rollback");
-    expect(result.options?.json).toBe(true);
-    expect(result.options?.to).toBe("abc");
-  });
-
-  it("returns an error for static rollback without --to", () => {
-    const result = parseArgs(["static", "rollback"]);
-    expect(result.error).toBeInstanceOf(Error);
-  });
-
-  it("passes --site option from static list", () => {
-    const result = parseArgs(["static", "list", "--site", "my-site"]);
-    expect(result.command).toBe("list");
-    expect(result.options?.site).toBe("my-site");
-  });
-
-  it("returns version command for --version", () => {
-    const result = parseArgs(["--version"]);
-    expect(result.command).toBe("version");
-  });
-
-  it("returns version command for -V", () => {
-    const result = parseArgs(["-V"]);
-    expect(result.command).toBe("version");
-  });
-
-  it("passes --promote flag from static deploy", () => {
-    const result = parseArgs(["static", "deploy", "--promote"]);
-    expect(result.command).toBe("deploy");
-    expect(result.options?.promote).toBe(true);
-  });
-
-  it("passes --dir value from static deploy", () => {
-    const result = parseArgs(["static", "deploy", "--dir", "dist"]);
-    expect(result.command).toBe("deploy");
-    expect(result.options?.dir).toBe("dist");
-  });
-
-  it("passes --from value from static promote", () => {
-    const result = parseArgs(["static", "promote", "--from", "older-deploy"]);
-    expect(result.command).toBe("promote");
-    expect(result.options?.from).toBe("older-deploy");
-  });
-
-  it("returns an error for static deploy --dir without value", () => {
-    const result = parseArgs(["static", "deploy", "--dir"]);
-    expect(result.error).toBeInstanceOf(Error);
-  });
-
-  it("returns an error for static promote --from without value", () => {
-    const result = parseArgs(["static", "promote", "--from"]);
-    expect(result.error).toBeInstanceOf(Error);
   });
 });
