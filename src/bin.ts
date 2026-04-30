@@ -109,8 +109,8 @@ const route = async (
   // Auth commands
   program
     .command("login")
-    .description("Authenticate with the platform")
-    .option("--force", "Force re-authentication", false)
+    .description("Authenticate with GitHub via OAuth device flow")
+    .option("--force", "Replace any existing stored token", false)
     .option("--json", "Output as JSON", false)
     .action(async (options: { force: boolean; json: boolean }) => {
       onResult(
@@ -132,7 +132,7 @@ const route = async (
 
   program
     .command("logout")
-    .description("Remove stored credentials")
+    .description("Remove the stored GitHub device-flow token")
     .option("--json", "Output as JSON", false)
     .action(async (options: { json: boolean }) => {
       onResult(
@@ -146,7 +146,7 @@ const route = async (
 
   program
     .command("whoami")
-    .description("Show the current authenticated user")
+    .description("Show resolved GitHub identity and authorized sites")
     .option("--json", "Output as JSON", false)
     .action(async (options: { json: boolean }) => {
       onResult(
@@ -268,13 +268,15 @@ const route = async (
     });
 
   // Static commands
-  const staticCmd = new Command("static").description("Static deploy commands").exitOverride();
+  const staticCmd = new Command("static")
+    .description("Static site deployment commands")
+    .exitOverride();
 
   staticCmd
     .command("deploy")
-    .description("Deploy a project to the platform")
-    .option("--dir <dir>", "Directory to deploy")
-    .option("--promote", "Promote after deploy", false)
+    .description("Deploy static site via the artemis proxy")
+    .option("--dir <dir>", "Override build.output dir from platform.yaml")
+    .option("--promote", "Finalize as production (default: preview)", false)
     .option("--json", "Output as JSON", false)
     .allowExcessArguments(false)
     .action(async (options: { dir?: string; promote: boolean; json: boolean }) => {
@@ -297,9 +299,9 @@ const route = async (
     });
 
   staticCmd
-    .command("list")
-    .description("List deployments for a site")
-    .option("--site <site>", "Site name")
+    .command("ls")
+    .description("List recent deploys for a site")
+    .option("--site <site>", "Override site from platform.yaml")
     .option("--json", "Output as JSON", false)
     .allowExcessArguments(false)
     .action(async (options: { site?: string; json: boolean }) => {
@@ -322,8 +324,8 @@ const route = async (
 
   staticCmd
     .command("promote")
-    .description("Promote a deployment to production")
-    .option("--from <deployId>", "Deployment ID to promote from")
+    .description("Promote the current preview to production")
+    .option("--from <deployId>", "Promote a specific past deploy id (alias rewrite)")
     .option("--json", "Output as JSON", false)
     .allowExcessArguments(false)
     .action(async (options: { from?: string; json: boolean }) => {
@@ -346,8 +348,8 @@ const route = async (
 
   staticCmd
     .command("rollback")
-    .description("Roll back to a previous deployment")
-    .option("--to <deployId>", "Deployment ID to roll back to")
+    .description("Rewrite production alias to a past deploy")
+    .option("--to <deployId>", "Target deploy id (required)")
     .option("--json", "Output as JSON", false)
     .allowExcessArguments(false)
     .action(async (options: { to?: string; json: boolean }) => {
