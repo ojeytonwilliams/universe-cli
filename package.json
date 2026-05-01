@@ -1,6 +1,6 @@
 {
   "name": "@freecodecamp/universe-cli",
-  "version": "1.9.0",
+  "version": "0.5.0",
   "description": "Staff-facing CLI for deploying and managing projects on the freeCodeCamp Universe platform",
   "keywords": [
     "cli",
@@ -19,7 +19,7 @@
     "url": "git+https://github.com/freeCodeCamp-Universe/universe-cli.git"
   },
   "bin": {
-    "universe": "dist/bin.js"
+    "universe": "dist/index.cjs"
   },
   "files": [
     "dist/",
@@ -27,7 +27,7 @@
     "LICENSE"
   ],
   "type": "module",
-  "main": "index.js",
+  "main": "dist/index.cjs",
   "publishConfig": {
     "access": "public"
   },
@@ -40,7 +40,7 @@
     "codegen": "node scripts/generate-layer-files.mjs",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
-    "start": "node dist/index.js",
+    "start": "node --enable-source-maps dist/index.js",
     "test": "vitest run",
     "watch:unit": "vitest --config vitest.unit.config.ts",
     "test:e2e": "vitest run --config vitest.e2e.config.ts",
