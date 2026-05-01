@@ -34,7 +34,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "build:bundle": "tsdown",
-    "build:sea": "pnpm build:bundle && node --experimental-sea-config sea-config.json && cp $(command -v node) dist/universe && npx postject dist/universe NODE_SEA_BLOB dist/sea-prep.blob --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2",
+    "build:sea": "node --experimental-sea-config sea-config.json && cp $(command -v node) dist/universe && npx postject dist/universe NODE_SEA_BLOB dist/sea-prep.blob --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2",
     "check": "tsc --noEmit",
     "clean": "rm -rf dist",
     "codegen": "node scripts/generate-layer-files.mjs",

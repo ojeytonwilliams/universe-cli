@@ -8,5 +8,5 @@ export default defineConfig({
   dts: false,
   entry: ["src/index.ts"],
   format: "cjs",
-  outDir: "dist/sea",
+  outDir: "dist",
 });
