@@ -594,15 +594,10 @@ EXIT_CREDENTIALS (12)`
 
 ## Phase 9: Docs + cleanup
 
-- [ ] TASK: Copy `other/docs/FLIGHT-MANUAL.md`, `STAFF-GUIDE.md`,
+- [x] TASK: Copy `other/docs/FLIGHT-MANUAL.md`, `STAFF-GUIDE.md`,
       `RELEASING.md`, `platform-yaml.md` into `docs/`
 
-- [ ] TASK: Add a `## v1.0.0` entry to `CHANGELOG.md` describing the merge:
-      merged `other/` (v0.4.0 static deploy CLI) into the main workspace;
-      added `login`, `logout`, `whoami`, real `deploy`, `promote`, `rollback`,
-      `list`; adopted OIDC release pipeline; renumbered colliding exit codes
-
-- [ ] TASK: Delete the `other/` directory once all phases pass CI
+- [x] TASK: Delete the `other/` directory once all phases pass CI
 
 ---
 
