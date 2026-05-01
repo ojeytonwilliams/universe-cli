@@ -31,6 +31,7 @@ import type { Prompt } from "./commands/create/prompt/prompt.port.js";
 import pkg from "../package.json" with { type: "json" };
 import { runCli } from "./cli.js";
 import type { Logger } from "./output/logger.js";
+import { EXIT_USAGE } from "./errors/exit-codes.js";
 
 const VALID_ENVIRONMENTS = new Set(["preview", "production"]);
 type Environment = "preview" | "production";
@@ -65,10 +66,10 @@ export const dispatch = async (
   context: Context,
   observability: ObservabilityClient,
 ): Promise<{ exitCode: number }> => {
-  let result: { exitCode: number } | undefined;
+  let result: { exitCode: number } = { exitCode: 0 };
 
   const program = new Command("universe");
-  program.exitOverride().version(pkg.version, "-V, --version", "Show version number");
+  program.exitOverride().version(pkg.version, "-v, --version", "Show version number");
 
   // Auth commands
   program
@@ -389,15 +390,15 @@ export const dispatch = async (
     await program.parseAsync(["node", "universe", ...argv]);
   } catch (err) {
     if (err instanceof CommanderError) {
-      if (err.code === "commander.helpDisplayed") {
-        return { exitCode: 0 };
+      if (err.code === "commander.unknownCommand") {
+        return { exitCode: EXIT_USAGE };
       }
       return { exitCode: err.exitCode };
     }
     throw err;
   }
 
-  return result ?? { exitCode: 0 };
+  return result;
 };
 
 export type { Dependencies };

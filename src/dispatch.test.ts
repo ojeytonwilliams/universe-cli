@@ -11,6 +11,7 @@ import type { StatusResponse } from "./platform/status-client.port.js";
 import type { ResolvedLayerSet } from "./commands/create/layer-composition/layer-composition-service.js";
 import type { PlatformManifest } from "./services/platform-manifest-service.js";
 import type { MockedFunction } from "vitest";
+import { EXIT_USAGE } from "./errors/exit-codes.js";
 
 // --- Test stubs and helpers ---
 const client: ObservabilityClient = {
@@ -208,7 +209,7 @@ describe(dispatch, () => {
   describe("unknown command", () => {
     it("exits with a non-zero code", async () => {
       const result = await dispatch(["unknown-cmd"], createDependencies(), ctx, client);
-      expect(result.exitCode).toBeGreaterThan(0);
+      expect(result.exitCode).toBe(EXIT_USAGE);
       expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("unknown command"));
     });
 
