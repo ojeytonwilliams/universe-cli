@@ -1,34 +1,24 @@
-// oxlint-disable max-lines
 import type {
   AppPlatformManifest,
   PlatformManifest,
 } from "./services/platform-manifest-service.js";
 import {
-  DeploymentError,
   InvalidNameError,
-  ListError,
   LogsError,
   ManifestInvalidError,
   ManifestNotFoundError,
-  PromotionError,
   RegistrationError,
-  RollbackError,
   ScaffoldWriteError,
   StatusError,
   TeardownError,
 } from "./errors/cli-errors.js";
-import type { ListResponse } from "./platform/list-client.port.js";
 import type { CreateSelections } from "./commands/create/prompt/prompt.port.js";
 import type { StatusResponse } from "./platform/status-client.port.js";
 import type { TeardownReceipt } from "./platform/teardown-client.port.js";
 import type { ResolvedLayerSet } from "./commands/create/layer-composition/layer-composition-service.js";
 import { handleCreate } from "./commands/create/index.js";
 import { handleRegister } from "./commands/register/index.js";
-import { handleDeploy } from "./commands/deploy/index.js";
-import { handlePromote } from "./commands/promote/index.js";
-import { handleRollback } from "./commands/rollback/index.js";
 import { handleLogs } from "./commands/logs/index.js";
-import { handleList } from "./commands/list/index.js";
 import { handleStatus } from "./commands/status/index.js";
 import { handleTeardown } from "./commands/teardown/index.js";
 
@@ -51,11 +41,20 @@ const successReader = {
 
 const successValidator = (_yaml: string): PlatformManifest => stubManifest;
 
+const makeLogStub = () => ({
+  error: vi.fn<(s: string) => void>(),
+  info: vi.fn<(s: string) => void>(),
+  success: vi.fn<(s: string) => void>(),
+  warn: vi.fn<(s: string) => void>(),
+});
+
 const getDeps = <T extends object>(
   adapters: T,
   reader = successReader,
   validator = successValidator,
+  logger = makeLogStub(),
 ) => ({
+  logger,
   projectReader: reader,
   ...adapters,
   platformManifestGenerator: {
@@ -92,24 +91,6 @@ const successRegistrationClient = {
   },
 };
 
-const successDeployClient = {
-  deploy(_request: { manifest: PlatformManifest }) {
-    return Promise.resolve({ deploymentId: "stub-my-app-preview-1", name: "my-app" });
-  },
-};
-
-const successPromoteClient = {
-  promote(_request: { manifest: PlatformManifest }) {
-    return Promise.resolve({ name: "my-app", promotionId: "stub-promote-my-app-production-1" });
-  },
-};
-
-const successRollbackClient = {
-  rollback(_request: { manifest: PlatformManifest }) {
-    return Promise.resolve({ name: "my-app", rollbackId: "stub-rollback-my-app-production-1" });
-  },
-};
-
 // Shared failing validator fixture for manifest validation error tests
 const failingValidator: (yaml: string) => PlatformManifest = () => {
   throw new ManifestInvalidError("/workspace/platform.yaml", "");
@@ -132,6 +113,7 @@ describe(handleCreate, () => {
           return { files: resolvedLayerFiles, layers: [] };
         },
       },
+      logger: { error: vi.fn(), info: vi.fn(), success: vi.fn(), warn: vi.fn() },
       packageManager: {
         specifyDeps: () => Promise.resolve(),
       },
@@ -158,7 +140,7 @@ describe(handleCreate, () => {
       },
     };
 
-    const { output } = await handleCreate({ cwd: "/workspace" }, deps);
+    await handleCreate({ cwd: "/workspace" }, deps);
 
     expect(writerCalls).toStrictEqual([
       {
@@ -169,7 +151,9 @@ describe(handleCreate, () => {
         targetDirectory: "/workspace/hello-universe",
       },
     ]);
-    expect(output).toContain("Scaffolded project at /workspace/hello-universe");
+    expect(deps.logger.success).toHaveBeenCalledWith(
+      "Scaffolded project at /workspace/hello-universe",
+    );
   });
 
   it("returns non-zero when prompt flow is cancelled", async () => {
@@ -184,6 +168,7 @@ describe(handleCreate, () => {
           throw new Error("layerResolver not used in this test");
         },
       },
+      logger: { error: vi.fn(), info: vi.fn(), success: vi.fn(), warn: vi.fn() },
       packageManager: {
         specifyDeps(): never {
           throw new Error("packageManager not used in this test");
@@ -234,6 +219,7 @@ describe(handleCreate, () => {
               throw new Error("layerResolver not used in this test");
             },
           },
+          logger: { error: vi.fn(), info: vi.fn(), success: vi.fn(), warn: vi.fn() },
           packageManager: {
             specifyDeps(): never {
               throw new Error("packageManager not used in this test");
@@ -284,6 +270,7 @@ describe(handleCreate, () => {
               return { files: resolvedLayerFiles, layers: [] };
             },
           },
+          logger: { error: vi.fn(), info: vi.fn(), success: vi.fn(), warn: vi.fn() },
           packageManager: {
             specifyDeps(): never {
               throw new Error("packageManager not used in this test");
@@ -318,110 +305,6 @@ describe(handleCreate, () => {
   });
 });
 
-// --- handleList ---
-
-const stubDeployments = [
-  { deployedAt: "2026-01-01T00:00:00.000Z", deploymentId: "deploy-stub-001", state: "ACTIVE" },
-];
-
-const successListClient = {
-  getList(_request: { manifest: PlatformManifest }): Promise<ListResponse> {
-    return Promise.resolve({ deployments: stubDeployments, name: "my-app" });
-  },
-};
-
-describe(handleList, () => {
-  it("exits 0 on successful list retrieval", async () => {
-    const result = await handleList(
-      { projectDirectory: "/workspace" },
-      getDeps({ listClient: successListClient }),
-    );
-
-    expect(result.exitCode).toBe(0);
-  });
-
-  it("output contains the project name, environment, and deployment entries", async () => {
-    const { output } = await handleList(
-      { projectDirectory: "/workspace" },
-      getDeps({ listClient: successListClient }),
-    );
-
-    expect(output).toContain("my-app");
-    expect(output).toContain("preview");
-    expect(output).toContain("deploy-stub-001");
-  });
-
-  it("reads platform.yaml from the given projectDirectory", async () => {
-    const paths: string[] = [];
-    const trackingReader = {
-      readFile(filePath: string) {
-        paths.push(filePath);
-        return Promise.resolve("stack: app\n");
-      },
-    };
-
-    await handleList(
-      { projectDirectory: "/workspace" },
-      getDeps({ listClient: successListClient }, trackingReader),
-    );
-
-    expect(paths[0]).toBe("/workspace/platform.yaml");
-  });
-
-  it("reads platform.yaml from the given directory argument", async () => {
-    const paths: string[] = [];
-    const trackingReader = {
-      readFile(filePath: string) {
-        paths.push(filePath);
-        return Promise.resolve("stack: app\n");
-      },
-    };
-
-    await handleList(
-      { projectDirectory: "/some/project" },
-      getDeps({ listClient: successListClient }, trackingReader),
-    );
-
-    expect(paths[0]).toBe("/some/project/platform.yaml");
-  });
-
-  it("exits when platform.yaml is missing", async () => {
-    const missingReader = {
-      readFile(filePath: string) {
-        return Promise.reject(new ManifestNotFoundError(filePath));
-      },
-    };
-
-    await expect(
-      handleList(
-        { projectDirectory: "/workspace" },
-        getDeps({ listClient: successListClient }, missingReader),
-      ),
-    ).rejects.toThrow(ManifestNotFoundError);
-  });
-
-  it("exits when platform.yaml fails validation", async () => {
-    await expect(
-      handleList(
-        { projectDirectory: "/workspace" },
-        getDeps({ listClient: successListClient }, successReader, failingValidator),
-      ),
-    ).rejects.toThrow(ManifestInvalidError);
-  });
-
-  it("exits when list retrieval fails", async () => {
-    const failingClient = {
-      getList(request: { manifest: PlatformManifest }) {
-        return Promise.reject(new ListError(request.manifest.name, "unavailable"));
-      },
-    };
-
-    await expect(
-      handleList({ projectDirectory: "/workspace" }, getDeps({ listClient: failingClient })),
-    ).rejects.toThrow(ListError);
-  });
-});
-
 // --- handleLogs ---
 
 const stubLogEntries = [
@@ -445,14 +328,15 @@ describe(handleLogs, () => {
   });
 
   it("output contains the project name, environment, and log entries", async () => {
-    const { output } = await handleLogs(
+    const log = makeLogStub();
+    await handleLogs(
       { environment: "preview", projectDirectory: "/workspace" },
-      getDeps({ logsClient: successLogsClient }),
+      getDeps({ logsClient: successLogsClient }, successReader, successValidator, log),
     );
 
-    expect(output).toContain("my-app");
-    expect(output).toContain("preview");
-    expect(output).toContain("Application started");
+    expect(log.success.mock.calls[0]?.[0]).toContain("my-app");
+    expect(log.success.mock.calls[0]?.[0]).toContain("preview");
+    expect(log.success.mock.calls[0]?.[0]).toContain("Application started");
   });
 
   it("reads platform.yaml from the given projectDirectory", async () => {
@@ -573,14 +457,15 @@ describe(handleStatus, () => {
   });
 
   it("output contains the project name, environment, and state", async () => {
-    const { output } = await handleStatus(
+    const log = makeLogStub();
+    await handleStatus(
       { environment: "preview", projectDirectory: "/workspace" },
-      getDeps({ statusClient: successStatusClient }),
+      getDeps({ statusClient: successStatusClient }, successReader, successValidator, log),
     );
 
-    expect(output).toContain("my-app");
-    expect(output).toContain("preview");
-    expect(output).toContain("ACTIVE");
+    expect(log.success.mock.calls[0]?.[0]).toContain("my-app");
+    expect(log.success.mock.calls[0]?.[0]).toContain("preview");
+    expect(log.success.mock.calls[0]?.[0]).toContain("ACTIVE");
   });
 
   it("reads platform.yaml from the given projectDirectory", async () => {
@@ -701,13 +586,14 @@ describe(handleTeardown, () => {
   });
 
   it("output contains the project name and teardown ID", async () => {
-    const { output } = await handleTeardown(
+    const log = makeLogStub();
+    await handleTeardown(
       { projectDirectory: "/workspace" },
-      getDeps({ teardownClient: successTeardownClient }),
+      getDeps({ teardownClient: successTeardownClient }, successReader, successValidator, log),
     );
 
-    expect(output).toContain("my-app");
-    expect(output).toContain("stub-teardown-my-app-1");
+    expect(log.success.mock.calls[0]?.[0]).toContain("my-app");
+    expect(log.success.mock.calls[0]?.[0]).toContain("stub-teardown-my-app-1");
   });
 
   it("reads platform.yaml from the given projectDirectory", async () => {
@@ -797,13 +683,19 @@ describe(handleRegister, () => {
   });
 
   it("output contains the project name and registration ID", async () => {
-    const { output } = await handleRegister(
+    const log = makeLogStub();
+    await handleRegister(
       { projectDirectory: "/workspace" },
-      getDeps({ registrationClient: successRegistrationClient }),
+      getDeps(
+        { registrationClient: successRegistrationClient },
+        successReader,
+        successValidator,
+        log,
+      ),
     );
 
-    expect(output).toContain("my-app");
-    expect(output).toContain("stub-my-app");
+    expect(log.success.mock.calls[0]?.[0]).toContain("my-app");
+    expect(log.success.mock.calls[0]?.[0]).toContain("stub-my-app");
   });
 
   it("reads platform.yaml from the given projectDirectory", async () => {
@@ -877,256 +769,5 @@ describe(handleRegister, () => {
         getDeps({ registrationClient: failingClient }),
       ),
     ).rejects.toThrow(RegistrationError);
-  });
-});
-
-// --- handleDeploy ---
-
-describe(handleDeploy, () => {
-  it("exits 0 on successful deployment", async () => {
-    const result = await handleDeploy(
-      { projectDirectory: "/workspace" },
-      getDeps({ deployClient: successDeployClient }),
-    );
-
-    expect(result.exitCode).toBe(0);
-  });
-
-  it("output contains the project name, environment, and deployment ID", async () => {
-    const { output } = await handleDeploy(
-      { projectDirectory: "/workspace" },
-      getDeps({ deployClient: successDeployClient }),
-    );
-
-    expect(output).toContain("my-app");
-    expect(output).toContain("preview");
-    expect(output).toContain("stub-my-app-preview-1");
-  });
-
-  it("exits when platform.yaml is missing", async () => {
-    const missingReader = {
-      readFile(filePath: string) {
-        return Promise.reject(new ManifestNotFoundError(filePath));
-      },
-    };
-
-    await expect(
-      handleDeploy(
-        { projectDirectory: "/workspace" },
-        getDeps({ deployClient: successDeployClient }, missingReader),
-      ),
-    ).rejects.toThrow(ManifestNotFoundError);
-  });
-
-  it("exits when platform.yaml fails validation", async () => {
-    await expect(
-      handleDeploy(
-        { projectDirectory: "/workspace" },
-        getDeps({ deployClient: successDeployClient }, successReader, failingValidator),
-      ),
-    ).rejects.toThrow(ManifestInvalidError);
-  });
-
-  it("exits when deployment fails", async () => {
-    const failingClient = {
-      deploy(request: { manifest: PlatformManifest }) {
-        return Promise.reject(new DeploymentError(request.manifest.name, "timeout"));
-      },
-    };
-
-    await expect(
-      handleDeploy({ projectDirectory: "/workspace" }, getDeps({ deployClient: failingClient })),
-    ).rejects.toThrow(DeploymentError);
-  });
-});
-
-// --- handlePromote ---
-
-describe(handlePromote, () => {
-  it("exits 0 on successful promotion", async () => {
-    const result = await handlePromote(
-      { projectDirectory: "/workspace" },
-      getDeps({ promoteClient: successPromoteClient }),
-    );
-
-    expect(result.exitCode).toBe(0);
-  });
-
-  it("output contains the project name, target environment, and promotion ID", async () => {
-    const { output } = await handlePromote(
-      { projectDirectory: "/workspace" },
-      getDeps({ promoteClient: successPromoteClient }),
-    );
-
-    expect(output).toContain("my-app");
-    expect(output).toContain("production");
-    expect(output).toContain("stub-promote-my-app-production-1");
-  });
-
-  it("reads platform.yaml from the given projectDirectory", async () => {
-    const paths: string[] = [];
-    const trackingReader = {
-      readFile(filePath: string) {
-        paths.push(filePath);
-        return Promise.resolve("stack: app\n");
-      },
-    };
-
-    await handlePromote(
-      { projectDirectory: "/workspace" },
-      getDeps({ promoteClient: successPromoteClient }, trackingReader),
-    );
-
-    expect(paths[0]).toBe("/workspace/platform.yaml");
-  });
-
-  it("reads platform.yaml from the given directory argument", async () => {
-    const paths: string[] = [];
-    const trackingReader = {
-      readFile(filePath: string) {
-        paths.push(filePath);
-        return Promise.resolve("stack: app\n");
-      },
-    };
-
-    await handlePromote(
-      { projectDirectory: "/some/project" },
-      getDeps({ promoteClient: successPromoteClient }, trackingReader),
-    );
-
-    expect(paths[0]).toBe("/some/project/platform.yaml");
-  });
-
-  it("exits when platform.yaml is missing", async () => {
-    const missingReader = {
-      readFile(filePath: string) {
-        return Promise.reject(new ManifestNotFoundError(filePath));
-      },
-    };
-
-    await expect(
-      handlePromote(
-        { projectDirectory: "/workspace" },
-        getDeps({ promoteClient: successPromoteClient }, missingReader),
-      ),
-    ).rejects.toThrow(ManifestNotFoundError);
-  });
-
-  it("exits when platform.yaml fails validation", async () => {
-    await expect(
-      handlePromote(
-        { projectDirectory: "/workspace" },
-        getDeps({ promoteClient: successPromoteClient }, successReader, failingValidator),
-      ),
-    ).rejects.toThrow(ManifestInvalidError);
-  });
-
-  it("exits when promotion fails", async () => {
-    const failingClient = {
-      promote(request: { manifest: PlatformManifest }) {
-        return Promise.reject(new PromotionError(request.manifest.name, "timeout"));
-      },
-    };
-
-    await expect(
-      handlePromote({ projectDirectory: "/workspace" }, getDeps({ promoteClient: failingClient })),
-    ).rejects.toThrow(PromotionError);
-  });
-});
-
-// --- handleRollback ---
-
-describe(handleRollback, () => {
-  it("exits 0 on successful rollback", async () => {
-    const result = await handleRollback(
-      { projectDirectory: "/workspace" },
-      getDeps({ rollbackClient: successRollbackClient }),
-    );
-
-    expect(result.exitCode).toBe(0);
-  });
-
-  it("output contains the project name, target environment, and rollback ID", async () => {
-    const { output } = await handleRollback(
-      { projectDirectory: "/workspace" },
-      getDeps({ rollbackClient: successRollbackClient }),
-    );
-
-    expect(output).toContain("my-app");
-    expect(output).toContain("production");
-    expect(output).toContain("stub-rollback-my-app-production-1");
-  });
-
-  it("reads platform.yaml from the given projectDirectory", async () => {
-    const paths: string[] = [];
-    const trackingReader = {
-      readFile(filePath: string) {
-        paths.push(filePath);
-        return Promise.resolve("stack: app\n");
-      },
-    };
-
-    await handleRollback(
-      { projectDirectory: "/workspace" },
-      getDeps({ rollbackClient: successRollbackClient }, trackingReader),
-    );
-
-    expect(paths[0]).toBe("/workspace/platform.yaml");
-  });
-
-  it("reads platform.yaml from the given directory argument", async () => {
-    const paths: string[] = [];
-    const trackingReader = {
-      readFile(filePath: string) {
-        paths.push(filePath);
-        return Promise.resolve("stack: app\n");
-      },
-    };
-
-    await handleRollback(
-      { projectDirectory: "/some/project" },
-      getDeps({ rollbackClient: successRollbackClient }, trackingReader),
-    );
-
-    expect(paths[0]).toBe("/some/project/platform.yaml");
-  });
-
-  it("exits when platform.yaml is missing", async () => {
-    const missingReader = {
-      readFile(filePath: string) {
-        return Promise.reject(new ManifestNotFoundError(filePath));
-      },
-    };
-
-    await expect(
-      handleRollback(
-        { projectDirectory: "/workspace" },
-        getDeps({ rollbackClient: successRollbackClient }, missingReader),
-      ),
-    ).rejects.toThrow(ManifestNotFoundError);
-  });
-
-  it("exits when platform.yaml fails validation", async () => {
-    await expect(
-      handleRollback(
-        { projectDirectory: "/workspace" },
-        getDeps({ rollbackClient: successRollbackClient }, successReader, failingValidator),
-      ),
-    ).rejects.toThrow(ManifestInvalidError);
-  });
-
-  it("exits when rollback fails", async () => {
-    const failingClient = {
-      rollback(request: { manifest: PlatformManifest }) {
-        return Promise.reject(new RollbackError(request.manifest.name, "timeout"));
-      },
-    };
-
-    await expect(
-      handleRollback(
-        { projectDirectory: "/workspace" },
-        getDeps({ rollbackClient: failingClient }),
-      ),
-    ).rejects.toThrow(RollbackError);
   });
 });

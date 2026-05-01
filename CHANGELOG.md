@@ -1,5 +1,174 @@
 # Changelog
 
+## [1.9.0] - 2026-04-30
+
+### feat: Remove `output` from HandlerResult — injectable side-effecting output
+
+- Added `src/output/logger.ts`: shared `Logger` interface with `clackLogger` default (wraps `@clack/prompts`).
+- Added `src/output/write-json.ts`: `writeJson` and `writeErrorJson` utilities writing JSON envelopes directly to `process.stdout`.
+- Migrated all handlers to use `deps.log` (Logger) for human-readable output and `writeJson` / `writeErrorJson` for JSON output; removed `deps.write` / `DeployLog` and similar per-handler output interfaces.
+- Removed `output: string` from `HandlerResult`; all handlers now return `{ exitCode }` only.
+- Removed output write from `bin.ts`; `dispatch` return type simplified to `{ exitCode: number }`.
+- Tests updated: `writeJson` spy pattern uses `vi.mock` + named import instead of namespace import; log assertions use injected stubs.
+
+## [1.8.0] - 2026-04-29
+
+### feat: Phase 10 — fix testing gaps (deploy, login, promote, whoami, bin flags)
+
+- `src/commands/deploy/index.ts` — added `--promote` flag (forces production mode),
+  `--dir` flag (overrides build output dir), `nogit-` sha fallback, expanded auth-error
+  message with runbook URL, and ProxyError propagation from deployInit/deployFinalize.
+- `src/commands/login/index.ts` — env fallback trims whitespace from `UNIVERSE_GH_CLIENT_ID`;
+  device-flow errors re-thrown as `CredentialError`.
+- `src/commands/promote/index.ts` — added `--from` flag (routes to `siteRollback`).
+- `src/commands/whoami/index.ts` — ProxyError caught and JSON error envelope emitted
+  before rethrowing.
+- `src/bin.ts` — `--version` / `-V` flags return package version; `parseStaticDeploy`
+  accepts `--promote` and `--dir`; `parseStaticPromote` accepts `--from`; handler
+  binders forward all new flags to their respective command handlers.
+- `src/errors/cli-errors.test.ts` — added `error.name` assertions for all 6 Phase-6
+  error classes (`ConfigError`, `CredentialError`, `StorageError`, `GitError`,
+  `ConfirmError`, `PartialUploadError`).
+
+## [1.7.0] - 2026-04-29
+
+### feat: Phase 7 — wire-up: static namespace, auth commands, real adapter deps in bin.ts
+
+- `src/bin.ts` — full router redesign:
+  - Added `static` namespace: `universe static deploy|promote|rollback|list`; bare
+    usage of static commands returns a descriptive `BadArgumentsError`.
+  - `--json` extracted globally before command parsing so `universe --json static
+rollback --to abc` works correctly.
+  - Added `login`, `logout`, `whoami` as direct top-level commands; `login` accepts
+    `--force`; unrecognised arguments return `BadArgumentsError`.
+  - `RouteDeps` updated: added `deviceFlow`, `identityResolver`, `proxyClient`,
+    `tokenStore`; removed the four legacy stub clients.
+  - Wiring block now instantiates `FileTokenStore`, `GithubIdentityResolver`,
+    `GithubDeviceFlow`, `createProxyClient` with real adapter instances.
+  - Handler binders for deploy, promote, rollback, list pass injected `identityResolver`
+    and `proxyClient`; binders for login, logout, whoami pass auth deps.
+- `src/integration-tests/adapter-stubs.ts` — replaced `deployClient`, `listClient`,
+  `promoteClient`, `rollbackClient` stubs with `deviceFlow`, `identityResolver`,
+  `proxyClient`, `tokenStore` to match the updated `RouteDeps`.
+- `src/bin.test.ts` — rewrote to cover the new router: static namespace dispatch,
+  bare command rejection, `--json` flag propagation, `login`/`logout`/`whoami`,
+  and full `parseArgs` coverage including `--force` and `--to`.
+
+## [1.6.0] - 2026-04-29
+
+### feat: Phase 6 (2-7/7) — proxy-based promote, rollback, list, login, logout, whoami
+
+- `src/commands/promote/index.ts` — `handlePromote` reads `platform.yaml` for site
+  name, calls `sitePromote`, emits JSON envelope or `log.success`.
+- `src/commands/rollback/index.ts` — `handleRollback` requires `--to <deployId>`;
+  throws `BadArgumentsError` when absent; calls `siteRollback({ site, to })`.
+- `src/commands/list/index.ts` — `handleList` accepts optional `--site` override
+  (skips yaml read when set); calls `siteDeploys`; prints one id per line or JSON array.
+- `src/commands/login/index.ts` — `handleLogin` checks for existing token (throws
+  `ConfirmError` unless `--force`); runs device flow with `DEFAULT_GH_CLIENT_ID`;
+  saves token; emits two JSON envelopes in `--json` mode (prompt + success).
+- `src/commands/logout/index.ts` — `handleLogout` calls `tokenStore.deleteToken()`.
+- `src/commands/whoami/index.ts` — `handleWhoami` calls `proxyClient.whoami()`;
+  surfaces `login`, `authorizedSites`, and `identitySource` in JSON envelope.
+- All six commands: fully-injectable deps; test files with 4–8 unit tests each.
+- `src/bin.ts` — rollback and list binders updated to use stub deps.
+- Removed obsolete `handleList` / `handleRollback` describe blocks from
+  `commands.test.ts`; deleted `integration-tests/promote.test.ts`,
+  `rollback.test.ts`, `list.test.ts`.
+
+## [1.5.0] - 2026-04-29
+
+### feat: Phase 6 (1/7) — proxy-based `universe static deploy` handler
+
+- `src/commands/deploy/index.ts` — `handleDeploy` replaces the old stub;
+  orchestrates identity resolution, `platform.yaml` parsing, `whoami`
+  authorization, git-state warning, build, walk+ignore-filter, deploy-init,
+  concurrent upload, finalize, and JSON/human output; all dependencies
+  (identity resolver, proxy client, git, build, walk, upload, read, log,
+  write) are injectable for testing.
+- `src/commands/deploy/index.test.ts` — 13 unit tests covering every
+  acceptance criterion.
+- `src/bin.ts` — deploy binder updated to new signature; uses
+  `StubIdentityResolver` + `StubProxyClient` as placeholders until Phase 7
+  wires up real implementations.
+- `src/commands.test.ts` — removed five obsolete tests that exercised the
+  old stub deploy behavior.
+- `src/integration-tests/deploy.test.ts` — deleted; integration tests for
+  the new proxy-based flow will be added in Phase 7.
+
+## [1.4.0] - 2026-04-28
+
+### feat: Phase 4+5 — platform YAML v2 schema/parser and deploy utilities
+
+- `src/platform/platform-yaml-v2.schema.ts` — Zod v4 schema for `platform.yaml` v2: site
+  name pattern (lowercase, 1–63 chars), optional `build` block with defaulted `output: "dist"`,
+  `deploy` block with `preview` flag and `ignore` glob list; strict unknown-key rejection.
+- `src/platform/platform-yaml-v2.ts` — `parsePlatformYaml` tagged-result parser; v1-marker
+  detection (`r2`, `stack`, `domain`, `static`, `name`) with migration hint.
+- `src/commands/deploy/git.ts` — `getGitState` reads HEAD hash and `--porcelain` status via
+  `execSync`; returns `{ hash, dirty }` or `{ hash: null, error }` for non-git directories.
+- `src/commands/deploy/walk.ts` — async recursive directory walker returning relative-path
+  file entries; throws `StorageError` when the output root is missing.
+- `src/commands/deploy/ignore.ts` — gitignore-style filter (`createIgnoreFilter`) supporting
+  `*`, `**`, `?`, anchored and basename patterns.
+- `src/commands/deploy/build.ts` — `runBuild` orchestrator: runs the build command via
+  injected `exec`, validates the output directory exists, returns `skipped: true` for
+  pre-built deploys.
+- `src/commands/deploy/upload.ts` — `uploadFiles` with fixed-concurrency semaphore, hand-
+  rolled MIME map, per-file error collection, and `onProgress` callback.
+
+## [1.3.0] - 2026-04-28
+
+### feat: Phase 3 proxy client — port, HTTP adapter, and stub
+
+- `src/platform/proxy-client.port.ts` — `ProxyClient` interface with all seven methods
+  (`whoami`, `deployInit`, `deployUpload`, `deployFinalize`, `siteDeploys`, `sitePromote`,
+  `siteRollback`); all request/response types; `ProxyError extends CliError` with
+  status-to-exit-code mapping; `wrapProxyError` helper for per-command catch paths.
+- `src/platform/http-proxy-client.ts` — `createProxyClient` factory; injectable `fetch` for
+  tests; network errors wrapped as `ProxyError(0, "network_error", ...)`; JSON error
+  envelopes parsed from non-2xx responses.
+- `src/platform/proxy-client.stub.ts` — `StubProxyClient implements ProxyClient` with
+  per-method override map; all seven methods have sensible default responses.
+
+## [1.2.0] - 2026-04-28
+
+### feat: Phase 2 auth infrastructure — token store, device flow, identity resolver
+
+- `src/auth/token-store.port.ts` — `TokenStore` interface (`saveToken`, `loadToken`, `deleteToken`).
+- `src/auth/file-token-store.ts` — `FileTokenStore implements TokenStore`; persists to
+  `$XDG_CONFIG_HOME/universe-cli/token` (mode 0600, dir 0700); exports `tokenPath()` for testing.
+- `src/auth/stub-token-store.ts` — in-memory `StubTokenStore` for tests; rejects empty tokens.
+- `src/auth/device-flow.port.ts` — `DeviceFlow` interface and `DeviceFlowOptions`/`DeviceFlowPrompt` types.
+- `src/auth/github-device-flow.ts` — `GithubDeviceFlow implements DeviceFlow`; full GitHub device-flow
+  RFC 8628 implementation with injectable `fetch`/`sleep` for offline tests.
+- `src/auth/stub-device-flow.ts` — `StubDeviceFlow` that resolves immediately with a configurable token.
+- `src/auth/identity-resolver.port.ts` — `IdentityResolver` interface, `ResolvedIdentity`, and
+  `IdentitySource` union (`env_GITHUB_TOKEN | env_GH_TOKEN | gh_cli | device_flow`).
+- `src/auth/github-identity-resolver.ts` — `GithubIdentityResolver implements IdentityResolver`;
+  3-slot priority chain (env → gh CLI → stored token) with injectable overrides for testing.
+- `src/auth/stub-identity-resolver.ts` — `StubIdentityResolver` returning a configurable identity.
+
+## [1.1.0] - 2026-04-28
+
+### feat: Phase 1 foundation — unified exit codes, output layer, and shared constants
+
+- `src/errors/exit-codes.ts` — single source of truth for all exit code constants.
+  Other's stable published codes (10–19) are preserved exactly; main's colliding
+  codes are renumbered to 21–31 (DEPLOYMENT=21 … REPO_INITIALISATION=31).
+- `src/errors/cli-errors.ts` — replaced inline `EXIT_CODES` object with imports
+  from `exit-codes.ts`; renumbered colliding codes; added six new error classes:
+  `ConfigError`, `CredentialError`, `StorageError`, `GitError`, `ConfirmError`,
+  `PartialUploadError`.
+- `src/output/envelope.ts` — `buildEnvelope` and `buildErrorEnvelope` helpers for
+  the structured JSON output protocol.
+- `src/output/redact.ts` — credential-scrubbing utilities (`redact`, `redactObject`)
+  ported from the `other/` codebase.
+- `src/output/format.ts` — `outputSuccess` / `outputError` façade that selects JSON
+  or human-readable clack output and redacts credentials before emission.
+- `src/constants.ts` — `DEFAULT_GH_CLIENT_ID` and `DEFAULT_PROXY_URL` shared across
+  commands.
+
 ## [3.24.0] - 2026-04-27
 
 ### feat: docker cp-based container execution for package manager operations

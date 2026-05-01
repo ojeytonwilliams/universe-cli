@@ -3,7 +3,7 @@ import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
-import { route } from "../bin.js";
+import { dispatch } from "../dispatch.js";
 import { createAdapterStubs } from "../integration-tests/adapter-stubs.js";
 import { LocalFilesystemWriter } from "../io/local-filesystem-writer.js";
 import { LocalProjectReader } from "../io/local-project-reader.js";
@@ -82,12 +82,13 @@ describe("create e2e — docker", () => {
     };
 
     const { observability, ...adapterStubs } = createAdapterStubs();
-    const result = await route(
+    const result = await dispatch(
       ["create"],
       {
         ...adapterStubs,
         filesystemWriter: new LocalFilesystemWriter(),
         layerResolver: new LayerCompositionService(),
+        logger: { error: () => {}, info: () => {}, success: () => {}, warn: () => {} },
         packageManager: new PackageManagerService({
           bun: new BunPackageManager(),
           pnpm: new PnpmPackageManager(),
@@ -103,7 +104,7 @@ describe("create e2e — docker", () => {
       observability,
     );
 
-    expect(result.exitCode, result.output).toBe(0);
+    expect(result.exitCode).toBe(0);
 
     const projectDirectory = join(rootDirectory, selection.name);
 
@@ -147,12 +148,13 @@ describe("create e2e — docker", () => {
     };
 
     const { observability, ...adapterStubs } = createAdapterStubs();
-    const result = await route(
+    const result = await dispatch(
       ["create"],
       {
         ...adapterStubs,
         filesystemWriter: new LocalFilesystemWriter(),
         layerResolver: new LayerCompositionService(),
+        logger: { error: () => {}, info: () => {}, success: () => {}, warn: () => {} },
         packageManager: new PackageManagerService({
           bun: new BunPackageManager(),
           pnpm: new PnpmPackageManager(),
@@ -168,7 +170,7 @@ describe("create e2e — docker", () => {
       observability,
     );
 
-    expect(result.exitCode, result.output).toBe(0);
+    expect(result.exitCode).toBe(0);
 
     const projectDirectory = join(rootDirectory, selection.name);
 

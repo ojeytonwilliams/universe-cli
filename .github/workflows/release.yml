@@ -1,0 +1,231 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release (e.g., 0.2.0)"
+        required: true
+        type: string
+      notes:
+        description: "CHANGELOG body for this release (markdown). Only used if ## [X.Y.Z] does not already exist."
+        required: false
+        type: string
+        default: ""
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+      - uses: ./.github/actions/validate-version
+        with:
+          version: ${{ inputs.version }}
+
+  bump:
+    needs: preflight
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      sha: ${{ steps.commit.outputs.sha }}
+    env:
+      VERSION: ${{ inputs.version }}
+      NOTES: ${{ inputs.notes }}
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: pnpm/action-setup@b307475762933b98ed359c036b0e51f26b63b74b
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: "24"
+          cache: "pnpm"
+      - name: Bump package.json if needed
+        run: |
+          CURRENT=$(node -p "require('./package.json').version")
+          if [ "$CURRENT" != "$VERSION" ]; then
+            pnpm version "$VERSION" --no-git-tag-version
+          fi
+      - name: Ensure CHANGELOG section
+        run: |
+          if ! grep -qE "^## \[${VERSION//./\\.}\]" CHANGELOG.md; then
+            DATE=$(date -u +%Y-%m-%d)
+            BODY="${NOTES:-Release $VERSION}"
+            awk -v v="$VERSION" -v d="$DATE" -v b="$BODY" '
+              !inserted && /^## \[/ {
+                printf "## [%s] - %s\n\n%s\n\n", v, d, b
+                inserted=1
+              }
+              { print }
+            ' CHANGELOG.md > CHANGELOG.md.new
+            mv CHANGELOG.md.new CHANGELOG.md
+          fi
+      - name: Commit and push
+        id: commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet; then
+            echo "No version/CHANGELOG changes; release commit not needed."
+            echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git add package.json CHANGELOG.md
+          git commit -m "chore: release v$VERSION"
+          git push origin main
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  test:
+    needs: bump
+    uses: ./.github/workflows/test.yml
+
+  build:
+    needs: [bump, test]
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            artifact: universe-darwin-arm64
+          - os: macos-15-intel
+            artifact: universe-darwin-amd64
+          - os: ubuntu-latest
+            artifact: universe-linux-amd64
+          - os: ubuntu-24.04-arm
+            artifact: universe-linux-arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          ref: ${{ needs.bump.outputs.sha }}
+      - uses: pnpm/action-setup@b307475762933b98ed359c036b0e51f26b63b74b
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: "24"
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm tsdown
+      - name: Generate SEA blob
+        run: node --experimental-sea-config sea-config.json
+      - name: Create executable
+        run: cp "$(which node)" "${{ matrix.artifact }}"
+      - name: Remove existing signature (macOS)
+        if: runner.os == 'macOS'
+        run: codesign --remove-signature "${{ matrix.artifact }}"
+      - name: Inject SEA blob
+        run: pnpm exec postject ${{ matrix.artifact }} NODE_SEA_BLOB dist/sea.blob --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2 --macho-segment-name NODE_SEA
+      - name: Sign macOS binary
+        if: runner.os == 'macOS'
+        run: codesign --sign - --entitlements entitlements.plist "${{ matrix.artifact }}"
+      - name: Generate checksum
+        run: shasum -a 256 ${{ matrix.artifact }} > ${{ matrix.artifact }}.sha256
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        with:
+          name: ${{ matrix.artifact }}
+          path: |
+            ${{ matrix.artifact }}
+            ${{ matrix.artifact }}.sha256
+
+  publish:
+    needs: [bump, test]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          ref: ${{ needs.bump.outputs.sha }}
+      - uses: ./.github/actions/validate-version
+        with:
+          version: ${{ inputs.version }}
+      - uses: pnpm/action-setup@b307475762933b98ed359c036b0e51f26b63b74b
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: "24"
+          cache: "pnpm"
+          registry-url: "https://registry.npmjs.org"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm tsdown
+      - run: npm version "$VERSION" --no-git-tag-version --allow-same-version
+      # G1 — derive npm dist-tag from the version. Stable releases land
+      # on `latest`; prereleases on `alpha` / `beta` / `next` so that
+      # `npm i -g @freecodecamp/universe-cli` keeps resolving to the
+      # last stable for unflagged consumers.
+      - name: Resolve npm dist-tag
+        id: npmtag
+        run: |
+          case "$VERSION" in
+            *-alpha*) echo "tag=alpha" >> "$GITHUB_OUTPUT" ;;
+            *-beta*)  echo "tag=beta"  >> "$GITHUB_OUTPUT" ;;
+            *-rc*)    echo "tag=next"  >> "$GITHUB_OUTPUT" ;;
+            *)        echo "tag=latest" >> "$GITHUB_OUTPUT" ;;
+          esac
+      - run: npm publish --provenance --access public --tag ${{ steps.npmtag.outputs.tag }}
+
+  release:
+    needs: [bump, build, publish]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          ref: ${{ needs.bump.outputs.sha }}
+      - uses: ./.github/actions/validate-version
+        with:
+          version: ${{ inputs.version }}
+      - name: Tag release
+        run: |
+          git tag "v$VERSION"
+          git push origin "v$VERSION"
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          merge-multiple: true
+      - name: Extract changelog section
+        env:
+          VERSION_PATTERN: ${{ inputs.version }}
+        run: |
+          awk -v version="$VERSION_PATTERN" '
+            $0 == "## [" version "]" || index($0, "## [" version "]") == 1 { flag=1; next }
+            /^## \[/ { flag=0 }
+            flag
+          ' CHANGELOG.md > RELEASE_NOTES.md
+          if [ ! -s RELEASE_NOTES.md ]; then
+            echo "ERROR: No CHANGELOG.md section found for version $VERSION_PATTERN" >&2
+            exit 1
+          fi
+      # G2 — flag prereleases so the GitHub UI badges them and `latest
+      # release` API stays pinned to the last stable.
+      - name: Resolve prerelease flag
+        id: prerelease
+        run: |
+          if [[ "$VERSION" == *-* ]]; then
+            echo "flag=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "flag=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Create release
+        uses: softprops/action-gh-release@6da8fa9354ddfdc4aeace5fc48d7f679b5214090
+        with:
+          tag_name: "v${{ inputs.version }}"
+          prerelease: ${{ steps.prerelease.outputs.flag }}
+          body_path: RELEASE_NOTES.md
+          files: |
+            universe-darwin-arm64
+            universe-darwin-arm64.sha256
+            universe-darwin-amd64
+            universe-darwin-amd64.sha256
+            universe-linux-amd64
+            universe-linux-amd64.sha256
+            universe-linux-arm64
+            universe-linux-arm64.sha256

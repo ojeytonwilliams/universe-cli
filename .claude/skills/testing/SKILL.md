@@ -57,6 +57,7 @@ Ideally projects should have many unit tests, some integration tests and a few e
 - Avoid testing constants. `expect(SOME_VALUE).toBe(5)` is bad.
 - Avoid testing configuration. Configuration should be checked at runtime.
 - Do not export module internals just for testing purposes. Focus on testing the module's public api.
+- Avoid testing that something doesn't throw. If the code throws, the test will fail anyway, so the assertion is redundant. Instead, check for the expected result or that the expected side effects occurred.
 
 ## Titles
 

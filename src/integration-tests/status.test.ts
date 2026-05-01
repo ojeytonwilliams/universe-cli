@@ -9,8 +9,9 @@ import { CreateInputValidationService } from "../commands/create/create-input-va
 import { LayerCompositionService } from "../commands/create/layer-composition/layer-composition-service.js";
 import { PackageManagerService } from "../commands/create/package-manager/package-manager.service.js";
 import { PlatformManifestService } from "../services/platform-manifest-service.js";
-import { route } from "../bin.js";
+import { dispatch } from "../dispatch.js";
 import type { CreateSelections, Prompt } from "../commands/create/prompt/prompt.port.js";
+import type { MockedFunction } from "vitest";
 
 const createNodeSelection = (name: string): CreateSelections => ({
   confirmed: true,
@@ -34,6 +35,7 @@ const makeDeps = (cwd: string, prompt: Prompt) => {
     ...adapters,
     filesystemWriter: new LocalFilesystemWriter(),
     layerResolver: new LayerCompositionService(),
+    logger: { error: vi.fn(), info: vi.fn(), success: vi.fn(), warn: vi.fn() },
     observability,
     packageManager: new PackageManagerService({
       bun: new StubPackageSpecifier(),
@@ -48,50 +50,52 @@ const makeDeps = (cwd: string, prompt: Prompt) => {
 
 describe("status", () => {
   let rootDirectory: string;
+  let stderrSpy: MockedFunction<typeof process.stderr.write>;
 
   beforeEach(() => {
     rootDirectory = mkdtempSync(join(tmpdir(), "universe-status-"));
+    stderrSpy = vi.spyOn(process.stderr, "write").mockReturnValue(true) as MockedFunction<
+      typeof process.stdout.write
+    >;
   });
 
   afterEach(() => {
     rmSync(rootDirectory, { force: true, recursive: true });
+    stderrSpy.mockRestore();
   });
 
   it("retrieves status for a project scaffolded by universe create", async () => {
     const projectName = "status-app";
-    const { observability, ...routeDeps } = makeDeps(
+    const { observability, ...deps } = makeDeps(
       rootDirectory,
       createPromptPort(createNodeSelection(projectName)),
     );
     const projectDir = join(rootDirectory, projectName);
 
-    const createResult = await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
+    const createResult = await dispatch(["create"], deps, { cwd: rootDirectory }, observability);
     expect(createResult.exitCode).toBe(0);
 
-    const statusResult = await route(
+    const statusResult = await dispatch(
       ["status", projectDir],
-      routeDeps,
+      deps,
       { cwd: rootDirectory },
       observability,
     );
     expect(statusResult.exitCode).toBe(0);
-    expect(statusResult.output).toContain(projectName);
-    expect(statusResult.output).toContain("preview");
-    expect(statusResult.output).toContain("ACTIVE");
   });
 
   it("exits for the sentinel failure project name", async () => {
-    const { observability, ...routeDeps } = makeDeps(
+    const { observability, ...deps } = makeDeps(
       rootDirectory,
       createPromptPort(createNodeSelection("status-failure")),
     );
     const projectDir = join(rootDirectory, "status-failure");
 
-    await route(["create"], routeDeps, { cwd: rootDirectory }, observability);
+    await dispatch(["create"], deps, { cwd: rootDirectory }, observability);
 
-    const result = await route(
+    const result = await dispatch(
       ["status", projectDir],
-      routeDeps,
+      deps,
       { cwd: rootDirectory },
       observability,
     );

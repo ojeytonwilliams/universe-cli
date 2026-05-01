@@ -2,24 +2,61 @@ import { range } from "lodash";
 
 import {
   BadArgumentsError,
+  CliError,
+  ConfigError,
+  ConfirmError,
   CreateUnsupportedCombinationError,
   CreateUnsupportedFrameworkError,
   CreateUnsupportedRuntimeError,
-  CliError,
+  CredentialError,
   DeploymentError,
+  GitError,
   InvalidMultiSelectError,
   InvalidNameError,
   LayerConflictError,
   ListError,
+  LogsError,
   ManifestInvalidError,
   ManifestNotFoundError,
   MissingLayerError,
+  PackageInstallError,
+  PartialUploadError,
+  PromotionError,
   RegistrationError,
+  RepoInitialisationError,
+  RollbackError,
   ScaffoldWriteError,
   StatusError,
+  StorageError,
   TargetDirectoryExistsError,
   TeardownError,
 } from "./cli-errors.js";
+import {
+  EXIT_BAD_ARGUMENTS,
+  EXIT_CONFIG,
+  EXIT_CONFIRM,
+  EXIT_CREDENTIALS,
+  EXIT_DEPLOYMENT,
+  EXIT_GIT,
+  EXIT_INVALID_MULTI_SELECT,
+  EXIT_INVALID_NAME,
+  EXIT_LAYER,
+  EXIT_LIST,
+  EXIT_LOGS,
+  EXIT_MANIFEST,
+  EXIT_PACKAGE_INSTALL,
+  EXIT_PARTIAL,
+  EXIT_PROMOTION,
+  EXIT_REGISTRATION,
+  EXIT_REPO_INITIALISATION,
+  EXIT_ROLLBACK,
+  EXIT_SCAFFOLD_WRITE,
+  EXIT_STATUS,
+  EXIT_STORAGE,
+  EXIT_TARGET_EXISTS,
+  EXIT_TEARDOWN,
+  EXIT_UNSUPPORTED,
+} from "./exit-codes.js";
 
 describe("error exit codes", () => {
   let errors: CliError[];
@@ -43,6 +80,12 @@ describe("error exit codes", () => {
       new CreateUnsupportedFrameworkError("fastify", "nodejs"),
       new CreateUnsupportedRuntimeError("python"),
       new BadArgumentsError("bad args"),
+      new ConfigError("config missing"),
+      new CredentialError("not authenticated"),
+      new StorageError("upload failed"),
+      new GitError("not a git repo"),
+      new ConfirmError("user cancelled"),
+      new PartialUploadError("3 files failed"),
     ];
   });
 
@@ -55,6 +98,64 @@ describe("error exit codes", () => {
     for (const code of codes) {
       expect(allowedCodes).toContain(code);
     }
+  });
+
+  it("deploy/scaffold errors carry correct exit codes (group 1)", () => {
+    expect(new DeploymentError("x", "y").exitCode).toBe(EXIT_DEPLOYMENT);
+    expect(new InvalidMultiSelectError("f").exitCode).toBe(EXIT_INVALID_MULTI_SELECT);
+    expect(new InvalidNameError("x").exitCode).toBe(EXIT_INVALID_NAME);
+    expect(new LayerConflictError("f", "a", "b").exitCode).toBe(EXIT_LAYER);
+    expect(new ManifestInvalidError("p", "r").exitCode).toBe(EXIT_MANIFEST);
+  });
+
+  it("scaffold errors carry correct exit codes (group 2)", () => {
+    expect(new ManifestNotFoundError("p").exitCode).toBe(EXIT_MANIFEST);
+    expect(new MissingLayerError("l").exitCode).toBe(EXIT_LAYER);
+    expect(new ListError("x", "y").exitCode).toBe(EXIT_LIST);
+    expect(new RegistrationError("x", "y").exitCode).toBe(EXIT_REGISTRATION);
+    expect(new ScaffoldWriteError("p", new Error()).exitCode).toBe(EXIT_SCAFFOLD_WRITE);
+  });
+
+  it("scaffold/create errors carry correct exit codes (group 3)", () => {
+    expect(new StatusError("x", "y").exitCode).toBe(EXIT_STATUS);
+    expect(new TargetDirectoryExistsError("p").exitCode).toBe(EXIT_TARGET_EXISTS);
+    expect(new TeardownError("x", "y").exitCode).toBe(EXIT_TEARDOWN);
+    expect(new CreateUnsupportedCombinationError("d").exitCode).toBe(EXIT_UNSUPPORTED);
+    expect(new CreateUnsupportedFrameworkError("f", "r").exitCode).toBe(EXIT_UNSUPPORTED);
+  });
+
+  it("create/auth errors carry correct exit codes (group 4)", () => {
+    expect(new CreateUnsupportedRuntimeError("r").exitCode).toBe(EXIT_UNSUPPORTED);
+    expect(new BadArgumentsError("b").exitCode).toBe(EXIT_BAD_ARGUMENTS);
+    expect(new ConfigError("c").exitCode).toBe(EXIT_CONFIG);
+    expect(new CredentialError("c").exitCode).toBe(EXIT_CREDENTIALS);
+    expect(new StorageError("s").exitCode).toBe(EXIT_STORAGE);
+  });
+
+  it("git/confirm/partial errors carry correct exit codes (group 5)", () => {
+    expect(new GitError("g").exitCode).toBe(EXIT_GIT);
+    expect(new ConfirmError("c").exitCode).toBe(EXIT_CONFIRM);
+    expect(new PartialUploadError("p").exitCode).toBe(EXIT_PARTIAL);
+  });
+
+  it("logsError carries EXIT_LOGS", () => {
+    expect(new LogsError("x", "y").exitCode).toBe(EXIT_LOGS);
+  });
+
+  it("promotionError carries EXIT_PROMOTION", () => {
+    expect(new PromotionError("x", "y").exitCode).toBe(EXIT_PROMOTION);
+  });
+
+  it("rollbackError carries EXIT_ROLLBACK", () => {
+    expect(new RollbackError("x", "y").exitCode).toBe(EXIT_ROLLBACK);
+  });
+
+  it("packageInstallError carries EXIT_PACKAGE_INSTALL", () => {
+    expect(new PackageInstallError("x").exitCode).toBe(EXIT_PACKAGE_INSTALL);
+  });
+
+  it("repoInitialisationError carries EXIT_REPO_INITIALISATION", () => {
+    expect(new RepoInitialisationError("x").exitCode).toBe(EXIT_REPO_INITIALISATION);
   });
 });
 
@@ -217,5 +318,41 @@ describe(TeardownError, () => {
 
     expect(error.message).toBe('Failed to tear down project "my-app": unavailable');
     expect(error.exitCode).toBeGreaterThan(0);
+  });
+});
+
+describe(ConfigError, () => {
+  it("has the correct error name", () => {
+    expect(new ConfigError("msg").name).toBe("ConfigError");
+  });
+});
+
+describe(CredentialError, () => {
+  it("has the correct error name", () => {
+    expect(new CredentialError("msg").name).toBe("CredentialError");
+  });
+});
+
+describe(StorageError, () => {
+  it("has the correct error name", () => {
+    expect(new StorageError("msg").name).toBe("StorageError");
+  });
+});
+
+describe(GitError, () => {
+  it("has the correct error name", () => {
+    expect(new GitError("msg").name).toBe("GitError");
+  });
+});
+
+describe(ConfirmError, () => {
+  it("has the correct error name", () => {
+    expect(new ConfirmError("msg").name).toBe("ConfirmError");
+  });
+});
+
+describe(PartialUploadError, () => {
+  it("has the correct error name", () => {
+    expect(new PartialUploadError("msg").name).toBe("PartialUploadError");
   });
 });

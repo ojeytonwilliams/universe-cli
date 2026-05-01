@@ -52,6 +52,8 @@
     "max-lines-per-function": "off",
     /* each test is a statement */
     "max-statements": "off",
+    /* Starting a comment with a capital letter is generally nicer, but there are common exceptions (e.g. function names: // mkdir needs to be...) */
+    "eslint/capitalized-comments": "off",
     /* magic numbers aren't great, but the blanket rule has too many false
     positives (e.g. 0 in a loop or 2 as a divisor) and I don't want to configure
     it */
@@ -68,6 +70,32 @@
     /* Either calledOnce or calledTimes(1) is fine, but we should pick one for consistency */
     "vitest/prefer-called-times": "off",
     /* We're more interested in testing behaviour. If a test needs to make an unsafe assertion, that's okay */
-    "typescript/no-unsafe-type-assertion": "off"
+    "typescript/no-unsafe-type-assertion": "off",
+    /* Nullable booleans get a pass so that optional flags (e.g. opts.isWhatever) can be used in ternaries */
+    "typescript/strict-boolean-expressions": [
+      "error",
+      { "allowNullableBoolean": true, "allowNullableString": true }
+    ],
+    /* Generally this is a little neater, but there are lot of false positives.
+    Consider simply disabling if the allowedPrefixes balloons */
+    "jest/prefer-lowercase-title": [
+      "error",
+      {
+        "allowedPrefixes": [
+          /* HTTP methods */
+          "GET",
+          "POST",
+          "PUT",
+          "PATCH",
+          "DELETE",
+          "HEAD",
+          "OPTIONS",
+          "TRACE",
+          "CONNECT",
+          /* Standard acronyms */
+          "URL"
+        ]
+      }
+    ]
   }
 }
