@@ -12,6 +12,7 @@ pnpm lint          # oxlint
 pnpm test          # vitest run
 pnpm check         # typecheck
 pnpm build         # tsc → dist/
+pnpm start
 ```
 
 A husky pre-commit hook runs `pnpm lint-staged` on every commit.

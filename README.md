@@ -151,6 +151,7 @@ pnpm test          # vitest
 pnpm check         # tsc --noEmit
 pnpm lint          # oxlint
 pnpm build         # tsc -> dist
+pnpm start
 ```
 
 ## Releasing
